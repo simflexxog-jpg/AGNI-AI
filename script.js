@@ -4,6 +4,7 @@ const sendBtn = document.getElementById('send-btn');
 const newChatBtn = document.getElementById('new-chat-btn');
 const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
 const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
 const historyList = document.getElementById('history-list');
 const providerSelect = document.getElementById('provider-select');
 const modelSelect = document.getElementById('model-select');
@@ -12,10 +13,12 @@ const statusPill = document.getElementById('status-pill');
 const imageInput = document.getElementById('image-input');
 const fileInput = document.getElementById('file-input');
 const attachmentPreview = document.getElementById('attachment-preview');
+const suggestionPromptBar = document.getElementById('suggestion-prompt-bar');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const exportBtn = document.getElementById('export-btn');
 const importBtn = document.getElementById('import-btn');
 const importInput = document.getElementById('import-input');
+const voiceInputBtn = document.getElementById('voice-input-btn');
 
 // Same-origin relative path: works regardless of host/port, since server.js
 // serves both the static frontend and the /api/chat endpoint.
@@ -32,6 +35,9 @@ let activeId = null;
 let socket = null;
 let socketReady = false;
 let pendingRequest = null;
+let speechRecognition = null;
+let isVoiceListening = false;
+let voiceTranscriptBuffer = '';
 
 // ---------------------------------------------------------------------------
 // Theme management
@@ -277,10 +283,41 @@ function renderHistoryList() {
     });
 }
 
+const suggestedPrompts = [
+    'Summarize this idea in a few bullets',
+    'Help me write a polished email',
+    'Give me a short plan for a new project',
+    'Explain this concept simply'
+];
+
+function renderSuggestedPrompts() {
+    const conv = getActiveConversation();
+    const shouldShow = Array.isArray(conv?.messages) && conv.messages.length <= 1 && conv.messages.every(message => message.role === 'bot');
+
+    suggestionPromptBar.innerHTML = '';
+    suggestionPromptBar.classList.toggle('visible', shouldShow);
+
+    if (!shouldShow) return;
+
+    suggestedPrompts.forEach(prompt => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'suggestion-prompt-chip';
+        chip.textContent = prompt;
+        chip.addEventListener('click', () => {
+            userInput.value = prompt;
+            userInput.focus();
+            handleSend();
+        });
+        suggestionPromptBar.appendChild(chip);
+    });
+}
+
 function renderActiveConversation() {
     chatBox.innerHTML = '';
     const conv = getActiveConversation();
     conv.messages.forEach(m => appendMessage(m.content, m.role, { persist: false }));
+    renderSuggestedPrompts();
 }
 
 // ---------------------------------------------------------------------------
@@ -304,6 +341,7 @@ function renderMarkdown(raw) {
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
     html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    html = html.replace(/(^|\s)(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
     html = html.replace(/\n/g, '<br>');
 
     return html;
@@ -322,8 +360,33 @@ function copyToClipboard(text, button) {
 // Messages
 // ---------------------------------------------------------------------------
 
+function streamBotMessage(messageDiv, text) {
+    const content = messageDiv.querySelector('.message-content');
+    if (!content) return;
+
+    content.textContent = '';
+    const chars = Array.from(text);
+    let index = 0;
+
+    const tick = () => {
+        if (index >= chars.length) {
+            content.innerHTML = renderMarkdown(text);
+            messageDiv.classList.remove('is-streaming');
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return;
+        }
+
+        content.textContent += chars[index];
+        index += 1;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        setTimeout(tick, 12);
+    };
+
+    tick();
+}
+
 function appendMessage(text, sender, options = {}) {
-    const { persist = true } = options;
+    const { persist = true, animate = false } = options;
     const conv = getActiveConversation();
 
     const messageDiv = document.createElement('div');
@@ -332,7 +395,6 @@ function appendMessage(text, sender, options = {}) {
     if (sender === 'bot') {
         const content = document.createElement('div');
         content.className = 'message-content';
-        content.innerHTML = renderMarkdown(text);
         messageDiv.appendChild(content);
 
         const actions = document.createElement('div');
@@ -346,6 +408,13 @@ function appendMessage(text, sender, options = {}) {
         actions.appendChild(copyBtn);
 
         messageDiv.appendChild(actions);
+
+        if (animate) {
+            messageDiv.classList.add('is-streaming');
+            streamBotMessage(messageDiv, text);
+        } else {
+            content.innerHTML = renderMarkdown(text);
+        }
     } else {
         messageDiv.textContent = text;
     }
@@ -509,6 +578,81 @@ function setComposerBusy(isBusy) {
     userInput.disabled = isBusy;
 }
 
+function setVoiceListening(isListening) {
+    isVoiceListening = isListening;
+    voiceInputBtn.classList.toggle('listening', isListening);
+    const icon = voiceInputBtn.querySelector('span');
+    if (icon) {
+        icon.textContent = isListening ? '🔴' : '🎤';
+    }
+    voiceInputBtn.setAttribute('aria-pressed', String(isListening));
+}
+
+function stopVoiceInput() {
+    if (speechRecognition && isVoiceListening) {
+        speechRecognition.stop();
+    }
+}
+
+function startVoiceInput() {
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+        showComposerNotice('Voice input is not supported in this browser.');
+        return;
+    }
+
+    if (!speechRecognition) {
+        speechRecognition = new SpeechRecognitionCtor();
+        speechRecognition.continuous = false;
+        speechRecognition.interimResults = true;
+        speechRecognition.lang = 'en-US';
+
+        speechRecognition.onstart = () => {
+            voiceTranscriptBuffer = '';
+            setVoiceListening(true);
+        };
+
+        speechRecognition.onresult = (event) => {
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i += 1) {
+                const result = event.results[i];
+                const transcript = result[0].transcript.trim();
+                if (result.isFinal) {
+                    finalTranscript += `${transcript} `;
+                } else {
+                    interimTranscript += `${transcript} `;
+                }
+            }
+
+            voiceTranscriptBuffer = `${voiceTranscriptBuffer}${finalTranscript}${interimTranscript}`.trim();
+            userInput.value = voiceTranscriptBuffer;
+        };
+
+        speechRecognition.onerror = () => {
+            setVoiceListening(false);
+            showComposerNotice('Voice input stopped.');
+        };
+
+        speechRecognition.onend = () => {
+            setVoiceListening(false);
+        };
+    }
+
+    if (isVoiceListening) {
+        stopVoiceInput();
+        return;
+    }
+
+    try {
+        speechRecognition.start();
+    } catch (error) {
+        setVoiceListening(false);
+        showComposerNotice('Could not start voice input.');
+    }
+}
+
 function removeThinkingIndicator() {
     if (pendingRequest?.thinkingId) {
         document.getElementById(pendingRequest.thinkingId)?.remove();
@@ -545,7 +689,7 @@ function connectWebSocket() {
                 pendingRequest = null;
                 if (!request) return;
 
-                const botEl = appendMessage(data.content, 'bot');
+                const botEl = appendMessage(data.content, 'bot', { animate: true });
                 addRegenerateButton(botEl, request.userText, request.attachmentsSnapshot, request.historyForRequest);
                 setComposerBusy(false);
                 return;
@@ -582,7 +726,7 @@ async function fetchAIResponse(userText, attachmentsSnapshot, historyForRequest)
 
     const thinkingId = 'thinking-' + Date.now();
     const thinkingDiv = document.createElement('div');
-    thinkingDiv.classList.add('message', 'bot-message');
+    thinkingDiv.classList.add('message', 'bot-message', 'thinking-indicator');
     thinkingDiv.id = thinkingId;
     thinkingDiv.innerHTML = '<span class="thinking-label">Thinking<span class="thinking-dots"><span></span><span></span><span></span></span></span>';
     chatBox.appendChild(thinkingDiv);
@@ -625,7 +769,7 @@ async function fetchAIResponse(userText, attachmentsSnapshot, historyForRequest)
 
         const botText = data?.choices?.[0]?.message?.content;
         if (typeof botText === 'string' && botText.trim()) {
-            const botEl = appendMessage(botText, 'bot');
+            const botEl = appendMessage(botText, 'bot', { animate: true });
             addRegenerateButton(botEl, userText, attachmentsSnapshot, historyForRequest);
         } else {
             const fallbackText = data?.fallback
@@ -680,8 +824,38 @@ newChatBtn.addEventListener('click', async () => {
     renderHistoryList();
 });
 
+function setSidebarOpen(isOpen) {
+    const isMobile = window.innerWidth <= 900;
+
+    if (isMobile) {
+        sidebar.classList.toggle('mobile-open', isOpen);
+        sidebar.classList.remove('collapsed');
+        sidebarOverlay.classList.toggle('active', isOpen);
+        sidebarOverlay.hidden = !isOpen;
+    } else {
+        sidebar.classList.remove('mobile-open');
+        sidebarOverlay.classList.remove('active');
+        sidebarOverlay.hidden = true;
+        sidebar.classList.toggle('collapsed', !isOpen);
+    }
+}
+
 toggleSidebarBtn.addEventListener('click', () => {
-    sidebar.classList.toggle('collapsed');
+    if (window.innerWidth <= 900) {
+        setSidebarOpen(!sidebar.classList.contains('mobile-open'));
+    } else {
+        setSidebarOpen(sidebar.classList.contains('collapsed'));
+    }
+});
+
+sidebarOverlay.addEventListener('click', () => setSidebarOpen(false));
+
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 900) {
+        setSidebarOpen(true);
+    } else {
+        setSidebarOpen(false);
+    }
 });
 
 themeToggleBtn.addEventListener('click', toggleTheme);
@@ -695,8 +869,12 @@ thinkingToggle.addEventListener('click', toggleThinking);
 imageInput.addEventListener('change', handleAttachmentSelection);
 fileInput.addEventListener('change', handleAttachmentSelection);
 sendBtn.addEventListener('click', handleSend);
+voiceInputBtn.addEventListener('click', startVoiceInput);
 userInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleSend();
+});
+userInput.addEventListener('focus', () => {
+    stopVoiceInput();
 });
 
 // ---------------------------------------------------------------------------

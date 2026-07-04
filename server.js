@@ -3,6 +3,7 @@ require('dotenv').config();
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const { MongoClient } = require('mongodb');
 const { WebSocketServer } = require('ws');
 
@@ -107,6 +108,8 @@ function readBody(req, maxBytes = MAX_BODY_BYTES) {
 async function serveStaticFile(req, res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = mimeTypes[ext] || 'application/octet-stream';
+  const acceptEncoding = req.headers['accept-encoding'] || '';
+  const canGzip = acceptEncoding.includes('gzip') && ['.html', '.js', '.css', '.json'].includes(ext);
 
   fs.readFile(filePath, (err, data) => {
     if (err) {
@@ -115,7 +118,18 @@ async function serveStaticFile(req, res, filePath) {
     }
 
     setCorsHeaders(req, res);
-    res.writeHead(200, { 'Content-Type': contentType });
+    res.setHeader('Cache-Control', ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable');
+
+    if (canGzip) {
+      const compressed = zlib.gzipSync(data);
+      res.setHeader('Content-Encoding', 'gzip');
+      res.setHeader('Vary', 'Accept-Encoding');
+      res.writeHead(200, { 'Content-Type': contentType, 'Content-Length': compressed.length });
+      res.end(compressed);
+      return;
+    }
+
+    res.writeHead(200, { 'Content-Type': contentType, 'Content-Length': data.length });
     res.end(data);
   });
 }

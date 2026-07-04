@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#020617">
     <title>AGNI AI</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
 <div class="app-shell">
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -74,12 +73,17 @@
             <div class="message bot-message">Hello! I’m your AI assistant. Ask me anything and I’ll help.</div>
         </div>
 
+        <div class="suggestion-prompt-bar" id="suggestion-prompt-bar" aria-label="Suggested prompts"></div>
+
         <div class="chat-input-container">
             <div class="composer-stack">
                 <div class="attachment-preview" id="attachment-preview"></div>
                 <div class="composer-row">
                     <input type="text" id="user-input" placeholder="Ask anything, add files, or share images..." autocomplete="off">
                     <div class="composer-actions">
+                        <button id="voice-input-btn" class="icon-btn voice-btn" type="button" title="Speak your prompt">
+                            <span>🎤</span>
+                        </button>
                         <label class="icon-btn" title="Add image">
                             <input type="file" id="image-input" accept="image/*" hidden>
                             <span>🖼️</span>
