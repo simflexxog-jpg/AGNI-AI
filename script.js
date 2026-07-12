@@ -20,6 +20,7 @@ const actionMenuDropdown = document.getElementById('action-menu-dropdown');
 const exportBtn = document.getElementById('export-btn');
 const importBtn = document.getElementById('import-btn');
 const importInput = document.getElementById('import-input');
+const compactViewToggle = document.getElementById('compact-view-toggle');
 const compactViewToggleBtn = document.getElementById('compact-view-toggle-btn');
 const voiceInputBtn = document.getElementById('voice-input-btn');
 
@@ -65,14 +66,22 @@ function applyDensity(density) {
     document.documentElement.classList.add('density-' + density);
 }
 
+function updateDensitySelection(density, save = true) {
+    if (!density) return;
+    applyDensity(density);
+    densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === density));
+    if (save) {
+        localStorage.setItem(UI_DENSITY_KEY, density);
+    }
+}
+
 function loadUISettings() {
     const font = localStorage.getItem(UI_FONT_KEY) || 'normal';
     const density = localStorage.getItem(UI_DENSITY_KEY) || 'comfortable';
     applyFontSize(font);
-    applyDensity(density);
+    updateDensitySelection(density, false);
     // mark active buttons
     fontOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.font === font));
-    densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === density));
 }
 
 function saveUISettings(font, density) {
@@ -364,6 +373,9 @@ function initCompactMode() {
     const storedCompact = localStorage.getItem(COMPACT_KEY) === 'true';
     compactViewToggle.checked = storedCompact;
     updateCompactMode();
+    if (storedCompact) {
+        updateDensitySelection('compact', false);
+    }
 }
 
 function handleKeyboardShortcuts(event) {
@@ -1092,11 +1104,12 @@ userInput.addEventListener('focus', () => {
 
 document.addEventListener('keydown', handleKeyboardShortcuts);
 
-const compactViewToggle = document.getElementById('compact-view-toggle');
 compactViewToggle.addEventListener('change', handleCompactToggle);
 compactViewToggleBtn.addEventListener('click', () => {
     compactViewToggle.checked = !compactViewToggle.checked;
     handleCompactToggle();
+    const density = compactViewToggle.checked ? 'compact' : 'comfortable';
+    updateDensitySelection(density);
     closeActionMenu();
 });
 historySearch.addEventListener('input', handleHistorySearch);
