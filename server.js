@@ -53,6 +53,160 @@ const MAX_HISTORY_MESSAGES = 20;
 const MAX_HISTORY_MESSAGE_CHARS = 6000;
 const UPSTREAM_TIMEOUT_MS = 30000;
 const isDev = process.env.NODE_ENV !== 'production';
+const RAG_ENABLED = process.env.RAG_ENABLED !== 'false';
+const RAG_TOP_K = 3;
+const RAG_CHUNK_SIZE = 700;
+const RAG_CACHE_TTL_MS = 1000 * 60 * 5;
+const RAG_SCAN_EXTENSIONS = new Set(['.md', '.txt', '.json']);
+const RAG_EXCLUDED_FILES = new Set(['package-lock.json', 'conversations.json']);
+
+let ragIndexCache = null;
+let ragIndexCacheTime = 0;
+
+function normalizeText(text) {
+  return (text || '').replace(/\r/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function tokenize(text) {
+  return (text || '').toLowerCase().match(/[a-z0-9]+/g) || [];
+}
+
+function buildChunksFromText(text, sourcePath) {
+  const normalized = normalizeText(text);
+  if (!normalized) return [];
+
+  const sentenceLikeParts = normalized
+    .split(/\n{2,}|(?<=[.!?])\s+/)
+    .map(part => part.trim())
+    .filter(Boolean);
+
+  const chunks = [];
+  let current = '';
+
+  for (const part of sentenceLikeParts) {
+    const candidate = current ? `${current} ${part}` : part;
+    if (candidate.length <= RAG_CHUNK_SIZE) {
+      current = candidate;
+      continue;
+    }
+
+    if (current) {
+      chunks.push(current);
+    }
+
+    const words = part.split(/\s+/);
+    let segment = '';
+    for (const word of words) {
+      const next = segment ? `${segment} ${word}` : word;
+      if (next.length <= RAG_CHUNK_SIZE) {
+        segment = next;
+      } else if (segment) {
+        chunks.push(segment);
+        segment = word;
+      } else {
+        segment = word;
+      }
+    }
+
+    current = segment;
+  }
+
+  if (current) {
+    chunks.push(current);
+  }
+
+  return chunks
+    .map(chunk => ({ text: chunk.trim(), source: sourcePath }))
+    .filter(chunk => chunk.text.length >= 40);
+}
+
+async function buildKnowledgeIndex() {
+  if (!RAG_ENABLED) return [];
+  if (ragIndexCache && Date.now() - ragIndexCacheTime < RAG_CACHE_TTL_MS) {
+    return ragIndexCache;
+  }
+
+  const collectedChunks = [];
+  const rootDir = __dirname;
+
+  async function walk(dirPath) {
+    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === '.env') {
+        continue;
+      }
+
+      const fullPath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        await walk(fullPath);
+        continue;
+      }
+
+      const ext = path.extname(entry.name).toLowerCase();
+      if (!RAG_SCAN_EXTENSIONS.has(ext)) continue;
+      if (RAG_EXCLUDED_FILES.has(entry.name)) continue;
+
+      try {
+        const content = await fs.promises.readFile(fullPath, 'utf8');
+        if (!content || content.length > 200000) continue;
+        collectedChunks.push(...buildChunksFromText(content, path.relative(rootDir, fullPath).replace(/\\/g, '/')));
+      } catch (error) {
+        // Ignore unreadable files and continue.
+      }
+    }
+  }
+
+  await walk(rootDir);
+  ragIndexCache = collectedChunks;
+  ragIndexCacheTime = Date.now();
+  return ragIndexCache;
+}
+
+function scoreChunk(query, chunk) {
+  const queryTerms = new Set(tokenize(query));
+  if (!queryTerms.size) return 0;
+
+  const haystack = `${chunk.source} ${chunk.text}`.toLowerCase();
+  let score = 0;
+  queryTerms.forEach(term => {
+    if (haystack.includes(term)) score += 2;
+  });
+
+  const queryText = tokenize(query).join(' ');
+  if (queryText && haystack.includes(queryText)) {
+    score += 5;
+  }
+
+  return score;
+}
+
+async function retrieveRelevantContext(userMessage, limit = RAG_TOP_K) {
+  if (!RAG_ENABLED) return [];
+  const query = String(userMessage || '').trim();
+  if (!query) return [];
+
+  const index = await buildKnowledgeIndex();
+  if (!index.length) return [];
+
+  return index
+    .map(chunk => ({ ...chunk, score: scoreChunk(query, chunk) }))
+    .filter(chunk => chunk.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ text, source }) => ({ text, source }));
+}
+
+function buildPromptWithContext(currentText, contextChunks) {
+  if (!Array.isArray(contextChunks) || !contextChunks.length) {
+    return currentText;
+  }
+
+  const contextBlock = contextChunks
+    .map((chunk, index) => `[${index + 1}] ${chunk.source}\n${chunk.text}`)
+    .join('\n\n');
+
+  return `${currentText}\n\nRelevant project context:\n${contextBlock}\n\nUse the context above when it helps answer. If it is not relevant, answer normally.`;
+}
 
 function isOriginAllowed(origin) {
   if (!origin) return false;
@@ -449,6 +603,8 @@ async function handleChat(req, res) {
   const currentText = nonImageNames.length
     ? `${userMessage}\n\nAttachments: ${nonImageNames.join(', ')}`
     : userMessage;
+  const relevantContext = await retrieveRelevantContext(userMessage);
+  const enrichedText = buildPromptWithContext(currentText, relevantContext);
 
   const provider = ['gemini', 'groq', 'openai'].includes(String(payload.provider || '').toLowerCase())
     ? String(payload.provider).toLowerCase()
@@ -467,11 +623,11 @@ async function handleChat(req, res) {
     let botText = '';
 
     if (provider === 'groq') {
-      botText = await callGroq(history, currentText, modelName, thinkingEnabled);
+      botText = await callGroq(history, enrichedText, modelName, thinkingEnabled);
     } else if (provider === 'openai') {
-      botText = await callOpenAI(history, currentText, attachments, modelName, thinkingEnabled);
+      botText = await callOpenAI(history, enrichedText, attachments, modelName, thinkingEnabled);
     } else {
-      botText = await callGemini(history, currentText, attachments, modelName, thinkingEnabled);
+      botText = await callGemini(history, enrichedText, attachments, modelName, thinkingEnabled);
     }
 
     if (!botText || !botText.trim() || botText === "Sorry, I couldn't generate a response.") {
@@ -540,17 +696,19 @@ async function handleWebSocketChat(ws, payload) {
   }
 
   const { userMessage, history, attachments, currentText, provider, modelName, thinkingEnabled } = chatPayload;
+  const relevantContext = await retrieveRelevantContext(userMessage);
+  const enrichedText = buildPromptWithContext(currentText, relevantContext);
   ws.send(JSON.stringify({ type: 'status', message: 'Thinking…' }));
 
   try {
     let botText = '';
 
     if (provider === 'groq') {
-      botText = await callGroq(history, currentText, modelName, thinkingEnabled);
+      botText = await callGroq(history, enrichedText, modelName, thinkingEnabled);
     } else if (provider === 'openai') {
-      botText = await callOpenAI(history, currentText, attachments, modelName, thinkingEnabled);
+      botText = await callOpenAI(history, enrichedText, attachments, modelName, thinkingEnabled);
     } else {
-      botText = await callGemini(history, currentText, attachments, modelName, thinkingEnabled);
+      botText = await callGemini(history, enrichedText, attachments, modelName, thinkingEnabled);
     }
 
     if (!botText || !botText.trim() || botText === "Sorry, I couldn't generate a response.") {
@@ -699,10 +857,18 @@ wss.on('connection', (ws) => {
   });
 });
 
-server.listen(port, host, () => {
-  const displayHost = host === '0.0.0.0' ? 'localhost' : host;
-  console.log(`Chat backend is running at http://${displayHost}:${port}`);
-  if (ALLOWED_ORIGINS.length === 0) {
-    console.log('ALLOWED_ORIGINS not set — defaulting to localhost-only CORS. Set ALLOWED_ORIGINS for production.');
-  }
-});
+if (require.main === module) {
+  server.listen(port, host, () => {
+    const displayHost = host === '0.0.0.0' ? 'localhost' : host;
+    console.log(`Chat backend is running at http://${displayHost}:${port}`);
+    if (ALLOWED_ORIGINS.length === 0) {
+      console.log('ALLOWED_ORIGINS not set — defaulting to localhost-only CORS. Set ALLOWED_ORIGINS for production.');
+    }
+  });
+}
+
+module.exports = {
+  buildKnowledgeIndex,
+  retrieveRelevantContext,
+  buildPromptWithContext
+};

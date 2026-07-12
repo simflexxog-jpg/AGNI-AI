@@ -14,9 +14,12 @@
 <div class="app-shell">
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <div>
-                <p class="eyebrow">Premium workspace</p>
-                <h2>AGNI AI</h2>
+            <div class="brand-block">
+                <img src="Sitelogo.png" alt="AGNI AI logo" class="site-logo">
+                <div>
+                    <p class="eyebrow">Premium workspace</p>
+                    <h2>AGNI AI</h2>
+                </div>
             </div>
             <button id="new-chat-btn">+ New chat</button>
         </div>
@@ -102,18 +105,19 @@
                 </div>
             </div>
             <div class="header-meta">
+                <input type="file" id="import-input" accept=".json" hidden>
+                <input type="checkbox" id="compact-view-toggle" hidden>
+                <div class="status-pill" id="status-pill">● Gemini · Flash</div>
                 <div class="action-menu">
                     <button id="action-menu-btn" class="icon-header-btn" type="button" aria-haspopup="true" aria-expanded="false" title="More actions"><span class="material-symbols-outlined">more_vert</span></button>
                     <div class="action-menu-dropdown" id="action-menu-dropdown" hidden role="menu" aria-label="More actions menu">
                         <button type="button" id="export-btn" class="menu-item" role="menuitem">Export chat</button>
                         <button type="button" id="import-btn" class="menu-item" role="menuitem">Import chat</button>
+                        <button type="button" id="clear-chat-btn" class="menu-item" role="menuitem">Clear chat</button>
                         <button type="button" id="compact-view-toggle-btn" class="menu-item" role="menuitem">Compact view</button>
                         <button type="button" id="about-dev-btn" class="menu-item" role="menuitem">About developer</button>
                     </div>
                 </div>
-                <input type="file" id="import-input" accept=".json" hidden>
-                <input type="checkbox" id="compact-view-toggle" hidden>
-                <div class="status-pill" id="status-pill">● Gemini · Flash</div>
             </div>
         </div>
 

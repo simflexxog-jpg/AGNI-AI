@@ -224,6 +224,36 @@ html.light-mode .status-pill {
     position: relative;
 }
 
+.sidebar-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 20px;
+}
+
+.brand-block,
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.site-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    border-radius: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 10px 20px rgba(2, 6, 23, 0.18);
+}
+
+.site-logo--small {
+    width: 40px;
+    height: 40px;
+}
+
 .sidebar-body {
     display: flex;
     flex-direction: column;
@@ -1196,6 +1226,7 @@ html.light-mode .status-pill {
     display: flex;
     align-items: center;
     gap: 16px;
+    margin-left: auto;
 }
 
 .theme-settings {

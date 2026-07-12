@@ -19,6 +19,7 @@ const actionMenuBtn = document.getElementById('action-menu-btn');
 const actionMenuDropdown = document.getElementById('action-menu-dropdown');
 const exportBtn = document.getElementById('export-btn');
 const importBtn = document.getElementById('import-btn');
+const clearChatBtn = document.getElementById('clear-chat-btn');
 const importInput = document.getElementById('import-input');
 const compactViewToggle = document.getElementById('compact-view-toggle');
 const compactViewToggleBtn = document.getElementById('compact-view-toggle-btn');
@@ -483,6 +484,21 @@ function renderSuggestedPrompts() {
         });
         suggestionPromptBar.appendChild(chip);
     });
+}
+
+function clearActiveConversation() {
+    const conv = getActiveConversation();
+    if (!conv) return;
+
+    conv.title = 'New chat';
+    conv.messages = [{ role: 'bot', content: WELCOME_TEXT }];
+    attachments = [];
+    renderAttachments();
+    saveState();
+    persistConversation(conv);
+    renderActiveConversation();
+    renderHistoryList();
+    showComposerNotice('Chat cleared.');
 }
 
 function renderActiveConversation() {
@@ -1044,6 +1060,10 @@ exportBtn.addEventListener('click', () => {
 importBtn.addEventListener('click', () => {
     closeActionMenu();
     importInput.click();
+});
+clearChatBtn.addEventListener('click', () => {
+    closeActionMenu();
+    clearActiveConversation();
 });
 importInput.addEventListener('change', handleImportInput);
 
