@@ -1,0 +1,58 @@
+[
+  {
+    "id": "c-1783160089268-nf5yn",
+    "title": "hi",
+    "messages": [
+      {
+        "role": "bot",
+        "content": "Hello! I’m your AI assistant. Ask me anything and I’ll help."
+      },
+      {
+        "role": "user",
+        "content": "hi"
+      },
+      {
+        "role": "bot",
+        "content": "I couldn’t reach the selected AI provider right now, so I searched the web for you.\n\nHawaii An island state of the United States, in the Pacific Ocean about 2,000 miles southwest of the U.S.\n\nSource: https://duckduckgo.com/Hawaii\n\nOpen Google: https://www.google.com/search?q=hi"
+      },
+      {
+        "role": "user",
+        "content": "hi"
+      },
+      {
+        "role": "bot",
+        "content": "It seems like you said \"hi\" again. I'll assume you're looking for a casual greeting or conversation starter. \n\nHow about we start fresh? What's on your mind? Would you like to talk about a specific topic or ask a question?"
+      },
+      {
+        "role": "user",
+        "content": "hi"
+      },
+      {
+        "role": "bot",
+        "content": "I couldn’t reach the selected AI provider right now, so I searched the web for you.\n\nHawaii An island state of the United States, in the Pacific Ocean about 2,000 miles southwest of the U.S.\n\nSource: https://duckduckgo.com/Hawaii\n\nOpen Google: https://www.google.com/search?q=hi"
+      },
+      {
+        "role": "user",
+        "content": "hi"
+      },
+      {
+        "role": "bot",
+        "content": "I couldn’t reach the selected AI provider right now, so I searched the web for you.\n\nHawaii An island state of the United States, in the Pacific Ocean about 2,000 miles southwest of the U.S.\n\nSource: https://duckduckgo.com/Hawaii\n\nOpen Google: https://www.google.com/search?q=hi"
+      }
+    ],
+    "createdAt": "2026-07-06T12:52:15.293Z",
+    "updatedAt": "2026-07-06T12:52:15.293Z"
+  },
+  {
+    "id": "demo-chat",
+    "title": "Demo chat",
+    "messages": [
+      {
+        "content": "Hello",
+        "role": "user"
+      }
+    ],
+    "createdAt": "2026-07-06T12:51:36.740Z",
+    "updatedAt": "2026-07-06T12:51:36.740Z"
+  }
+]
