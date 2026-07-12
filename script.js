@@ -15,9 +15,12 @@ const fileInput = document.getElementById('file-input');
 const attachmentPreview = document.getElementById('attachment-preview');
 const suggestionPromptBar = document.getElementById('suggestion-prompt-bar');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
+const actionMenuBtn = document.getElementById('action-menu-btn');
+const actionMenuDropdown = document.getElementById('action-menu-dropdown');
 const exportBtn = document.getElementById('export-btn');
 const importBtn = document.getElementById('import-btn');
 const importInput = document.getElementById('import-input');
+const compactViewToggleBtn = document.getElementById('compact-view-toggle-btn');
 const voiceInputBtn = document.getElementById('voice-input-btn');
 
 // Same-origin relative path: works regardless of host/port, since server.js
@@ -26,7 +29,12 @@ const API_ENDPOINT = '/api/chat';
 const WS_ENDPOINT = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/`;
 
 const STORAGE_KEY = 'agni-ai-conversations-v1';
-const ACTIVE_KEY = 'agni-ai-active-id-v1';const THEME_KEY = 'agni-ai-theme-v1';const WELCOME_TEXT = 'Hello! I’m your AI assistant. Ask me anything and I’ll help.';
+const ACTIVE_KEY = 'agni-ai-active-id-v1';
+const THEME_KEY = 'agni-ai-theme-v1';
+const COMPACT_KEY = 'agni-ai-compact-mode-v1';
+const UI_FONT_KEY = 'agni-ai-ui-font-v1';
+const UI_DENSITY_KEY = 'agni-ai-ui-density-v1';
+const WELCOME_TEXT = 'Hello! I’m your AI assistant. Ask me anything and I’ll help.';
 const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024; // 8MB per file
 
 let attachments = [];
@@ -38,6 +46,50 @@ let pendingRequest = null;
 let speechRecognition = null;
 let isVoiceListening = false;
 let voiceTranscriptBuffer = '';
+
+// Settings panel elements (sidebar)
+const openSettingsBtn = document.getElementById('open-settings-btn');
+const sidebarSettings = document.getElementById('sidebar-settings');
+const closeSettingsBtn = document.getElementById('close-settings-btn');
+const resetSettingsBtn = document.getElementById('reset-settings-btn');
+const fontOpts = Array.from(document.getElementsByClassName('font-opt'));
+const densityOpts = Array.from(document.getElementsByClassName('density-opt'));
+
+function applyFontSize(size) {
+    document.documentElement.classList.remove('font-small', 'font-normal', 'font-large');
+    document.documentElement.classList.add('font-' + size);
+}
+
+function applyDensity(density) {
+    document.documentElement.classList.remove('density-comfortable', 'density-compact');
+    document.documentElement.classList.add('density-' + density);
+}
+
+function loadUISettings() {
+    const font = localStorage.getItem(UI_FONT_KEY) || 'normal';
+    const density = localStorage.getItem(UI_DENSITY_KEY) || 'comfortable';
+    applyFontSize(font);
+    applyDensity(density);
+    // mark active buttons
+    fontOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.font === font));
+    densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === density));
+}
+
+function saveUISettings(font, density) {
+    if (font) localStorage.setItem(UI_FONT_KEY, font);
+    if (density) localStorage.setItem(UI_DENSITY_KEY, density);
+}
+
+function resetUISettings() {
+    localStorage.removeItem(UI_FONT_KEY);
+    localStorage.removeItem(UI_DENSITY_KEY);
+    loadUISettings();
+}
+
+function toggleSidebarSettings(show) {
+    if (!sidebarSettings) return;
+    sidebarSettings.hidden = !show;
+}
 
 // ---------------------------------------------------------------------------
 // Theme management
@@ -63,6 +115,19 @@ function toggleTheme() {
         localStorage.setItem(THEME_KEY, 'light');
     }
     updateThemeButton();
+}
+
+function closeActionMenu() {
+    if (!actionMenuDropdown || !actionMenuBtn) return;
+    actionMenuDropdown.hidden = true;
+    actionMenuBtn.setAttribute('aria-expanded', 'false');
+}
+
+function toggleActionMenu() {
+    if (!actionMenuDropdown || !actionMenuBtn) return;
+    const isOpen = !actionMenuDropdown.hidden;
+    actionMenuDropdown.hidden = isOpen;
+    actionMenuBtn.setAttribute('aria-expanded', String(!isOpen));
 }
 
 function updateThemeButton() {
@@ -256,16 +321,23 @@ function deleteConversation(id) {
     renderHistoryList();
 }
 
-function renderHistoryList() {
-    historyList.innerHTML = '';
-    conversations.forEach(conv => {
-        const item = document.createElement('div');
-        item.className = 'history-item' + (conv.id === activeId ? ' active' : '');
+const historySearch = document.getElementById('history-search');
+let historyFilterText = '';
 
-        const titleSpan = document.createElement('span');
-        titleSpan.className = 'history-item-title';
-        titleSpan.textContent = conv.title || 'New chat';
-        item.appendChild(titleSpan);
+function renderHistoryList() {
+    const query = historyFilterText.trim().toLowerCase();
+    historyList.innerHTML = '';
+
+    conversations
+        .filter(conv => !query || (conv.title || 'New chat').toLowerCase().includes(query))
+        .forEach(conv => {
+            const item = document.createElement('div');
+            item.className = 'history-item' + (conv.id === activeId ? ' active' : '');
+
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'history-item-title';
+            titleSpan.textContent = conv.title || 'New chat';
+            item.appendChild(titleSpan);
 
         const delBtn = document.createElement('button');
         delBtn.type = 'button';
@@ -281,6 +353,94 @@ function renderHistoryList() {
         item.addEventListener('click', () => switchConversation(conv.id));
         historyList.appendChild(item);
     });
+}
+
+function handleHistorySearch(event) {
+    historyFilterText = event.target.value;
+    renderHistoryList();
+}
+
+function initCompactMode() {
+    const storedCompact = localStorage.getItem(COMPACT_KEY) === 'true';
+    compactViewToggle.checked = storedCompact;
+    updateCompactMode();
+}
+
+function handleKeyboardShortcuts(event) {
+    // Ignore modifier-only presses
+    if (!event || (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.key.length === 1 && event.key === event.key.toLowerCase())) {
+        // continue to other handling
+    }
+
+    // Global shortcuts (Ctrl/Cmd + ...)
+    if (event.ctrlKey || event.metaKey) {
+        // Use Alt variants to avoid browser collisions (Ctrl/Cmd + Alt + ...)
+        // Toggle sidebar: Ctrl/Cmd + Alt + B
+        if (event.altKey && event.key.toLowerCase() === 'b') {
+            event.preventDefault();
+            toggleSidebarBtn.click();
+            return;
+        }
+
+        // Toggle theme: Ctrl/Cmd + Alt + T
+        if (event.altKey && event.key.toLowerCase() === 't') {
+            event.preventDefault();
+            toggleTheme();
+            return;
+        }
+
+        // Export conversations: Ctrl/Cmd + Alt + E
+        if (event.altKey && event.key.toLowerCase() === 'e') {
+            event.preventDefault();
+            exportConversations();
+            return;
+        }
+
+        // Import conversations (open picker): Ctrl/Cmd + Alt + I
+        if (event.altKey && event.key.toLowerCase() === 'i') {
+            event.preventDefault();
+            importInput.click();
+            return;
+        }
+
+        // Focus message input: Ctrl/Cmd + Alt + J
+        if (event.altKey && event.key.toLowerCase() === 'j') {
+            event.preventDefault();
+            userInput.focus();
+            return;
+        }
+    }
+    // Focus search: Ctrl/Cmd+K or Ctrl/Cmd+Alt+K (Alt variant added for browsers)
+    if ((event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === 'k') && (!event.altKey || event.altKey)) {
+        // allow both Ctrl+K and Ctrl+Alt+K
+        event.preventDefault();
+        historySearch.focus();
+        return;
+    }
+
+    // New chat: use Ctrl/Cmd+Alt+N to avoid browser Ctrl+N (new window)
+    if ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === 'n') {
+        event.preventDefault();
+        newChatBtn.click();
+        return;
+    }
+
+    // Toggle settings with Ctrl/Cmd + , (comma)
+    if ((event.ctrlKey || event.metaKey) && event.key === ',') {
+        event.preventDefault();
+        if (sidebarSettings) toggleSidebarSettings(sidebarSettings.hidden);
+        return;
+    }
+
+    if (event.key === 'Escape') {
+        // Close settings if open, otherwise blur search/input
+        if (sidebarSettings && !sidebarSettings.hidden) {
+            toggleSidebarSettings(false);
+            return;
+        }
+        historySearch.blur();
+        userInput.blur();
+    }
 }
 
 const suggestedPrompts = [
@@ -350,9 +510,9 @@ function renderMarkdown(raw) {
 function copyToClipboard(text, button) {
     if (!navigator.clipboard) return;
     navigator.clipboard.writeText(text).then(() => {
-        const original = button.textContent;
-        button.textContent = 'Copied!';
-        setTimeout(() => { button.textContent = original; }, 1500);
+        // Add a temporary state class so we do not overwrite inner content (icons)
+        button.classList.add('copied');
+        setTimeout(() => { button.classList.remove('copied'); }, 1500);
     }).catch(() => {});
 }
 
@@ -574,16 +734,18 @@ function toggleThinking() {
 
 function setComposerBusy(isBusy) {
     sendBtn.disabled = isBusy;
-    sendBtn.textContent = isBusy ? 'Sending…' : 'Send';
+    const sendLabel = sendBtn.querySelector('.send-text');
+    if (sendLabel) sendLabel.textContent = isBusy ? 'Sending…' : 'Send';
+    sendBtn.classList.toggle('busy', isBusy);
     userInput.disabled = isBusy;
 }
 
 function setVoiceListening(isListening) {
     isVoiceListening = isListening;
     voiceInputBtn.classList.toggle('listening', isListening);
-    const icon = voiceInputBtn.querySelector('span');
+    const icon = voiceInputBtn.querySelector('.material-symbols-outlined');
     if (icon) {
-        icon.textContent = isListening ? '🔴' : '🎤';
+        icon.textContent = isListening ? 'stop' : 'mic';
     }
     voiceInputBtn.setAttribute('aria-pressed', String(isListening));
 }
@@ -859,9 +1021,60 @@ window.addEventListener('resize', () => {
 });
 
 themeToggleBtn.addEventListener('click', toggleTheme);
-exportBtn.addEventListener('click', exportConversations);
-importBtn.addEventListener('click', () => importInput.click());
+actionMenuBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    toggleActionMenu();
+});
+exportBtn.addEventListener('click', () => {
+    closeActionMenu();
+    exportConversations();
+});
+importBtn.addEventListener('click', () => {
+    closeActionMenu();
+    importInput.click();
+});
 importInput.addEventListener('change', handleImportInput);
+
+const aboutDevBtn = document.getElementById('about-dev-btn');
+const aboutOverlay = document.getElementById('about-overlay');
+const aboutCloseBtn = document.getElementById('about-close-btn');
+
+function openAboutModal() {
+    if (!aboutOverlay) return;
+    aboutOverlay.hidden = false;
+    closeActionMenu();
+}
+
+function closeAboutModal() {
+    if (!aboutOverlay) return;
+    aboutOverlay.hidden = true;
+}
+
+if (aboutDevBtn) {
+    aboutDevBtn.addEventListener('click', () => {
+        openAboutModal();
+    });
+}
+
+if (aboutCloseBtn) {
+    aboutCloseBtn.addEventListener('click', closeAboutModal);
+}
+
+if (aboutOverlay) {
+    aboutOverlay.addEventListener('click', (event) => {
+        if (event.target === aboutOverlay) closeAboutModal();
+    });
+}
+
+document.addEventListener('click', (event) => {
+    if (!actionMenuBtn.contains(event.target) && !actionMenuDropdown.contains(event.target)) {
+        closeActionMenu();
+    }
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeActionMenu();
+});
 
 providerSelect.addEventListener('change', populateModels);
 modelSelect.addEventListener('change', updateStatusPill);
@@ -877,18 +1090,61 @@ userInput.addEventListener('focus', () => {
     stopVoiceInput();
 });
 
+document.addEventListener('keydown', handleKeyboardShortcuts);
+
+const compactViewToggle = document.getElementById('compact-view-toggle');
+compactViewToggle.addEventListener('change', handleCompactToggle);
+compactViewToggleBtn.addEventListener('click', () => {
+    compactViewToggle.checked = !compactViewToggle.checked;
+    handleCompactToggle();
+    closeActionMenu();
+});
+historySearch.addEventListener('input', handleHistorySearch);
+
+// Settings panel events: clicking the footer Settings button toggles the panel
+if (openSettingsBtn) openSettingsBtn.addEventListener('click', () => {
+    if (sidebarSettings) toggleSidebarSettings(sidebarSettings.hidden);
+});
+if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => toggleSidebarSettings(false));
+if (resetSettingsBtn) resetSettingsBtn.addEventListener('click', () => resetUISettings());
+
+fontOpts.forEach(btn => btn.addEventListener('click', (e) => {
+    const size = e.currentTarget.dataset.font;
+    applyFontSize(size);
+    saveUISettings(size, null);
+    fontOpts.forEach(b => b.classList.toggle('active', b === e.currentTarget));
+}));
+
+densityOpts.forEach(btn => btn.addEventListener('click', (e) => {
+    const d = e.currentTarget.dataset.density;
+    applyDensity(d);
+    saveUISettings(null, d);
+    densityOpts.forEach(b => b.classList.toggle('active', b === e.currentTarget));
+}));
+
 // ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 
 async function initializeApp() {
     initTheme();
+    initCompactMode();
+    loadUISettings();
     await loadState();
     renderAttachments();
     populateModels();
     renderActiveConversation();
     renderHistoryList();
     connectWebSocket();
+}
+
+function updateCompactMode() {
+    document.documentElement.classList.toggle('compact-mode', compactViewToggle.checked);
+}
+
+function handleCompactToggle() {
+    localStorage.setItem(COMPACT_KEY, compactViewToggle.checked ? 'true' : 'false');
+    updateCompactMode();
 }
 
 initializeApp();

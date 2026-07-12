@@ -3,22 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#020617">
+    <meta name="color-scheme" content="dark light">
     <title>AGNI AI</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=7">
+    <!-- Google Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 </head>
 <body>
 <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
 <div class="app-shell">
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <div>
-                <p class="eyebrow">Premium workspace</p>
-                <h2>AGNI AI</h2>
+            <div class="brand-wrap">
+                <img src="Sitelogo.png" alt="AGNI AI logo" class="brand-logo">
+                <div class="brand-text">
+                    <p class="eyebrow">Premium workspace</p>
+                    <h2>AGNI AI</h2>
+                </div>
             </div>
             <button id="new-chat-btn">+ New chat</button>
         </div>
 
+        <div class="sidebar-body">
         <div class="control-card">
             <div class="control-row">
                 <label for="provider-select">AI provider</label>
@@ -40,31 +46,76 @@
             </div>
         </div>
 
+        <div class="history-search">
+            <input type="search" id="history-search" placeholder="Search chats..." autocomplete="off">
+        </div>
+
         <div class="history-list" id="history-list">
             <div class="history-item active">Welcome chat</div>
         </div>
+        </div> <!-- /.sidebar-body -->
+
+        <footer class="sidebar-footer">
+            <button id="open-settings-btn" class="text-btn"><span class="material-symbols-outlined">settings</span> Settings</button>
+
+            <div class="sidebar-settings" id="sidebar-settings" hidden>
+                <div class="settings-header">
+                    <h4>UI Personalization</h4>
+                </div>
+                <div class="settings-section">
+                    <label>Font size</label>
+                    <div class="settings-row">
+                        <button type="button" data-font="small" class="settings-opt font-opt">Small</button>
+                        <button type="button" data-font="normal" class="settings-opt font-opt">Normal</button>
+                        <button type="button" data-font="large" class="settings-opt font-opt">Large</button>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <label>UI density</label>
+                    <div class="settings-row">
+                        <button type="button" data-density="comfortable" class="settings-opt density-opt">Comfortable</button>
+                        <button type="button" data-density="compact" class="settings-opt density-opt">Compact</button>
+                    </div>
+                </div>
+                <div class="settings-section theme-settings">
+                    <label>Theme mode</label>
+                    <div class="settings-row theme-row">
+                        <span class="theme-label">Dark</span>
+                        <button id="theme-toggle-btn" class="theme-switch" type="button" role="switch" aria-checked="false" aria-label="Toggle dark/light mode">
+                            <span class="theme-switch-knob"></span>
+                        </button>
+                        <span class="theme-label">Light</span>
+                    </div>
+                </div>
+                <div class="settings-actions">
+                    <button id="reset-settings-btn" class="text-btn">Reset</button>
+                    <button id="close-settings-btn" class="text-btn">Close</button>
+                </div>
+            </div>
+        </footer>
     </aside>
 
     <main class="chat-panel">
         <div class="chat-header">
             <div class="header-left">
-                <button id="toggle-sidebar-btn" class="toggle-btn">☰</button>
+                <button id="toggle-sidebar-btn" class="toggle-btn" aria-label="Toggle sidebar"><span class="material-symbols-outlined">menu</span></button>
                 <div>
                     <h3>AGNI AI</h3>
                     <p>Smart assistant ready to help</p>
                 </div>
             </div>
             <div class="header-meta">
-                <div class="theme-toggle-container">
-                    <span class="theme-label">Dark</span>
-                    <button id="theme-toggle-btn" class="theme-switch" type="button" role="switch" aria-checked="false" aria-label="Toggle dark/light mode">
-                        <span class="theme-switch-knob"></span>
-                    </button>
-                    <span class="theme-label">Light</span>
+                <div class="action-menu">
+                    <button id="action-menu-btn" class="icon-header-btn" type="button" aria-haspopup="true" aria-expanded="false" title="More actions"><span class="material-symbols-outlined">more_vert</span></button>
+                    <div class="action-menu-dropdown" id="action-menu-dropdown" hidden role="menu" aria-label="More actions menu">
+                        <button type="button" id="export-btn" class="menu-item" role="menuitem">Export chat</button>
+                        <button type="button" id="import-btn" class="menu-item" role="menuitem">Import chat</button>
+                        <button type="button" id="compact-view-toggle-btn" class="menu-item" role="menuitem">Compact view</button>
+                        <button type="button" id="about-dev-btn" class="menu-item" role="menuitem">About developer</button>
+                    </div>
                 </div>
-                <button id="export-btn" class="text-btn" title="Export chat">Export</button>
-                <button id="import-btn" class="text-btn" title="Import chat">Import</button>
                 <input type="file" id="import-input" accept=".json" hidden>
+                <input type="checkbox" id="compact-view-toggle" hidden>
                 <div class="status-pill" id="status-pill">● Gemini · Flash</div>
             </div>
         </div>
@@ -82,22 +133,60 @@
                     <input type="text" id="user-input" placeholder="Ask anything, add files, or share images..." autocomplete="off">
                     <div class="composer-actions">
                         <button id="voice-input-btn" class="icon-btn voice-btn" type="button" title="Speak your prompt">
-                            <span>🎤</span>
+                            <span class="material-symbols-outlined">mic</span>
                         </button>
                         <label class="icon-btn" title="Add image">
                             <input type="file" id="image-input" accept="image/*" hidden>
-                            <span>🖼️</span>
+                            <span class="material-symbols-outlined">image</span>
                         </label>
                         <label class="icon-btn" title="Add file">
                             <input type="file" id="file-input" hidden>
-                            <span>📎</span>
+                            <span class="material-symbols-outlined">attach_file</span>
                         </label>
-                        <button id="send-btn">Send</button>
+                        <button id="send-btn"><span class="material-symbols-outlined">send</span><span class="send-text">Send</span></button>
                     </div>
                 </div>
             </div>
         </div>
     </main>
+
+    <div class="modal-overlay" id="about-overlay" hidden>
+        <div class="about-modal" role="dialog" aria-modal="true" aria-labelledby="about-title">
+            <button class="modal-close-btn" id="about-close-btn" aria-label="Close about dialog">×</button>
+            <div class="about-header">
+                <img src="Sitelogo.png" alt="Developer photo" class="about-avatar">
+                <div>
+                    <h3 id="about-title">About the Developer</h3>
+                    <p class="about-subtitle">A dummy portfolio profile, built with care for AGNI AI.</p>
+                </div>
+            </div>
+            <div class="about-body">
+                <p>Hi, I’m Agni — a creative web developer building modern AI experiences with clean UI, fast interactions, and polished design. This section is a placeholder portfolio view.</p>
+                <div class="about-grid">
+                    <div>
+                        <h4>Role</h4>
+                        <p>Front-end Engineer</p>
+                    </div>
+                    <div>
+                        <h4>Skills</h4>
+                        <p>JavaScript, HTML, CSS, UX, AI tools</p>
+                    </div>
+                    <div>
+                        <h4>Experience</h4>
+                        <p>Designed intuitive dashboards, chat interfaces, and responsive portals.</p>
+                    </div>
+                    <div>
+                        <h4>Passion</h4>
+                        <p>Turning ideas into polished user experiences with helpful AI features.</p>
+                    </div>
+                </div>
+                <div class="about-links">
+                    <a href="#" title="Portfolio website">Portfolio site</a>
+                    <a href="#" title="Contact developer">Contact me</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="script.js?v=7"></script>

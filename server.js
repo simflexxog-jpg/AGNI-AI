@@ -52,6 +52,7 @@ const MAX_ATTACHMENT_DATA_URL_LENGTH = 7 * 1024 * 1024; // ~5MB of binary data
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_HISTORY_MESSAGE_CHARS = 6000;
 const UPSTREAM_TIMEOUT_MS = 30000;
+const isDev = process.env.NODE_ENV !== 'production';
 
 function isOriginAllowed(origin) {
   if (!origin) return false;
@@ -118,7 +119,11 @@ async function serveStaticFile(req, res, filePath) {
     }
 
     setCorsHeaders(req, res);
-    res.setHeader('Cache-Control', ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable');
+    if (isDev) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else {
+      res.setHeader('Cache-Control', ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable');
+    }
 
     if (canGzip) {
       const compressed = zlib.gzipSync(data);
