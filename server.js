@@ -1320,6 +1320,25 @@ app.post('/auth/logout', (req, res) => {
   });
 });
 
+// Temporary debug routes — remove after troubleshooting
+app.get('/debug/set-cookie', (req, res) => {
+  // Allow CORS headers to be set for this diagnostic route
+  setCorsHeaders(req, res);
+  // For cross-site tests, set SameSite=None and secure when in production
+  res.cookie('agni_debug', '1', {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'none',
+    maxAge: 60 * 1000
+  });
+  res.json({ ok: true, note: 'Debug cookie set (agni_debug)'});
+});
+
+app.get('/debug/check-session', (req, res) => {
+  setCorsHeaders(req, res);
+  res.json({ sessionId: req.sessionID || null, hasUser: Boolean(req.session?.user), user: req.session?.user ? { id: req.session.user.googleId } : null });
+});
+
 app.get('/api/user', (req, res) => {
   const user = req.session?.user || null;
   res.json({ user });
