@@ -4,8 +4,19 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const { MongoClient } = require('mongodb');
+const express = require('express');
+const session = require('express-session');
+const { Pool } = require('pg');
+const { OAuth2Client } = require('google-auth-library');
 const { WebSocketServer } = require('ws');
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.warn('Unhandled promise rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+});
 
 const port = Number(process.env.PORT) || 3000;
 const host = process.env.HOST || '0.0.0.0';
@@ -60,11 +71,29 @@ const RAG_CACHE_TTL_MS = 1000 * 60 * 5;
 const RAG_SCAN_EXTENSIONS = new Set(['.md', '.txt', '.json']);
 const RAG_EXCLUDED_FILES = new Set(['package-lock.json', 'conversations.json']);
 
+const app = express();
+const oauthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '');
+const inMemoryConversations = new Map();
+const inMemoryUsers = new Map();
+
 let ragIndexCache = null;
 let ragIndexCacheTime = 0;
 
 function normalizeText(text) {
   return (text || '').replace(/\r/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function isAuthenticated(req, res, next) {
+  if (req.session?.user && req.session.user.googleId) {
+    return next();
+  }
+
+  if (req.path.startsWith('/api/')) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+
+  next();
 }
 
 function tokenize(text) {
@@ -218,7 +247,7 @@ function isOriginAllowed(origin) {
   return false;
 }
 
-function setCorsHeaders(req, res) {
+function setCorsHeaders(req, res, next) {
   const origin = req.headers.origin;
   if (isOriginAllowed(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
@@ -226,6 +255,13 @@ function setCorsHeaders(req, res) {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (typeof next === 'function') {
+    next();
+  }
+}
+
+function getUserId(req) {
+  return req.session?.user?.googleId || null;
 }
 
 function sendJson(req, res, statusCode, payload) {
@@ -301,27 +337,67 @@ function withTimeout(ms) {
   return undefined;
 }
 
-let mongoClient = null;
-let conversationsCollection = null;
+let pgPool = null;
+let pgReady = false;
+let pgInitPromise = null;
+let sessionStore = null;
 
-async function connectToMongo() {
-  if (conversationsCollection) return conversationsCollection;
-  if (!process.env.MONGODB_URI) return null;
+async function connectToDatabase() {
+  if (pgReady && pgPool) return pgPool;
+  if (pgInitPromise) return pgInitPromise;
 
-  try {
-    mongoClient = new MongoClient(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 10000
-    });
-    await mongoClient.connect();
-    const dbName = process.env.MONGODB_DB || 'chatbox';
-    const db = mongoClient.db(dbName);
-    conversationsCollection = db.collection('conversations');
-    console.log(`Connected to MongoDB Atlas database "${dbName}"`);
-    return conversationsCollection;
-  } catch (error) {
-    console.warn('MongoDB Atlas connection failed, falling back to in-memory storage:', error.message);
+  const databaseUrl = process.env.DATABASE_URL || process.env.MONGODB_URI;
+  if (!databaseUrl) {
+    console.warn('DATABASE_URL is not configured; PostgreSQL storage will be disabled.');
     return null;
   }
+
+  pgInitPromise = (async () => {
+    try {
+      pgPool = new Pool({
+        connectionString: databaseUrl,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+        max: 5
+      });
+
+      await pgPool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          google_id TEXT PRIMARY KEY,
+          name TEXT,
+          email TEXT,
+          avatar TEXT,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS conversations (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          title TEXT,
+          messages JSONB NOT NULL DEFAULT '[]'::jsonb,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
+      `);
+
+      pgReady = true;
+      console.log('Connected to PostgreSQL');
+      return pgPool;
+    } catch (error) {
+      console.warn('PostgreSQL connection failed, falling back to in-memory storage:', error.message);
+      pgPool = null;
+      pgReady = false;
+      return null;
+    } finally {
+      pgInitPromise = null;
+    }
+  })();
+
+  return pgInitPromise;
+}
+
+function getDataStore() {
+  return pgReady && pgPool ? connectToDatabase() : null;
 }
 
 function normalizeConversation(doc) {
@@ -334,37 +410,136 @@ function normalizeConversation(doc) {
   };
 }
 
-async function listConversations() {
-  const collection = await connectToMongo();
-  if (!collection) return [];
-
-  const docs = await collection.find({}).sort({ updatedAt: -1, createdAt: -1 }).toArray();
-  return docs.map(normalizeConversation);
+function normalizeUser(doc) {
+  return {
+    id: doc.googleId,
+    name: doc.name,
+    email: doc.email,
+    avatar: doc.avatar
+  };
 }
 
-async function upsertConversation(conversation) {
-  const collection = await connectToMongo();
-  if (!collection) return null;
+async function getUserByGoogleId(googleId) {
+  if (!googleId) return null;
+  const pool = await connectToDatabase();
+  if (!pool) {
+    return inMemoryUsers.get(googleId) || null;
+  }
 
+  const { rows } = await pool.query(
+    'SELECT google_id AS "googleId", name, email, avatar FROM users WHERE google_id = $1',
+    [googleId]
+  );
+  return rows[0] ? normalizeUser(rows[0]) : null;
+}
+
+async function upsertUser(user) {
+  if (!user || !user.googleId) return null;
+  const doc = {
+    googleId: user.googleId,
+    name: user.name || '',
+    email: user.email || '',
+    avatar: user.avatar || '',
+    updatedAt: new Date().toISOString()
+  };
+
+  const pool = await connectToDatabase();
+  if (!pool) {
+    if (!inMemoryUsers.has(user.googleId)) {
+      doc.createdAt = new Date().toISOString();
+    } else {
+      doc.createdAt = inMemoryUsers.get(user.googleId).createdAt;
+    }
+    inMemoryUsers.set(user.googleId, doc);
+    return normalizeUser(doc);
+  }
+
+  const { rows } = await pool.query(
+    `INSERT INTO users (google_id, name, email, avatar, updated_at)
+     VALUES ($1, $2, $3, $4, NOW())
+     ON CONFLICT (google_id) DO UPDATE SET
+       name = EXCLUDED.name,
+       email = EXCLUDED.email,
+       avatar = EXCLUDED.avatar,
+       updated_at = NOW()
+     RETURNING google_id AS "googleId", name, email, avatar`,
+    [user.googleId, doc.name, doc.email, doc.avatar]
+  );
+
+  return rows[0] ? normalizeUser(rows[0]) : null;
+}
+
+async function listConversations(userId) {
+  const pool = await connectToDatabase();
+  if (!pool) {
+    return Array.from(inMemoryConversations.values())
+      .filter(doc => doc.userId === userId)
+      .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
+      .map(normalizeConversation);
+  }
+
+  const { rows } = await pool.query(
+    'SELECT id, title, messages, created_at, updated_at FROM conversations WHERE user_id = $1 ORDER BY updated_at DESC, created_at DESC',
+    [userId]
+  );
+
+  return rows.map(row => normalizeConversation({
+    _id: row.id,
+    id: row.id,
+    title: row.title,
+    messages: row.messages || [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }));
+}
+
+async function upsertConversation(conversation, userId) {
   const doc = {
     _id: conversation.id,
     id: conversation.id,
+    userId,
     title: conversation.title || 'New chat',
     messages: Array.isArray(conversation.messages) ? conversation.messages : [],
     createdAt: conversation.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
 
-  await collection.updateOne({ _id: conversation.id }, { $set: doc }, { upsert: true });
-  return normalizeConversation(doc);
+  const pool = await connectToDatabase();
+  if (!pool) {
+    inMemoryConversations.set(conversation.id, doc);
+    return normalizeConversation(doc);
+  }
+
+  const { rows } = await pool.query(
+    `INSERT INTO conversations (id, user_id, title, messages, created_at, updated_at)
+     VALUES ($1, $2, $3, $4::jsonb, $5, NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       title = EXCLUDED.title,
+       messages = EXCLUDED.messages,
+       updated_at = NOW()
+     RETURNING id, title, messages, created_at, updated_at`,
+    [conversation.id, userId, doc.title, JSON.stringify(doc.messages), doc.createdAt]
+  );
+
+  const row = rows[0];
+  return normalizeConversation({
+    _id: row.id,
+    id: row.id,
+    title: row.title,
+    messages: row.messages || [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  });
 }
 
-async function deleteConversationById(id) {
-  const collection = await connectToMongo();
-  if (!collection) return false;
+async function deleteConversationById(id, userId) {
+  const pool = await connectToDatabase();
+  if (!pool) {
+    return inMemoryConversations.delete(id);
+  }
 
-  const result = await collection.deleteOne({ _id: id });
-  return result.deletedCount > 0;
+  const { rowCount } = await pool.query('DELETE FROM conversations WHERE id = $1 AND user_id = $2 RETURNING id', [id, userId]);
+  return rowCount > 0;
 }
 
 async function getSearchFallback(userMessage) {
@@ -570,6 +745,227 @@ async function callOpenAI(history, currentText, attachments, modelName, thinking
 
 // ---- Request handling -------------------------------------------------------
 
+function writeSseEvent(res, event, data) {
+  if (res.writableEnded) return false;
+  const payload = typeof data === 'string' ? data : JSON.stringify(data);
+  const lines = payload
+    .split(/\r?\n/)
+    .map(line => `data: ${line}`)
+    .join('\n');
+
+  try {
+    res.write(`event: ${event}\n${lines}\n\n`);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function extractGeminiDelta(parsed) {
+  if (!parsed || typeof parsed !== 'object') return '';
+
+  if (typeof parsed.text === 'string') {
+    return parsed.text;
+  }
+
+  const candidateText = parsed?.candidates?.[0]?.content?.parts?.map(part => part?.text || '').join('');
+  if (candidateText) {
+    return candidateText;
+  }
+
+  const deltaContent = parsed?.response?.delta?.content || parsed?.response?.content;
+  if (deltaContent) {
+    if (typeof deltaContent === 'string') return deltaContent;
+    if (Array.isArray(deltaContent)) {
+      return deltaContent.map(item => {
+        if (!item || typeof item !== 'object') return '';
+        return typeof item.text === 'string' ? item.text : typeof item.content === 'string' ? item.content : '';
+      }).join('');
+    }
+  }
+
+  return '';
+}
+
+async function streamOpenAICompatible(provider, apiUrl, apiKey, messages, modelName, thinkingEnabled, abortSignal, onDelta) {
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: modelName,
+      temperature: thinkingEnabled ? 0.8 : 0.6,
+      messages,
+      stream: true
+    }),
+    signal: abortSignal
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => 'Unable to read provider error');
+    const parsedError = (() => {
+      try {
+        return JSON.parse(errorText)?.error?.message || errorText;
+      } catch {
+        return errorText;
+      }
+    })();
+    throw new Error(parsedError || `${provider} request failed`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let boundary = buffer.indexOf('\n\n');
+    while (boundary !== -1) {
+      const chunk = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      boundary = buffer.indexOf('\n\n');
+
+      const lines = chunk.split(/\r?\n/);
+      for (const line of lines) {
+        const text = line.trim();
+        if (!text) continue;
+        if (text === 'data: [DONE]' || text === 'data:[DONE]') {
+          return;
+        }
+        if (!text.startsWith('data:')) continue;
+        const payloadText = text.slice(5).trim();
+        if (!payloadText) continue;
+
+        let parsed;
+        try {
+          parsed = JSON.parse(payloadText);
+        } catch {
+          continue;
+        }
+
+        const delta = parsed?.choices?.[0]?.delta?.content;
+        if (typeof delta === 'string' && delta) {
+          onDelta(delta);
+        } else if (Array.isArray(delta)) {
+          onDelta(delta.map(item => item?.content || '').join(''));
+        } else if (typeof parsed?.choices?.[0]?.delta?.role === 'string') {
+          // Role indicator only, skip.
+        }
+      }
+    }
+  }
+}
+
+async function streamGemini(history, currentText, attachments, modelName, thinkingEnabled, abortSignal, onDelta) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('Missing GEMINI_API_KEY');
+  }
+
+  const contents = history.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }]
+  }));
+
+  const parts = [{ text: currentText }];
+  attachments.filter(isImageAttachment).forEach(item => {
+    const decoded = extractBase64(item.previewUrl);
+    if (decoded) {
+      parts.push({ inlineData: { mimeType: decoded.mimeType, data: decoded.data } });
+    }
+  });
+  contents.push({ role: 'user', parts });
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:streamGenerateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        generationConfig: {
+          temperature: thinkingEnabled ? 0.85 : 0.6
+        },
+        systemInstruction: {
+          parts: [{ text: SYSTEM_PROMPT }]
+        }
+      }),
+      signal: abortSignal
+    }
+  );
+
+  if (!response.ok) {
+    const geminiData = await response.text().catch(() => 'Gemini streaming request failed');
+    throw new Error(geminiData || 'Gemini streaming request failed');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let newlineIndex = buffer.indexOf('\n');
+    while (newlineIndex !== -1) {
+      const line = buffer.slice(0, newlineIndex).trim();
+      buffer = buffer.slice(newlineIndex + 1);
+      newlineIndex = buffer.indexOf('\n');
+
+      if (!line || line === '[DONE]') {
+        continue;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(line);
+      } catch {
+        continue;
+      }
+
+      const delta = extractGeminiDelta(parsed);
+      if (delta) {
+        onDelta(delta);
+      }
+    }
+  }
+}
+
+async function streamProviderResponse({ provider, history, enrichedText, attachments, modelName, thinkingEnabled, abortSignal }, onDelta) {
+  if (provider === 'groq') {
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...history.map(m => ({ role: m.role, content: m.content })),
+      { role: 'user', content: enrichedText }
+    ];
+    await streamOpenAICompatible('Groq', 'https://api.groq.com/openai/v1/chat/completions', process.env.GROQ_API_KEY, messages, modelName, thinkingEnabled, abortSignal, onDelta);
+  } else if (provider === 'openai') {
+    const imageAttachments = attachments.filter(isImageAttachment);
+    const lastUserContent = imageAttachments.length
+      ? [
+          { type: 'text', text: enrichedText },
+          ...imageAttachments.map(item => ({ type: 'image_url', image_url: { url: item.previewUrl } }))
+        ]
+      : enrichedText;
+
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...history.map(m => ({ role: m.role, content: m.content })),
+      { role: 'user', content: lastUserContent }
+    ];
+    await streamOpenAICompatible('OpenAI', 'https://api.openai.com/v1/chat/completions', process.env.OPENAI_API_KEY, messages, modelName, thinkingEnabled, abortSignal, onDelta);
+  } else {
+    await streamGemini(history, enrichedText, attachments, modelName, thinkingEnabled, abortSignal, onDelta);
+  }
+}
+
 async function handleChat(req, res) {
   let body;
   try {
@@ -619,43 +1015,48 @@ async function handleChat(req, res) {
 
   const thinkingEnabled = Boolean(payload.thinking);
 
+  setCorsHeaders(req, res);
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.writeHead(200);
+  res.flushHeaders?.();
+
+  const abortController = new AbortController();
+  req.on('close', () => abortController.abort());
+
+  let sentChunks = false;
+
   try {
-    let botText = '';
+    await streamProviderResponse(
+      {
+        provider,
+        history,
+        enrichedText,
+        attachments,
+        modelName,
+        thinkingEnabled,
+        abortSignal: abortController.signal
+      },
+      (delta) => {
+        if (!delta) return;
+        sentChunks = true;
+        writeSseEvent(res, 'message', { delta });
+      }
+    );
 
-    if (provider === 'groq') {
-      botText = await callGroq(history, enrichedText, modelName, thinkingEnabled);
-    } else if (provider === 'openai') {
-      botText = await callOpenAI(history, enrichedText, attachments, modelName, thinkingEnabled);
-    } else {
-      botText = await callGemini(history, enrichedText, attachments, modelName, thinkingEnabled);
-    }
-
-    if (!botText || !botText.trim() || botText === "Sorry, I couldn't generate a response.") {
-      throw new Error('Provider produced no usable text');
-    }
-
-    sendJson(req, res, 200, {
-      choices: [
-        {
-          message: {
-            content: botText
-          }
-        }
-      ]
-    });
+    writeSseEvent(res, 'done', { complete: true });
   } catch (error) {
     console.error('Chat provider failed, performing search fallback:', error.message);
     const fallbackText = await getSearchFallback(userMessage);
-    sendJson(req, res, 200, {
-      choices: [
-        {
-          message: {
-            content: fallbackText
-          }
-        }
-      ],
-      fallback: true
-    });
+
+    if (!sentChunks) {
+      writeSseEvent(res, 'message', { delta: fallbackText, fallback: true });
+    }
+    writeSseEvent(res, 'error', { message: error.message || 'Provider request failed.' });
+    writeSseEvent(res, 'done', { complete: true, fallback: !sentChunks });
+  } finally {
+    res.end();
   }
 }
 
@@ -730,9 +1131,18 @@ function isPathInsideRoot(root, candidate) {
 
 async function handleConversationPersistence(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
+  const userId = getUserId(req);
+
+  if (!userId) {
+    if (req.path.startsWith('/api/')) {
+      sendJson(req, res, 401, { error: 'Authentication required' });
+      return true;
+    }
+    return false;
+  }
 
   if (req.method === 'GET' && url.pathname === '/api/conversations') {
-    const conversations = await listConversations();
+    const conversations = await listConversations(userId);
     sendJson(req, res, 200, conversations);
     return true;
   }
@@ -759,7 +1169,7 @@ async function handleConversationPersistence(req, res) {
       return true;
     }
 
-    const persisted = await upsertConversation(payload);
+    const persisted = await upsertConversation(payload, userId);
     if (!persisted) {
       sendJson(req, res, 200, payload);
       return true;
@@ -786,7 +1196,7 @@ async function handleConversationPersistence(req, res) {
       return true;
     }
 
-    const deleted = await deleteConversationById(payload.id);
+    const deleted = await deleteConversationById(payload.id, userId);
     sendJson(req, res, 200, { deleted });
     return true;
   }
@@ -794,45 +1204,138 @@ async function handleConversationPersistence(req, res) {
   return false;
 }
 
-const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-
-  if (req.method === 'OPTIONS') {
-    setCorsHeaders(req, res);
-    res.writeHead(204);
-    res.end();
-    return;
-  }
-
-  if (req.method === 'GET' && url.pathname === '/health') {
-    sendJson(req, res, 200, { status: 'ok' });
-    return;
-  }
-
-  if (req.method === 'POST' && url.pathname === '/api/chat') {
-    await handleChat(req, res);
-    return;
-  }
-
-  if (await handleConversationPersistence(req, res)) {
-    return;
-  }
-
-  let filePath = path.resolve(__dirname, '.' + (url.pathname === '/' ? '/index.html' : url.pathname));
-
-  if (!isPathInsideRoot(__dirname, filePath)) {
-    sendJson(req, res, 403, { error: 'Access denied' });
-    return;
-  }
-
+async function initializeSessionStore() {
   try {
-    await fs.promises.access(filePath, fs.constants.R_OK);
-  } catch {
-    filePath = path.join(__dirname, 'index.html');
+    await connectToDatabase();
+  } catch (error) {
+    console.warn('Session store initialization failed:', error.message);
+  }
+}
+
+const sessionOptions = {
+  secret: process.env.SESSION_SECRET || 'supersecretlocal',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 1000 * 60 * 60 * 24 * 7
+  }
+};
+
+app.use(session(sessionOptions));
+app.use(setCorsHeaders);
+
+app.get('/login', (req, res) => {
+  if (req.session?.user?.googleId) {
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+app.get('/auth/google', (req, res) => {
+  res.redirect('/login');
+});
+
+app.get('/api/google-client-id', (req, res) => {
+  res.json({ clientId: process.env.GOOGLE_CLIENT_ID || '' });
+});
+
+app.post('/auth/google/callback', async (req, res) => {
+  let body = '';
+  try {
+    body = await readBody(req);
+  } catch (error) {
+    return res.status(400).json({ error: 'Failed to read request body.' });
   }
 
-  await serveStaticFile(req, res, filePath);
+  let payload = {};
+  try {
+    payload = body ? JSON.parse(body) : {};
+  } catch (error) {
+    return res.status(400).json({ error: 'Invalid JSON body' });
+  }
+
+  const idToken = typeof payload.id_token === 'string' ? payload.id_token : '';
+  if (!idToken) {
+    return res.status(400).json({ error: 'Missing id_token' });
+  }
+
+  let ticket;
+  try {
+    ticket = await oauthClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+  } catch (error) {
+    console.error('Google token validation failed:', error.message);
+    return res.status(401).json({ error: 'Invalid Google token' });
+  }
+
+  const tokenPayload = ticket.getPayload();
+  if (!tokenPayload) {
+    return res.status(401).json({ error: 'Invalid Google token payload' });
+  }
+
+  const user = {
+    googleId: tokenPayload.sub,
+    name: tokenPayload.name || '',
+    email: tokenPayload.email || '',
+    avatar: tokenPayload.picture || ''
+  };
+
+  const savedUser = await upsertUser(user);
+  req.session.user = savedUser;
+  req.session.save(err => {
+    if (err) console.warn('Session save failed:', err.message);
+    res.json({ user: savedUser });
+  });
 });
+
+app.post('/auth/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      console.warn('Session destroy failed:', err.message);
+    }
+    res.clearCookie('connect.sid');
+    res.json({ ok: true });
+  });
+});
+
+app.get('/api/user', (req, res) => {
+  const user = req.session?.user || null;
+  res.json({ user });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.use('/api', isAuthenticated);
+
+app.post('/api/chat', async (req, res) => {
+  await handleChat(req, res);
+});
+
+app.use(async (req, res, next) => {
+  const handled = await handleConversationPersistence(req, res);
+  if (!handled) {
+    next();
+  }
+});
+
+app.get('/', (req, res) => {
+  if (!req.session?.user?.googleId) {
+    return res.redirect('/login');
+  }
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.use(express.static(path.join(__dirname)));
+
+const server = http.createServer(app);
+
 
 const wss = new WebSocketServer({ server });
 

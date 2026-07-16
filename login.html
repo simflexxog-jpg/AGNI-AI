@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AGNI AI — Login</title>
+  <link rel="stylesheet" href="style.css?v=7" />
+</head>
+<body class="login-page">
+  <main class="login-shell">
+    <div class="login-card">
+      <img src="Sitelogo.png" alt="AGNI AI" class="login-logo" />
+      <h1>Welcome to AGNI AI</h1>
+      <p>Sign in with Google to access your private workspace and conversation history.</p>
+      <div id="google-signin-button" class="google-signin-button"></div>
+      <p class="login-note">Your workspace is private and stored securely.</p>
+    </div>
+  </main>
+  <script>
+    const loginOrigin = window.location.origin;
+
+    function setLoginNote(message, isError = false) {
+      const note = document.querySelector('.login-note');
+      if (!note) return;
+      note.textContent = message;
+      note.classList.toggle('error', isError);
+    }
+
+    function showOriginHint() {
+      setLoginNote(`Configure your Google OAuth client with origin ${loginOrigin} under Authorized JavaScript origins.`, true);
+    }
+
+    async function handleCredentialResponse(response) {
+      if (!response || !response.credential) {
+        return;
+      }
+
+      try {
+        const result = await fetch('/auth/google/callback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ id_token: response.credential })
+        });
+
+        if (!result.ok) {
+          const error = await result.json().catch(() => ({}));
+          throw new Error(error.error || 'Login failed');
+        }
+
+        window.location.href = '/';
+      } catch (error) {
+        setLoginNote(error.message || 'Login failed. Please try again.', true);
+      }
+    }
+
+    async function initGoogleSignin() {
+      const response = await fetch('/api/google-client-id');
+      if (!response.ok) {
+        setLoginNote('Failed to fetch Google client ID. Try refreshing the page.', true);
+        return;
+      }
+
+      const data = await response.json();
+      const clientId = data.clientId;
+      if (!clientId) {
+        setLoginNote('Google login is not configured. Please set GOOGLE_CLIENT_ID in .env.', true);
+        return;
+      }
+
+      if (!window.google?.accounts?.id) {
+        setLoginNote('Unable to initialize Google login. Please refresh the page.', true);
+        return;
+      }
+
+      try {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleCredentialResponse
+        });
+        window.google.accounts.id.renderButton(
+          document.getElementById('google-signin-button'),
+          { theme: 'outline', size: 'large', width: 320 }
+        );
+        window.google.accounts.id.prompt();
+      } catch (error) {
+        if (String(error).includes('invalid_client') || String(error).includes('origin')) {
+          showOriginHint();
+          return;
+        }
+        setLoginNote('Google login failed to initialize. Check your OAuth client config.', true);
+        console.error(error);
+      }
+    }
+
+    function loadGoogleClient() {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = initGoogleSignin;
+      script.onerror = () => setLoginNote('Failed to load Google login. Please check your network.', true);
+      document.body.appendChild(script);
+    }
+
+    document.addEventListener('DOMContentLoaded', loadGoogleClient);
+  </script>
+</body>
+</html>

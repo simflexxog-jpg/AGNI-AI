@@ -14,6 +14,10 @@ const imageInput = document.getElementById('image-input');
 const fileInput = document.getElementById('file-input');
 const attachmentPreview = document.getElementById('attachment-preview');
 const suggestionPromptBar = document.getElementById('suggestion-prompt-bar');
+const sidebarUserInfo = document.getElementById('sidebar-user-info');
+const sidebarUserAvatar = document.getElementById('sidebar-user-avatar');
+const sidebarUserName = document.getElementById('sidebar-user-name');
+const logoutBtn = document.getElementById('logout-btn');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const actionMenuBtn = document.getElementById('action-menu-btn');
 const actionMenuDropdown = document.getElementById('action-menu-dropdown');
@@ -48,6 +52,7 @@ let pendingRequest = null;
 let speechRecognition = null;
 let isVoiceListening = false;
 let voiceTranscriptBuffer = '';
+let currentUser = null;
 
 // Settings panel elements (sidebar)
 const openSettingsBtn = document.getElementById('open-settings-btn');
@@ -303,6 +308,36 @@ async function deleteConversationFromServer(id) {
     } catch (error) {
         // Ignore persistence failures and keep using the current UI state.
     }
+}
+
+async function fetchCurrentUser() {
+    try {
+        const response = await fetch('/api/user');
+        if (!response.ok) {
+            throw new Error('Not authenticated');
+        }
+        const data = await response.json();
+        return data.user || null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function renderUserHeader() {
+    if (!sidebarUserInfo || !currentUser) return;
+    sidebarUserAvatar.src = currentUser.avatar || 'Sitelogo.png';
+    sidebarUserAvatar.alt = currentUser.name ? `${currentUser.name}'s avatar` : 'User avatar';
+    sidebarUserName.textContent = currentUser.name || currentUser.email || 'Signed in user';
+    sidebarUserInfo.hidden = false;
+}
+
+async function handleLogout() {
+    try {
+        await fetch('/auth/logout', { method: 'POST' });
+    } catch (error) {
+        // ignore logout errors
+    }
+    window.location.href = '/login';
 }
 
 function getActiveConversation() {
@@ -571,6 +606,86 @@ function streamBotMessage(messageDiv, text) {
     };
 
     tick();
+}
+
+function createStreamingBotMessage() {
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', 'bot-message', 'is-streaming');
+
+    const content = document.createElement('div');
+    content.className = 'message-content';
+    content.textContent = '';
+    messageDiv.appendChild(content);
+
+    const cursor = document.createElement('span');
+    cursor.className = 'stream-cursor';
+    cursor.textContent = '|';
+    messageDiv.appendChild(cursor);
+
+    const actions = document.createElement('div');
+    actions.className = 'message-actions';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'msg-action-btn';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => copyToClipboard(content.textContent || '', copyBtn));
+    actions.appendChild(copyBtn);
+
+    messageDiv.appendChild(actions);
+    chatBox.appendChild(messageDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    return { messageDiv, content, cursor };
+}
+
+function updateStreamingBotMessage(messageDiv, partialText) {
+    const content = messageDiv.querySelector('.message-content');
+    if (!content) return;
+    content.textContent = partialText;
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function finalizeStreamingBotMessage(messageDiv, finalText, persist = true) {
+    const content = messageDiv.querySelector('.message-content');
+    if (!content) return;
+    content.innerHTML = renderMarkdown(finalText);
+    messageDiv.classList.remove('is-streaming');
+    const cursor = messageDiv.querySelector('.stream-cursor');
+    if (cursor) cursor.remove();
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    if (persist) {
+        const conv = getActiveConversation();
+        conv.messages.push({ role: 'bot', content: finalText });
+        saveState();
+        persistConversation(conv);
+        renderHistoryList();
+    }
+
+    return messageDiv;
+}
+
+function finalizeStreamingBotMessageWithError(messageDiv, partialText, errorMessage) {
+    const content = messageDiv.querySelector('.message-content');
+    if (!content) return;
+    content.textContent = partialText;
+    messageDiv.classList.remove('is-streaming');
+    const cursor = messageDiv.querySelector('.stream-cursor');
+    if (cursor) cursor.remove();
+    const notice = document.createElement('div');
+    notice.className = 'stream-error';
+    notice.textContent = `Error: ${errorMessage}`;
+    messageDiv.appendChild(notice);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    const conv = getActiveConversation();
+    conv.messages.push({ role: 'bot', content: partialText });
+    saveState();
+    persistConversation(conv);
+    renderHistoryList();
+
+    return messageDiv;
 }
 
 function appendMessage(text, sender, options = {}) {
@@ -953,27 +1068,95 @@ async function fetchAIResponse(userText, attachmentsSnapshot, historyForRequest)
             })
         });
 
-            const data = await response.json();
-        removeThinkingIndicator();
-        pendingRequest = null;
+        if (!response.ok) {
+            const errorData = await response.text();
+            throw new Error(errorData || 'Request failed');
+        }
 
-        const botText = data?.choices?.[0]?.message?.content;
-        if (typeof botText === 'string' && botText.trim()) {
-            const botEl = appendMessage(botText, 'bot', { animate: true });
-            addRegenerateButton(botEl, userText, attachmentsSnapshot, historyForRequest);
+        const streamMessage = createStreamingBotMessage();
+        let partialText = '';
+        let hadError = false;
+        let errorText = '';
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+            throw new Error('Streaming response unsupported');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        const processEvent = (rawEvent) => {
+            const lines = rawEvent.split(/\r?\n/);
+            let eventType = 'message';
+            let dataLines = [];
+
+            for (const line of lines) {
+                if (line.startsWith('event:')) {
+                    eventType = line.slice(6).trim();
+                } else if (line.startsWith('data:')) {
+                    dataLines.push(line.slice(5).trim());
+                }
+            }
+
+            const rawData = dataLines.join('\n');
+            if (!rawData) return;
+
+            let parsed;
+            try {
+                parsed = JSON.parse(rawData);
+            } catch {
+                return;
+            }
+
+            if (eventType === 'message') {
+                const delta = parsed?.delta;
+                if (typeof delta === 'string') {
+                    partialText += delta;
+                    updateStreamingBotMessage(streamMessage.messageDiv, partialText);
+                } else if (parsed?.error && typeof parsed.error === 'string') {
+                    hadError = true;
+                    errorText = parsed.error;
+                }
+            } else if (eventType === 'error') {
+                hadError = true;
+                errorText = parsed?.message || parsed?.error || 'An error occurred while streaming.';
+            } else if (eventType === 'done') {
+                // no-op; finalization happens after loop
+            }
+        };
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let mark;
+
+            while ((mark = buffer.indexOf('\n\n')) !== -1) {
+                const rawEvent = buffer.slice(0, mark);
+                buffer = buffer.slice(mark + 2);
+                processEvent(rawEvent);
+            }
+        }
+
+        if (buffer.trim()) {
+            processEvent(buffer.trim());
+        }
+
+        if (hadError) {
+            finalizeStreamingBotMessageWithError(streamMessage.messageDiv, partialText, errorText || 'Stream ended with error');
         } else {
-            const fallbackText = data?.fallback
-                ? botText || 'The assistant is temporarily unavailable, but I can still help you search for the answer.'
-                : (typeof botText === 'string' && !botText.trim()
-                    ? 'The assistant responded with empty content. Please try again or choose a different provider.'
-                    : data?.error?.message || 'The assistant is temporarily unavailable.');
-            showFallbackMessage(fallbackText);
+            finalizeStreamingBotMessage(streamMessage.messageDiv, partialText);
+            addRegenerateButton(streamMessage.messageDiv, userText, attachmentsSnapshot, historyForRequest);
         }
     } catch (error) {
         removeThinkingIndicator();
         pendingRequest = null;
-        showFallbackMessage();
+        const streamMessage = createStreamingBotMessage();
+        finalizeStreamingBotMessageWithError(streamMessage.messageDiv, '', error.message || 'The assistant is temporarily unavailable.');
     } finally {
+        removeThinkingIndicator();
+        pendingRequest = null;
         setComposerBusy(false);
     }
 }
@@ -1163,6 +1346,15 @@ async function initializeApp() {
     initTheme();
     initCompactMode();
     loadUISettings();
+    currentUser = await fetchCurrentUser();
+    if (!currentUser) {
+        window.location.href = '/login';
+        return;
+    }
+    renderUserHeader();
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
     await loadState();
     renderAttachments();
     populateModels();
