@@ -1272,7 +1272,8 @@ app.post('/auth/google/callback', async (req, res) => {
       audience: process.env.GOOGLE_CLIENT_ID
     });
   } catch (error) {
-    console.error('Google token validation failed:', error.message);
+    console.error('Google token validation failed:', error && error.message ? error.message : error);
+    console.error('Request headers:', req.headers);
     return res.status(401).json({ error: 'Invalid Google token' });
   }
 
@@ -1289,9 +1290,22 @@ app.post('/auth/google/callback', async (req, res) => {
   };
 
   const savedUser = await upsertUser(user);
+  console.log('Upserted user:', savedUser && savedUser.googleId ? savedUser.googleId : savedUser);
   req.session.user = savedUser;
+  console.log('Session before save:', { id: req.sessionID, cookie: req.session.cookie, user: req.session.user && req.session.user.googleId });
   req.session.save(err => {
-    if (err) console.warn('Session save failed:', err.message);
+    if (err) {
+      console.warn('Session save failed:', err && err.message ? err.message : err);
+      // still respond with error so client can see failure
+      return res.status(500).json({ error: 'Session save failed' });
+    }
+    // Log response Set-Cookie header (if present)
+    try {
+      const setCookie = res.getHeader && res.getHeader('Set-Cookie');
+      console.log('Response Set-Cookie header after session.save:', setCookie);
+    } catch (e) {
+      console.warn('Failed to read Set-Cookie header:', e && e.message ? e.message : e);
+    }
     res.json({ user: savedUser });
   });
 });
