@@ -36,6 +36,8 @@
       }
 
       try {
+        setLoginNote('Signing you in…');
+
         const result = await fetch('/auth/google/callback', {
           method: 'POST',
           credentials: 'include',
@@ -50,7 +52,26 @@
           throw new Error(error.error || 'Login failed');
         }
 
-        window.location.href = '/';
+        // Give the browser time to persist the session cookie
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Verify the session is actually active before redirecting
+        const check = await fetch('/api/user', {
+          credentials: 'include'
+        });
+
+        const userData = await check.json();
+
+        if (userData && userData.user) {
+          window.location.href = '/';
+        } else {
+          // Session didn't stick — wait a moment and redirect anyway
+          // (server will redirect back to login if truly unauthenticated)
+          setLoginNote('Almost there, redirecting…');
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 1000);
+        }
       } catch (error) {
         setLoginNote(error.message || 'Login failed. Please try again.', true);
       }
