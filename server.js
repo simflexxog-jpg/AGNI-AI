@@ -6,7 +6,7 @@ const path = require('path');
 const zlib = require('zlib');
 const express = require('express');
 const session = require('express-session');
-const pgSession = require('connect-pg-simple')(session); // NEW: persistent session store
+const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
 const { OAuth2Client } = require('google-auth-library');
 const { WebSocketServer } = require('ws');
@@ -179,7 +179,7 @@ async function buildKnowledgeIndex() {
         if (!content || content.length > 200000) continue;
         collectedChunks.push(...buildChunksFromText(content, path.relative(rootDir, fullPath).replace(/\\/g, '/')));
       } catch (error) {
-        // Ignore unreadable files and continue.
+        // Ignore unreadable files
       }
     }
   }
@@ -561,7 +561,7 @@ async function getSearchFallback(userMessage) {
       return `I couldn't reach the selected AI provider right now, so I searched the web for you.\n\n${topicText}\n\nSource: ${topicUrl || 'Web search'}\n\nOpen Google: https://www.google.com/search?q=${query}`;
     }
   } catch (error) {
-    // fall back to a helpful message if the search service is unavailable
+    // fall back to helpful message
   }
 
   return `I couldn't reach the selected AI provider right now. I can still help by searching the web for your question.\n\nOpen Google: https://www.google.com/search?q=${query}`;
@@ -1061,7 +1061,7 @@ async function handleConversationPersistence(req, res) {
   return false;
 }
 
-// ---- Session setup with persistent PostgreSQL store -------------------------
+// ---- Session setup ----------------------------------------------------------
 
 const sessionOptions = {
   secret: process.env.SESSION_SECRET || 'supersecretlocal',
@@ -1071,21 +1071,20 @@ const sessionOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+    maxAge: 1000 * 60 * 60 * 24 * 7
   }
 };
 
-// FIX: wire PostgreSQL as the session store so sessions survive Render restarts
 if (process.env.DATABASE_URL && process.env.NODE_ENV === 'production') {
   sessionOptions.store = new pgSession({
     conString: process.env.DATABASE_URL,
     tableName: 'session',
     ssl: { rejectUnauthorized: false },
-    createTableIfMissing: true // auto-creates the session table on first run
+    createTableIfMissing: true
   });
   console.log('Using PostgreSQL session store');
 } else {
-  console.warn('SESSION WARNING: Using in-memory session store. Sessions will be lost on restart. Set DATABASE_URL and NODE_ENV=production to enable persistent sessions.');
+  console.warn('SESSION WARNING: Using in-memory session store. Sessions will be lost on restart.');
 }
 
 app.use(session(sessionOptions));
@@ -1108,6 +1107,8 @@ app.get('/api/google-client-id', (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID || '' });
 });
 
+// *** KEY FIX: return a redirect instead of JSON so the browser
+//     commits the Set-Cookie header before navigating away ***
 app.post('/auth/google/callback', async (req, res) => {
   let body = '';
   try {
@@ -1140,7 +1141,7 @@ app.post('/auth/google/callback', async (req, res) => {
       audience: process.env.GOOGLE_CLIENT_ID
     });
   } catch (error) {
-    console.error('Google token validation failed:', error && error.message ? error.message : error);
+    console.error('Google token validation failed:', error?.message);
     return res.status(401).json({ error: 'Invalid Google token' });
   }
 
@@ -1157,16 +1158,17 @@ app.post('/auth/google/callback', async (req, res) => {
   };
 
   const savedUser = await upsertUser(user);
-  console.log('Upserted user:', savedUser && savedUser.googleId ? savedUser.googleId : savedUser);
   req.session.user = savedUser;
-  console.log('Session before save:', { id: req.sessionID, cookie: req.session.cookie, user: req.session.user && req.session.user.googleId });
 
+  // Save session first, THEN respond — this ensures Set-Cookie is sent
+  // before the client does anything else
   req.session.save(err => {
     if (err) {
-      console.warn('Session save failed:', err && err.message ? err.message : err);
+      console.warn('Session save failed:', err?.message);
       return res.status(500).json({ error: 'Session save failed' });
     }
-    res.json({ user: savedUser });
+    // Return JSON with a redirect flag so the client can navigate cleanly
+    res.json({ user: savedUser, ok: true, redirect: '/' });
   });
 });
 
@@ -1188,7 +1190,7 @@ app.post('/auth/google/redirect', express.urlencoded({ extended: false }), async
       audience: process.env.GOOGLE_CLIENT_ID
     });
   } catch (error) {
-    console.error('Google redirect token validation failed:', error && error.message ? error.message : error);
+    console.error('Google redirect token validation failed:', error?.message);
     return res.status(401).send('Invalid Google token. Please retry login.');
   }
 
@@ -1209,7 +1211,7 @@ app.post('/auth/google/redirect', express.urlencoded({ extended: false }), async
 
   req.session.save(err => {
     if (err) {
-      console.warn('Session save failed:', err && err.message ? err.message : err);
+      console.warn('Session save failed:', err?.message);
       return res.status(500).send('Session save failed. Please retry login.');
     }
     res.redirect('/');
@@ -1224,7 +1226,6 @@ app.post('/auth/logout', (req, res) => {
   });
 });
 
-// Debug routes — remove after confirming login works
 app.get('/debug/set-cookie', (req, res) => {
   setCorsHeaders(req, res);
   res.cookie('agni_debug', '1', {
@@ -1238,7 +1239,7 @@ app.get('/debug/set-cookie', (req, res) => {
 
 app.get('/debug/check-session', (req, res) => {
   setCorsHeaders(req, res);
-  const cookieHeader = req.headers && req.headers.cookie ? req.headers.cookie : null;
+  const cookieHeader = req.headers?.cookie || null;
   console.log('/debug/check-session request cookies:', cookieHeader);
   res.json({
     sessionId: req.sessionID || null,
@@ -1281,7 +1282,6 @@ app.use(express.static(path.join(__dirname)));
 // ---- Server & WebSocket -----------------------------------------------------
 
 const server = http.createServer(app);
-
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
@@ -1306,7 +1306,6 @@ wss.on('connection', (ws) => {
 });
 
 if (require.main === module) {
-  // Kick off DB connection early so the session store is ready before requests arrive
   connectToDatabase().catch(err => {
     console.warn('Initial DB connection attempt failed:', err.message);
   });
@@ -1315,7 +1314,7 @@ if (require.main === module) {
     const displayHost = host === '0.0.0.0' ? 'localhost' : host;
     console.log(`Chat backend is running at http://${displayHost}:${port}`);
     if (ALLOWED_ORIGINS.length === 0) {
-      console.log('ALLOWED_ORIGINS not set — defaulting to localhost-only CORS. Set ALLOWED_ORIGINS for production.');
+      console.log('ALLOWED_ORIGINS not set — defaulting to localhost-only CORS.');
     }
   });
 }

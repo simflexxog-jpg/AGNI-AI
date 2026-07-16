@@ -31,9 +31,7 @@
     }
 
     async function handleCredentialResponse(response) {
-      if (!response || !response.credential) {
-        return;
-      }
+      if (!response || !response.credential) return;
 
       try {
         setLoginNote('Signing you in…');
@@ -41,9 +39,7 @@
         const result = await fetch('/auth/google/callback', {
           method: 'POST',
           credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id_token: response.credential })
         });
 
@@ -52,25 +48,22 @@
           throw new Error(error.error || 'Login failed');
         }
 
-        // Give the browser time to persist the session cookie
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Retry session check up to 5 times with 500ms delay each
+        let user = null;
+        for (let i = 0; i < 5; i++) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const check = await fetch('/api/user', { credentials: 'include' });
+          const data = await check.json();
+          if (data && data.user) {
+            user = data.user;
+            break;
+          }
+        }
 
-        // Verify the session is actually active before redirecting
-        const check = await fetch('/api/user', {
-          credentials: 'include'
-        });
-
-        const userData = await check.json();
-
-        if (userData && userData.user) {
+        if (user) {
           window.location.href = '/';
         } else {
-          // Session didn't stick — wait a moment and redirect anyway
-          // (server will redirect back to login if truly unauthenticated)
-          setLoginNote('Almost there, redirecting…');
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 1000);
+          setLoginNote('Session could not be established. Please try again.', true);
         }
       } catch (error) {
         setLoginNote(error.message || 'Login failed. Please try again.', true);
