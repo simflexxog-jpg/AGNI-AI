@@ -1265,9 +1265,13 @@ app.post('/auth/google/callback', async (req, res) => {
     return res.status(400).json({ error: 'Invalid JSON body' });
   }
 
-  const idToken = typeof payload.id_token === 'string' ? payload.id_token : '';
+  const idToken = typeof payload.id_token === 'string'
+    ? payload.id_token
+    : typeof payload.credential === 'string'
+      ? payload.credential
+      : '';
   if (!idToken) {
-    return res.status(400).json({ error: 'Missing id_token' });
+    return res.status(400).json({ error: 'Missing id_token or credential' });
   }
 
   let ticket;

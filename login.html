@@ -78,13 +78,13 @@
       try {
         window.google.accounts.id.initialize({
           client_id: clientId,
-          callback: handleCredentialResponse
+          callback: handleCredentialResponse,
+          auto_select: false
         });
         window.google.accounts.id.renderButton(
           document.getElementById('google-signin-button'),
           { theme: 'outline', size: 'large', width: 320 }
         );
-        window.google.accounts.id.prompt();
       } catch (error) {
         if (String(error).includes('invalid_client') || String(error).includes('origin')) {
           showOriginHint();
