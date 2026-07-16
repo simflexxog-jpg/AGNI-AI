@@ -72,6 +72,11 @@ const RAG_SCAN_EXTENSIONS = new Set(['.md', '.txt', '.json']);
 const RAG_EXCLUDED_FILES = new Set(['package-lock.json', 'conversations.json']);
 
 const app = express();
+// When running behind a proxy (e.g., Render), trust the first proxy so
+// `req.secure` and other proxy-aware fields are correct for cookie handling.
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 const oauthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '');
 const inMemoryConversations = new Map();
 const inMemoryUsers = new Map();
@@ -1222,7 +1227,7 @@ const sessionOptions = {
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 1000 * 60 * 60 * 24 * 7
   }
 };
@@ -1336,7 +1341,9 @@ app.get('/debug/set-cookie', (req, res) => {
 
 app.get('/debug/check-session', (req, res) => {
   setCorsHeaders(req, res);
-  res.json({ sessionId: req.sessionID || null, hasUser: Boolean(req.session?.user), user: req.session?.user ? { id: req.session.user.googleId } : null });
+  const cookieHeader = req.headers && req.headers.cookie ? req.headers.cookie : null;
+  console.log('/debug/check-session request cookies:', cookieHeader);
+  res.json({ sessionId: req.sessionID || null, hasUser: Boolean(req.session?.user), user: req.session?.user ? { id: req.session.user.googleId } : null, requestCookies: cookieHeader });
 });
 
 app.get('/api/user', (req, res) => {
