@@ -6,6 +6,7 @@ const path = require('path');
 const zlib = require('zlib');
 const express = require('express');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session); // NEW: persistent session store
 const { Pool } = require('pg');
 const { OAuth2Client } = require('google-auth-library');
 const { WebSocketServer } = require('ws');
@@ -33,9 +34,6 @@ const mimeTypes = {
   '.svg': 'image/svg+xml'
 };
 
-// Models the frontend is allowed to request, per provider. Anything else
-// gets silently replaced with the provider's default. This prevents a
-// client from injecting an arbitrary string into the upstream API URL/body.
 const ALLOWED_MODELS = {
   gemini: ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro'],
   groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'mixtral-8x7b-32768'],
@@ -48,18 +46,14 @@ const DEFAULT_MODELS = {
   openai: 'gpt-4o-mini'
 };
 
-// Comma-separated list of origins allowed to call the API, e.g.
-// "https://myapp.com,https://www.myapp.com". If left unset, we fall back to
-// allowing localhost/127.0.0.1 on any port, which is convenient for local
-// development but should NOT be relied on in production.
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
 
-const MAX_BODY_BYTES = 20 * 1024 * 1024; // 20MB cap on incoming request bodies
+const MAX_BODY_BYTES = 20 * 1024 * 1024;
 const MAX_ATTACHMENTS = 6;
-const MAX_ATTACHMENT_DATA_URL_LENGTH = 7 * 1024 * 1024; // ~5MB of binary data
+const MAX_ATTACHMENT_DATA_URL_LENGTH = 7 * 1024 * 1024;
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_HISTORY_MESSAGE_CHARS = 6000;
 const UPSTREAM_TIMEOUT_MS = 30000;
@@ -72,11 +66,11 @@ const RAG_SCAN_EXTENSIONS = new Set(['.md', '.txt', '.json']);
 const RAG_EXCLUDED_FILES = new Set(['package-lock.json', 'conversations.json']);
 
 const app = express();
-// When running behind a proxy (e.g., Render), trust the first proxy so
-// `req.secure` and other proxy-aware fields are correct for cookie handling.
+
 if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
+
 const oauthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '');
 const inMemoryConversations = new Map();
 const inMemoryUsers = new Map();
@@ -246,7 +240,6 @@ function isOriginAllowed(origin) {
   if (!origin) return false;
   if (ALLOWED_ORIGINS.includes(origin)) return true;
   if (ALLOWED_ORIGINS.length === 0) {
-    // Dev fallback: allow localhost / 127.0.0.1 on any port.
     return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
   }
   return false;
@@ -257,8 +250,6 @@ function setCorsHeaders(req, res, next) {
   if (isOriginAllowed(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
-    // Allow browsers to send and receive cookies when requests are same-origin
-    // or when the origin is explicitly allowed.
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -338,7 +329,6 @@ async function serveStaticFile(req, res, filePath) {
 }
 
 function withTimeout(ms) {
-  // AbortSignal.timeout is available in Node 18+. Fall back gracefully if not.
   if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
     return AbortSignal.timeout(ms);
   }
@@ -348,7 +338,6 @@ function withTimeout(ms) {
 let pgPool = null;
 let pgReady = false;
 let pgInitPromise = null;
-let sessionStore = null;
 
 async function connectToDatabase() {
   if (pgReady && pgPool) return pgPool;
@@ -402,10 +391,6 @@ async function connectToDatabase() {
   })();
 
   return pgInitPromise;
-}
-
-function getDataStore() {
-  return pgReady && pgPool ? connectToDatabase() : null;
 }
 
 function normalizeConversation(doc) {
@@ -554,22 +539,18 @@ async function getSearchFallback(userMessage) {
   const query = encodeURIComponent((userMessage || 'latest news').trim());
   try {
     const response = await fetch(`https://api.duckduckgo.com/?q=${query}&format=json&no_redirect=1&no_html=1&skip_disambig=1`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0'
-      },
+      headers: { 'User-Agent': 'Mozilla/5.0' },
       signal: withTimeout(UPSTREAM_TIMEOUT_MS)
     });
 
-    if (!response.ok) {
-      throw new Error('Search request failed');
-    }
+    if (!response.ok) throw new Error('Search request failed');
 
     const data = await response.json();
     const abstractText = data?.AbstractText?.trim();
     const abstractUrl = data?.AbstractURL?.trim();
 
     if (abstractText) {
-      return `I couldn’t reach the selected AI provider right now, so I searched the web for you.\n\n${abstractText}\n\nSource: ${abstractUrl || 'Web search'}\n\nOpen Google: https://www.google.com/search?q=${query}`;
+      return `I couldn't reach the selected AI provider right now, so I searched the web for you.\n\n${abstractText}\n\nSource: ${abstractUrl || 'Web search'}\n\nOpen Google: https://www.google.com/search?q=${query}`;
     }
 
     const firstTopic = data?.RelatedTopics?.[0];
@@ -577,16 +558,14 @@ async function getSearchFallback(userMessage) {
     const topicUrl = firstTopic?.FirstURL?.trim();
 
     if (topicText) {
-      return `I couldn’t reach the selected AI provider right now, so I searched the web for you.\n\n${topicText}\n\nSource: ${topicUrl || 'Web search'}\n\nOpen Google: https://www.google.com/search?q=${query}`;
+      return `I couldn't reach the selected AI provider right now, so I searched the web for you.\n\n${topicText}\n\nSource: ${topicUrl || 'Web search'}\n\nOpen Google: https://www.google.com/search?q=${query}`;
     }
   } catch (error) {
     // fall back to a helpful message if the search service is unavailable
   }
 
-  return `I couldn’t reach the selected AI provider right now. I can still help by searching the web for your question.\n\nOpen Google: https://www.google.com/search?q=${query}`;
+  return `I couldn't reach the selected AI provider right now. I can still help by searching the web for your question.\n\nOpen Google: https://www.google.com/search?q=${query}`;
 }
-
-// ---- Conversation / attachment sanitization -------------------------------
 
 function sanitizeHistory(rawHistory) {
   if (!Array.isArray(rawHistory)) return [];
@@ -624,13 +603,9 @@ function isImageAttachment(item) {
   return Boolean(item.type && item.type.startsWith('image/') && item.previewUrl);
 }
 
-// ---- Provider calls ---------------------------------------------------------
-
 async function callGemini(history, currentText, attachments, modelName, thinkingEnabled) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('Missing GEMINI_API_KEY');
-  }
+  if (!apiKey) throw new Error('Missing GEMINI_API_KEY');
 
   const contents = history.map(m => ({
     role: m.role === 'assistant' ? 'model' : 'user',
@@ -640,9 +615,7 @@ async function callGemini(history, currentText, attachments, modelName, thinking
   const parts = [{ text: currentText }];
   attachments.filter(isImageAttachment).forEach(item => {
     const decoded = extractBase64(item.previewUrl);
-    if (decoded) {
-      parts.push({ inlineData: { mimeType: decoded.mimeType, data: decoded.data } });
-    }
+    if (decoded) parts.push({ inlineData: { mimeType: decoded.mimeType, data: decoded.data } });
   });
   contents.push({ role: 'user', parts });
 
@@ -653,33 +626,22 @@ async function callGemini(history, currentText, attachments, modelName, thinking
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents,
-        generationConfig: {
-          temperature: thinkingEnabled ? 0.85 : 0.6
-        },
-        systemInstruction: {
-          parts: [{ text: SYSTEM_PROMPT }]
-        }
+        generationConfig: { temperature: thinkingEnabled ? 0.85 : 0.6 },
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }
       }),
       signal: withTimeout(UPSTREAM_TIMEOUT_MS)
     }
   );
 
   const geminiData = await response.json();
-  if (!response.ok) {
-    throw new Error(geminiData?.error?.message || 'Gemini request failed');
-  }
-
+  if (!response.ok) throw new Error(geminiData?.error?.message || 'Gemini request failed');
   return geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response.";
 }
 
 async function callGroq(history, currentText, modelName, thinkingEnabled) {
   const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    throw new Error('Missing GROQ_API_KEY');
-  }
+  if (!apiKey) throw new Error('Missing GROQ_API_KEY');
 
-  // Groq's hosted text models here don't accept image input, so attachments
-  // are represented only as filenames already folded into currentText.
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
     ...history.map(m => ({ role: m.role, content: m.content })),
@@ -688,15 +650,8 @@ async function callGroq(history, currentText, modelName, thinkingEnabled) {
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: modelName,
-      temperature: thinkingEnabled ? 0.8 : 0.6,
-      messages
-    }),
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: modelName, temperature: thinkingEnabled ? 0.8 : 0.6, messages }),
     signal: withTimeout(UPSTREAM_TIMEOUT_MS)
   });
 
@@ -705,15 +660,12 @@ async function callGroq(history, currentText, modelName, thinkingEnabled) {
     console.error('Groq request failed', response.status, groqData);
     throw new Error(groqData?.error?.message || 'Groq request failed');
   }
-
   return groqData?.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response.";
 }
 
 async function callOpenAI(history, currentText, attachments, modelName, thinkingEnabled) {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error('Missing OPENAI_API_KEY');
-  }
+  if (!apiKey) throw new Error('Missing OPENAI_API_KEY');
 
   const imageAttachments = attachments.filter(isImageAttachment);
   const lastUserContent = imageAttachments.length
@@ -731,36 +683,20 @@ async function callOpenAI(history, currentText, attachments, modelName, thinking
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: modelName,
-      temperature: thinkingEnabled ? 0.8 : 0.6,
-      messages
-    }),
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: modelName, temperature: thinkingEnabled ? 0.8 : 0.6, messages }),
     signal: withTimeout(UPSTREAM_TIMEOUT_MS)
   });
 
   const openAiData = await response.json();
-  if (!response.ok) {
-    throw new Error(openAiData?.error?.message || 'OpenAI request failed');
-  }
-
+  if (!response.ok) throw new Error(openAiData?.error?.message || 'OpenAI request failed');
   return openAiData?.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response.";
 }
-
-// ---- Request handling -------------------------------------------------------
 
 function writeSseEvent(res, event, data) {
   if (res.writableEnded) return false;
   const payload = typeof data === 'string' ? data : JSON.stringify(data);
-  const lines = payload
-    .split(/\r?\n/)
-    .map(line => `data: ${line}`)
-    .join('\n');
-
+  const lines = payload.split(/\r?\n/).map(line => `data: ${line}`).join('\n');
   try {
     res.write(`event: ${event}\n${lines}\n\n`);
     return true;
@@ -771,15 +707,10 @@ function writeSseEvent(res, event, data) {
 
 function extractGeminiDelta(parsed) {
   if (!parsed || typeof parsed !== 'object') return '';
-
-  if (typeof parsed.text === 'string') {
-    return parsed.text;
-  }
+  if (typeof parsed.text === 'string') return parsed.text;
 
   const candidateText = parsed?.candidates?.[0]?.content?.parts?.map(part => part?.text || '').join('');
-  if (candidateText) {
-    return candidateText;
-  }
+  if (candidateText) return candidateText;
 
   const deltaContent = parsed?.response?.delta?.content || parsed?.response?.content;
   if (deltaContent) {
@@ -791,34 +722,22 @@ function extractGeminiDelta(parsed) {
       }).join('');
     }
   }
-
   return '';
 }
 
 async function streamOpenAICompatible(provider, apiUrl, apiKey, messages, modelName, thinkingEnabled, abortSignal, onDelta) {
   const response = await fetch(apiUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: modelName,
-      temperature: thinkingEnabled ? 0.8 : 0.6,
-      messages,
-      stream: true
-    }),
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: modelName, temperature: thinkingEnabled ? 0.8 : 0.6, messages, stream: true }),
     signal: abortSignal
   });
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => 'Unable to read provider error');
     const parsedError = (() => {
-      try {
-        return JSON.parse(errorText)?.error?.message || errorText;
-      } catch {
-        return errorText;
-      }
+      try { return JSON.parse(errorText)?.error?.message || errorText; }
+      catch { return errorText; }
     })();
     throw new Error(parsedError || `${provider} request failed`);
   }
@@ -842,27 +761,20 @@ async function streamOpenAICompatible(provider, apiUrl, apiKey, messages, modelN
       for (const line of lines) {
         const text = line.trim();
         if (!text) continue;
-        if (text === 'data: [DONE]' || text === 'data:[DONE]') {
-          return;
-        }
+        if (text === 'data: [DONE]' || text === 'data:[DONE]') return;
         if (!text.startsWith('data:')) continue;
         const payloadText = text.slice(5).trim();
         if (!payloadText) continue;
 
         let parsed;
-        try {
-          parsed = JSON.parse(payloadText);
-        } catch {
-          continue;
-        }
+        try { parsed = JSON.parse(payloadText); }
+        catch { continue; }
 
         const delta = parsed?.choices?.[0]?.delta?.content;
         if (typeof delta === 'string' && delta) {
           onDelta(delta);
         } else if (Array.isArray(delta)) {
           onDelta(delta.map(item => item?.content || '').join(''));
-        } else if (typeof parsed?.choices?.[0]?.delta?.role === 'string') {
-          // Role indicator only, skip.
         }
       }
     }
@@ -871,9 +783,7 @@ async function streamOpenAICompatible(provider, apiUrl, apiKey, messages, modelN
 
 async function streamGemini(history, currentText, attachments, modelName, thinkingEnabled, abortSignal, onDelta) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('Missing GEMINI_API_KEY');
-  }
+  if (!apiKey) throw new Error('Missing GEMINI_API_KEY');
 
   const contents = history.map(m => ({
     role: m.role === 'assistant' ? 'model' : 'user',
@@ -883,9 +793,7 @@ async function streamGemini(history, currentText, attachments, modelName, thinki
   const parts = [{ text: currentText }];
   attachments.filter(isImageAttachment).forEach(item => {
     const decoded = extractBase64(item.previewUrl);
-    if (decoded) {
-      parts.push({ inlineData: { mimeType: decoded.mimeType, data: decoded.data } });
-    }
+    if (decoded) parts.push({ inlineData: { mimeType: decoded.mimeType, data: decoded.data } });
   });
   contents.push({ role: 'user', parts });
 
@@ -896,12 +804,8 @@ async function streamGemini(history, currentText, attachments, modelName, thinki
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents,
-        generationConfig: {
-          temperature: thinkingEnabled ? 0.85 : 0.6
-        },
-        systemInstruction: {
-          parts: [{ text: SYSTEM_PROMPT }]
-        }
+        generationConfig: { temperature: thinkingEnabled ? 0.85 : 0.6 },
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }
       }),
       signal: abortSignal
     }
@@ -927,21 +831,14 @@ async function streamGemini(history, currentText, attachments, modelName, thinki
       buffer = buffer.slice(newlineIndex + 1);
       newlineIndex = buffer.indexOf('\n');
 
-      if (!line || line === '[DONE]') {
-        continue;
-      }
+      if (!line || line === '[DONE]') continue;
 
       let parsed;
-      try {
-        parsed = JSON.parse(line);
-      } catch {
-        continue;
-      }
+      try { parsed = JSON.parse(line); }
+      catch { continue; }
 
       const delta = extractGeminiDelta(parsed);
-      if (delta) {
-        onDelta(delta);
-      }
+      if (delta) onDelta(delta);
     }
   }
 }
@@ -1017,9 +914,7 @@ async function handleChat(req, res) {
   let modelName = String(
     payload.model || process.env[`${provider.toUpperCase()}_MODEL`] || DEFAULT_MODELS[provider]
   ).trim();
-  if (!ALLOWED_MODELS[provider].includes(modelName)) {
-    modelName = DEFAULT_MODELS[provider];
-  }
+  if (!ALLOWED_MODELS[provider].includes(modelName)) modelName = DEFAULT_MODELS[provider];
 
   const thinkingEnabled = Boolean(payload.thinking);
 
@@ -1037,30 +932,18 @@ async function handleChat(req, res) {
 
   try {
     await streamProviderResponse(
-      {
-        provider,
-        history,
-        enrichedText,
-        attachments,
-        modelName,
-        thinkingEnabled,
-        abortSignal: abortController.signal
-      },
+      { provider, history, enrichedText, attachments, modelName, thinkingEnabled, abortSignal: abortController.signal },
       (delta) => {
         if (!delta) return;
         sentChunks = true;
         writeSseEvent(res, 'message', { delta });
       }
     );
-
     writeSseEvent(res, 'done', { complete: true });
   } catch (error) {
     console.error('Chat provider failed, performing search fallback:', error.message);
     const fallbackText = await getSearchFallback(userMessage);
-
-    if (!sentChunks) {
-      writeSseEvent(res, 'message', { delta: fallbackText, fallback: true });
-    }
+    if (!sentChunks) writeSseEvent(res, 'message', { delta: fallbackText, fallback: true });
     writeSseEvent(res, 'error', { message: error.message || 'Provider request failed.' });
     writeSseEvent(res, 'done', { complete: true, fallback: !sentChunks });
   } finally {
@@ -1070,9 +953,7 @@ async function handleChat(req, res) {
 
 function buildChatPayload(payload) {
   const userMessage = typeof payload.message === 'string' ? payload.message : '';
-  if (!userMessage.trim()) {
-    return null;
-  }
+  if (!userMessage.trim()) return null;
 
   const history = sanitizeHistory(payload.history);
   const attachments = sanitizeAttachments(payload.attachments);
@@ -1088,12 +969,9 @@ function buildChatPayload(payload) {
   let modelName = String(
     payload.model || process.env[`${provider.toUpperCase()}_MODEL`] || DEFAULT_MODELS[provider]
   ).trim();
-  if (!ALLOWED_MODELS[provider].includes(modelName)) {
-    modelName = DEFAULT_MODELS[provider];
-  }
+  if (!ALLOWED_MODELS[provider].includes(modelName)) modelName = DEFAULT_MODELS[provider];
 
   const thinkingEnabled = Boolean(payload.thinking);
-
   return { userMessage, history, attachments, currentText, provider, modelName, thinkingEnabled };
 }
 
@@ -1132,11 +1010,6 @@ async function handleWebSocketChat(ws, payload) {
   }
 }
 
-function isPathInsideRoot(root, candidate) {
-  const relative = path.relative(root, candidate);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
-}
-
 async function handleConversationPersistence(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const userId = getUserId(req);
@@ -1157,52 +1030,28 @@ async function handleConversationPersistence(req, res) {
 
   if ((req.method === 'POST' || req.method === 'PUT') && url.pathname === '/api/conversations') {
     let body = '';
-    try {
-      body = await readBody(req);
-    } catch (error) {
-      sendJson(req, res, 400, { error: 'Failed to read request body.' });
-      return true;
-    }
+    try { body = await readBody(req); }
+    catch (error) { sendJson(req, res, 400, { error: 'Failed to read request body.' }); return true; }
 
     let payload = {};
-    try {
-      payload = body ? JSON.parse(body) : {};
-    } catch (error) {
-      sendJson(req, res, 400, { error: 'Invalid JSON body' });
-      return true;
-    }
+    try { payload = body ? JSON.parse(body) : {}; }
+    catch (error) { sendJson(req, res, 400, { error: 'Invalid JSON body' }); return true; }
 
-    if (!payload.id) {
-      sendJson(req, res, 400, { error: 'Conversation id is required.' });
-      return true;
-    }
+    if (!payload.id) { sendJson(req, res, 400, { error: 'Conversation id is required.' }); return true; }
 
     const persisted = await upsertConversation(payload, userId);
-    if (!persisted) {
-      sendJson(req, res, 200, payload);
-      return true;
-    }
-
-    sendJson(req, res, 200, persisted);
+    sendJson(req, res, 200, persisted || payload);
     return true;
   }
 
   if (req.method === 'DELETE' && url.pathname === '/api/conversations') {
     let body = '';
-    try {
-      body = await readBody(req);
-    } catch (error) {
-      sendJson(req, res, 400, { error: 'Failed to read request body.' });
-      return true;
-    }
+    try { body = await readBody(req); }
+    catch (error) { sendJson(req, res, 400, { error: 'Failed to read request body.' }); return true; }
 
     let payload = {};
-    try {
-      payload = body ? JSON.parse(body) : {};
-    } catch (error) {
-      sendJson(req, res, 400, { error: 'Invalid JSON body' });
-      return true;
-    }
+    try { payload = body ? JSON.parse(body) : {}; }
+    catch (error) { sendJson(req, res, 400, { error: 'Invalid JSON body' }); return true; }
 
     const deleted = await deleteConversationById(payload.id, userId);
     sendJson(req, res, 200, { deleted });
@@ -1212,13 +1061,7 @@ async function handleConversationPersistence(req, res) {
   return false;
 }
 
-async function initializeSessionStore() {
-  try {
-    await connectToDatabase();
-  } catch (error) {
-    console.warn('Session store initialization failed:', error.message);
-  }
-}
+// ---- Session setup with persistent PostgreSQL store -------------------------
 
 const sessionOptions = {
   secret: process.env.SESSION_SECRET || 'supersecretlocal',
@@ -1228,12 +1071,27 @@ const sessionOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 1000 * 60 * 60 * 24 * 7
+    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
 };
 
+// FIX: wire PostgreSQL as the session store so sessions survive Render restarts
+if (process.env.DATABASE_URL && process.env.NODE_ENV === 'production') {
+  sessionOptions.store = new pgSession({
+    conString: process.env.DATABASE_URL,
+    tableName: 'session',
+    ssl: { rejectUnauthorized: false },
+    createTableIfMissing: true // auto-creates the session table on first run
+  });
+  console.log('Using PostgreSQL session store');
+} else {
+  console.warn('SESSION WARNING: Using in-memory session store. Sessions will be lost on restart. Set DATABASE_URL and NODE_ENV=production to enable persistent sessions.');
+}
+
 app.use(session(sessionOptions));
 app.use(setCorsHeaders);
+
+// ---- Routes -----------------------------------------------------------------
 
 app.get('/login', (req, res) => {
   if (req.session?.user?.googleId) {
@@ -1270,6 +1128,7 @@ app.post('/auth/google/callback', async (req, res) => {
     : typeof payload.credential === 'string'
       ? payload.credential
       : '';
+
   if (!idToken) {
     return res.status(400).json({ error: 'Missing id_token or credential' });
   }
@@ -1282,7 +1141,6 @@ app.post('/auth/google/callback', async (req, res) => {
     });
   } catch (error) {
     console.error('Google token validation failed:', error && error.message ? error.message : error);
-    console.error('Request headers:', req.headers);
     return res.status(401).json({ error: 'Invalid Google token' });
   }
 
@@ -1302,52 +1160,93 @@ app.post('/auth/google/callback', async (req, res) => {
   console.log('Upserted user:', savedUser && savedUser.googleId ? savedUser.googleId : savedUser);
   req.session.user = savedUser;
   console.log('Session before save:', { id: req.sessionID, cookie: req.session.cookie, user: req.session.user && req.session.user.googleId });
+
   req.session.save(err => {
     if (err) {
       console.warn('Session save failed:', err && err.message ? err.message : err);
-      // still respond with error so client can see failure
       return res.status(500).json({ error: 'Session save failed' });
-    }
-    // Log response Set-Cookie header (if present)
-    try {
-      const setCookie = res.getHeader && res.getHeader('Set-Cookie');
-      console.log('Response Set-Cookie header after session.save:', setCookie);
-    } catch (e) {
-      console.warn('Failed to read Set-Cookie header:', e && e.message ? e.message : e);
     }
     res.json({ user: savedUser });
   });
 });
 
+app.post('/auth/google/redirect', express.urlencoded({ extended: false }), async (req, res) => {
+  const idToken = typeof req.body.credential === 'string'
+    ? req.body.credential
+    : typeof req.body.id_token === 'string'
+      ? req.body.id_token
+      : '';
+
+  if (!idToken) {
+    return res.status(400).send('Missing credential. Please retry login.');
+  }
+
+  let ticket;
+  try {
+    ticket = await oauthClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+  } catch (error) {
+    console.error('Google redirect token validation failed:', error && error.message ? error.message : error);
+    return res.status(401).send('Invalid Google token. Please retry login.');
+  }
+
+  const tokenPayload = ticket.getPayload();
+  if (!tokenPayload) {
+    return res.status(401).send('Invalid Google token payload. Please retry login.');
+  }
+
+  const user = {
+    googleId: tokenPayload.sub,
+    name: tokenPayload.name || '',
+    email: tokenPayload.email || '',
+    avatar: tokenPayload.picture || ''
+  };
+
+  const savedUser = await upsertUser(user);
+  req.session.user = savedUser;
+
+  req.session.save(err => {
+    if (err) {
+      console.warn('Session save failed:', err && err.message ? err.message : err);
+      return res.status(500).send('Session save failed. Please retry login.');
+    }
+    res.redirect('/');
+  });
+});
+
 app.post('/auth/logout', (req, res) => {
   req.session.destroy(err => {
-    if (err) {
-      console.warn('Session destroy failed:', err.message);
-    }
+    if (err) console.warn('Session destroy failed:', err.message);
     res.clearCookie('connect.sid');
     res.json({ ok: true });
   });
 });
 
-// Temporary debug routes — remove after troubleshooting
+// Debug routes — remove after confirming login works
 app.get('/debug/set-cookie', (req, res) => {
-  // Allow CORS headers to be set for this diagnostic route
   setCorsHeaders(req, res);
-  // For cross-site tests, set SameSite=None and secure when in production
   res.cookie('agni_debug', '1', {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'none',
     maxAge: 60 * 1000
   });
-  res.json({ ok: true, note: 'Debug cookie set (agni_debug)'});
+  res.json({ ok: true, note: 'Debug cookie set (agni_debug)' });
 });
 
 app.get('/debug/check-session', (req, res) => {
   setCorsHeaders(req, res);
   const cookieHeader = req.headers && req.headers.cookie ? req.headers.cookie : null;
   console.log('/debug/check-session request cookies:', cookieHeader);
-  res.json({ sessionId: req.sessionID || null, hasUser: Boolean(req.session?.user), user: req.session?.user ? { id: req.session.user.googleId } : null, requestCookies: cookieHeader });
+  res.json({
+    sessionId: req.sessionID || null,
+    hasUser: Boolean(req.session?.user),
+    user: req.session?.user ? { id: req.session.user.googleId } : null,
+    requestCookies: cookieHeader,
+    usingPgStore: Boolean(process.env.DATABASE_URL && process.env.NODE_ENV === 'production')
+  });
 });
 
 app.get('/api/user', (req, res) => {
@@ -1367,9 +1266,7 @@ app.post('/api/chat', async (req, res) => {
 
 app.use(async (req, res, next) => {
   const handled = await handleConversationPersistence(req, res);
-  if (!handled) {
-    next();
-  }
+  if (!handled) next();
 });
 
 app.get('/', (req, res) => {
@@ -1381,8 +1278,9 @@ app.get('/', (req, res) => {
 
 app.use(express.static(path.join(__dirname)));
 
-const server = http.createServer(app);
+// ---- Server & WebSocket -----------------------------------------------------
 
+const server = http.createServer(app);
 
 const wss = new WebSocketServer({ server });
 
@@ -1408,6 +1306,11 @@ wss.on('connection', (ws) => {
 });
 
 if (require.main === module) {
+  // Kick off DB connection early so the session store is ready before requests arrive
+  connectToDatabase().catch(err => {
+    console.warn('Initial DB connection attempt failed:', err.message);
+  });
+
   server.listen(port, host, () => {
     const displayHost = host === '0.0.0.0' ? 'localhost' : host;
     console.log(`Chat backend is running at http://${displayHost}:${port}`);
