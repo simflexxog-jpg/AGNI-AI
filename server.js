@@ -252,6 +252,9 @@ function setCorsHeaders(req, res, next) {
   if (isOriginAllowed(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
+    // Allow browsers to send and receive cookies when requests are same-origin
+    // or when the origin is explicitly allowed.
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

@@ -38,6 +38,7 @@
       try {
         const result = await fetch('/auth/google/callback', {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json'
           },
