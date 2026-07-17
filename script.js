@@ -68,6 +68,13 @@ let silenceDurationMs = 0;
 let audioContext = null;
 let analyserNode = null;
 
+// Animated icon sources (replace with your Flaticon/Lottie URLs if desired)
+const ICON_URLS = {
+    mic: 'https://assets2.lottiefiles.com/packages/lf20_j1adxtyb.json',
+    micListening: 'https://assets7.lottiefiles.com/packages/lf20_touohxv0.json',
+    menu: 'https://assets7.lottiefiles.com/packages/lf20_touohxv0.json'
+};
+
 // Settings panel elements (sidebar)
 const openSettingsBtn = document.getElementById('open-settings-btn');
 const sidebarSettings = document.getElementById('sidebar-settings');
@@ -948,9 +955,14 @@ function setComposerBusy(isBusy) {
 function setVoiceListening(isListening) {
     isVoiceListening = isListening;
     voiceInputBtn.classList.toggle('listening', isListening);
-    const icon = voiceInputBtn.querySelector('.material-symbols-outlined');
-    if (icon) {
-        icon.textContent = isListening ? 'stop' : 'mic';
+    const lottie = voiceInputBtn.querySelector('lottie-player#voice-icon') || voiceInputBtn.querySelector('lottie-player');
+    if (lottie) {
+        try {
+            lottie.setAttribute('src', isListening ? ICON_URLS.micListening : ICON_URLS.mic);
+            if (typeof lottie.play === 'function') lottie.play();
+        } catch (e) {
+            // ignore lottie errors
+        }
     }
     voiceInputBtn.setAttribute('aria-pressed', String(isListening));
 }

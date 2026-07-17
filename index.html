@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="dark light">
     <title>AGNI AI</title>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
     <link rel="stylesheet" href="style.css?v=7">
-    <!-- Google Material Symbols -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <!-- Lottie player for animated icons -->
 </head>
 <body>
 <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
@@ -58,7 +58,7 @@
         </div> <!-- /.sidebar-body -->
 
         <footer class="sidebar-footer">
-            <button id="open-settings-btn" class="text-btn"><span class="material-symbols-outlined">settings</span> Settings</button>
+            <button id="open-settings-btn" class="text-btn"><lottie-player class="icon-lottie" src="https://assets2.lottiefiles.com/packages/lf20_jcikwtux.json" style="width:20px;height:20px;" background="transparent" speed="1" loop autoplay></lottie-player> Settings</button>
 
             <div class="sidebar-settings" id="sidebar-settings" hidden>
                 <div class="settings-header">
@@ -100,7 +100,7 @@
     <main class="chat-panel">
         <div class="chat-header">
             <div class="header-left">
-                <button id="toggle-sidebar-btn" class="toggle-btn" aria-label="Toggle sidebar"><span class="material-symbols-outlined">menu</span></button>
+                <button id="toggle-sidebar-btn" class="toggle-btn" aria-label="Toggle sidebar"><lottie-player class="icon-lottie" src="https://assets7.lottiefiles.com/packages/lf20_touohxv0.json" style="width:20px;height:20px;" background="transparent" speed="1" loop autoplay></lottie-player></button>
                 <div>
                     <h3>AGNI AI</h3>
                     <p>Smart assistant ready to help</p>
@@ -117,7 +117,7 @@
                 <input type="checkbox" id="compact-view-toggle" hidden>
                 <div class="status-pill" id="status-pill">● Gemini · Flash</div>
                 <div class="action-menu">
-                    <button id="action-menu-btn" class="icon-header-btn" type="button" aria-haspopup="true" aria-expanded="false" title="More actions"><span class="material-symbols-outlined">more_vert</span></button>
+                    <button id="action-menu-btn" class="icon-header-btn" type="button" aria-haspopup="true" aria-expanded="false" title="More actions"><lottie-player class="icon-lottie" src="https://assets2.lottiefiles.com/packages/lf20_6z5q1e7k.json" style="width:20px;height:20px;" background="transparent" speed="1" loop autoplay></lottie-player></button>
                     <div class="action-menu-dropdown" id="action-menu-dropdown" hidden role="menu" aria-label="More actions menu">
                         <button type="button" id="export-btn" class="menu-item" role="menuitem">Export chat</button>
                         <button type="button" id="import-btn" class="menu-item" role="menuitem">Import chat</button>
@@ -143,18 +143,18 @@
                     <input type="text" id="user-input" placeholder="Ask anything, add files, or share images..." autocomplete="off">
                     <div class="composer-actions">
                         <button id="voice-input-btn" class="icon-btn voice-btn" type="button" title="Speak your prompt">
-                            <span class="material-symbols-outlined">mic</span>
+                            <lottie-player id="voice-icon" class="icon-lottie" src="https://assets2.lottiefiles.com/packages/lf20_j1adxtyb.json" style="width:24px;height:24px;" background="transparent" speed="1" loop autoplay></lottie-player>
                         </button>
                         <button id="auto-submit-toggle-btn" class="toggle-chip" type="button" aria-pressed="false">Auto-send</button>
                         <label class="icon-btn" title="Add image">
                             <input type="file" id="image-input" accept="image/*" hidden>
-                            <span class="material-symbols-outlined">image</span>
+                            <lottie-player class="icon-lottie" src="https://assets2.lottiefiles.com/packages/lf20_puciaact.json" style="width:20px;height:20px;" background="transparent" speed="1" loop autoplay></lottie-player>
                         </label>
                         <label class="icon-btn" title="Add file">
                             <input type="file" id="file-input" hidden>
-                            <span class="material-symbols-outlined">attach_file</span>
+                            <lottie-player class="icon-lottie" src="https://assets4.lottiefiles.com/packages/lf20_3vbOcw.json" style="width:20px;height:20px;" background="transparent" speed="1" loop autoplay></lottie-player>
                         </label>
-                        <button id="send-btn"><span class="material-symbols-outlined">send</span><span class="send-text">Send</span></button>
+                        <button id="send-btn"><lottie-player class="icon-lottie" src="https://assets10.lottiefiles.com/packages/lf20_z1bh5jtx.json" style="width:20px;height:20px;" background="transparent" speed="1" loop autoplay></lottie-player><span class="send-text">Send</span></button>
                     </div>
                 </div>
             </div>
