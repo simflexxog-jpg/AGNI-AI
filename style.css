@@ -327,6 +327,7 @@ html.light-mode .status-pill {
     border-radius: 50%;
     object-fit: cover;
     box-shadow: 0 8px 18px rgba(0,0,0,0.16);
+    border: 2px solid rgba(96, 165, 250, 0.35);
 }
 
 .sidebar-user-meta {
@@ -342,6 +343,68 @@ html.light-mode .status-pill {
     font-weight: 700;
     color: white;
     line-height: 1.2;
+}
+
+.sidebar-user-status {
+    margin: 4px 0 0;
+    font-size: 0.82rem;
+    color: rgba(226, 232, 240, 0.8);
+}
+
+.sidebar-user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 14px 14px 14px 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    border-radius: 18px;
+}
+
+.sidebar-user-info::before {
+    content: '';
+    width: 4px;
+    height: 40px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #60a5fa, #8b5cf6);
+}
+
+.sidebar-user-info p {
+    margin: 0;
+    color: #e2e8f0;
+}
+
+.toggle-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 100px;
+    border-radius: 999px;
+    padding: 10px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-primary);
+    font-size: 0.93rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.toggle-chip:hover {
+    transform: translateY(-1px);
+    background: rgba(96, 165, 250, 0.14);
+    border-color: rgba(96, 165, 250, 0.35);
+}
+
+.toggle-chip[aria-pressed="true"] {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: white;
+    border-color: transparent;
+}
+
+.toggle-chip[aria-pressed="true"]:hover {
+    background: linear-gradient(135deg, #1d4ed8, #6d28d9);
 }
 
 .sidebar-logout-btn {
