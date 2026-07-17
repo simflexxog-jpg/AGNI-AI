@@ -345,34 +345,68 @@ html.light-mode .status-pill {
     line-height: 1.2;
 }
 
-.sidebar-user-status {
-    margin: 4px 0 0;
-    font-size: 0.82rem;
-    color: rgba(226, 232, 240, 0.8);
-}
-
 .sidebar-user-info {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-top: 18px;
-    padding: 14px 14px 14px 0;
+    padding: 16px 16px 16px 0;
     border-top: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.04);
-    border-radius: 18px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+    backdrop-filter: blur(24px);
+    position: relative;
+    overflow: hidden;
 }
 
 .sidebar-user-info::before {
     content: '';
+    position: absolute;
+    top: 16px;
+    left: 12px;
     width: 4px;
-    height: 40px;
+    height: calc(100% - 32px);
     border-radius: 999px;
     background: linear-gradient(180deg, #60a5fa, #8b5cf6);
+}
+
+.sidebar-user-info::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent 60%);
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.sidebar-user-info > .sidebar-user-avatar {
+    position: relative;
+    z-index: 1;
+}
+
+.sidebar-user-info > .sidebar-user-meta {
+    position: relative;
+    z-index: 1;
 }
 
 .sidebar-user-info p {
     margin: 0;
     color: #e2e8f0;
+}
+
+.sidebar-user-name {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+.sidebar-user-meta span {
+    display: block;
+    font-size: 0.78rem;
+    color: rgba(226, 242, 254, 0.8);
+    margin-top: 4px;
 }
 
 .toggle-chip {

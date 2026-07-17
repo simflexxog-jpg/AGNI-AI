@@ -17,7 +17,6 @@ const suggestionPromptBar = document.getElementById('suggestion-prompt-bar');
 const sidebarUserInfo = document.getElementById('sidebar-user-info');
 const sidebarUserAvatar = document.getElementById('sidebar-user-avatar');
 const sidebarUserName = document.getElementById('sidebar-user-name');
-const sidebarUserStatus = document.getElementById('sidebar-user-status');
 const logoutBtn = document.getElementById('logout-btn');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const actionMenuBtn = document.getElementById('action-menu-btn');
@@ -374,7 +373,6 @@ function renderUserHeader() {
     sidebarUserAvatar.src = currentUser.avatar || 'Sitelogo.svg';
     sidebarUserAvatar.alt = currentUser.name ? `${currentUser.name}'s avatar` : 'User avatar';
     sidebarUserName.textContent = currentUser.name || currentUser.email || 'Signed in user';
-    sidebarUserStatus.textContent = currentUser.email ? `Signed in as ${currentUser.email}` : 'Account connected';
     sidebarUserInfo.hidden = false;
 }
 
