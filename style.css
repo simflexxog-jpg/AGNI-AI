@@ -425,19 +425,6 @@ html.light-mode .status-pill {
 
 .send-text { vertical-align: middle; }
 
-/* Lottie icon placeholders */
-.icon-lottie,
-lottie-player.icon-lottie {
-    display: inline-block;
-    width: 22px;
-    height: 22px;
-    vertical-align: middle;
-}
-
-.icon-lottie[aria-hidden="false"] {
-    outline: none;
-}
-
 .sidebar-settings {
     position: absolute;
     left: 16px;

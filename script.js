@@ -568,50 +568,6 @@ function renderSuggestedPrompts() {
     });
 }
 
-// ---------------------------------------------------------------------------
-// Lottie icon handling (Iconscout/Lottie)
-// Replace `.icon-lottie` placeholders with <lottie-player> elements when a URL is provided.
-// Animations play on hover and on click (as requested).
-// Fill `ICON_LOTTIE_MAP` with Iconscout or Lottie animation URLs for production.
-const ICON_LOTTIE_MAP = {
-    // Local Lottie JSON files (place matching JSON files under the /icons folder)
-    settings: '/icons/settings.json',
-    menu: '/icons/menu.json',
-    more_vert: '/icons/more_vert.json',
-    mic: '/icons/mic.json',
-    image: '/icons/image.json',
-    attach_file: '/icons/attach_file.json',
-    send: '/icons/send.json'
-};
-
-function initLottieIcons() {
-    if (typeof window.customElements === 'undefined' || !document.querySelectorAll) return;
-    const nodes = Array.from(document.querySelectorAll('.icon-lottie'));
-    nodes.forEach(el => {
-        const name = el.dataset.icon;
-        const src = ICON_LOTTIE_MAP[name];
-        if (src && src.trim()) {
-            const player = document.createElement('lottie-player');
-            player.setAttribute('src', src);
-            player.setAttribute('background', 'transparent');
-            player.setAttribute('speed', '1');
-            player.setAttribute('style', 'width:22px;height:22px;display:inline-block;');
-            player.className = 'icon-lottie';
-            player.setAttribute('tabindex', '0');
-            player.setAttribute('role', 'button');
-            player.addEventListener('mouseenter', () => { try { player.play(); } catch (e) {} });
-            player.addEventListener('mouseleave', () => { try { player.stop(); } catch (e) {} });
-            player.addEventListener('click', () => { try { player.play(); } catch (e) {} });
-            player.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); try { player.play(); } catch (e) {} } });
-            el.replaceWith(player);
-        } else {
-            // No animation URL provided — keep placeholder but add accessibility label
-            el.setAttribute('role', 'img');
-            el.setAttribute('aria-label', name || 'icon');
-        }
-    });
-}
-
 function clearActiveConversation() {
     const conv = getActiveConversation();
     if (!conv) return;
@@ -1676,7 +1632,6 @@ async function initializeApp() {
     renderAttachments();
     populateModels();
     renderActiveConversation();
-    initLottieIcons();
     renderHistoryList();
     connectWebSocket();
 }
