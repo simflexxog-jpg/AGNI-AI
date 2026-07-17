@@ -1033,13 +1033,17 @@ async function handleConversationPersistence(req, res) {
   }
 
   if ((req.method === 'POST' || req.method === 'PUT') && url.pathname === '/api/conversations') {
-    let body = '';
-    try { body = await readBody(req); }
-    catch (error) { sendJson(req, res, 400, { error: 'Failed to read request body.' }); return true; }
-
     let payload = {};
-    try { payload = body ? JSON.parse(body) : {}; }
-    catch (error) { sendJson(req, res, 400, { error: 'Invalid JSON body' }); return true; }
+    if (req.body && Object.keys(req.body).length > 0) {
+      payload = req.body;
+    } else {
+      let body = '';
+      try { body = await readBody(req); }
+      catch (error) { sendJson(req, res, 400, { error: 'Failed to read request body.' }); return true; }
+
+      try { payload = body ? JSON.parse(body) : {}; }
+      catch (error) { sendJson(req, res, 400, { error: 'Invalid JSON body' }); return true; }
+    }
 
     if (!payload.id) { sendJson(req, res, 400, { error: 'Conversation id is required.' }); return true; }
 
@@ -1049,13 +1053,17 @@ async function handleConversationPersistence(req, res) {
   }
 
   if (req.method === 'DELETE' && url.pathname === '/api/conversations') {
-    let body = '';
-    try { body = await readBody(req); }
-    catch (error) { sendJson(req, res, 400, { error: 'Failed to read request body.' }); return true; }
-
     let payload = {};
-    try { payload = body ? JSON.parse(body) : {}; }
-    catch (error) { sendJson(req, res, 400, { error: 'Invalid JSON body' }); return true; }
+    if (req.body && Object.keys(req.body).length > 0) {
+      payload = req.body;
+    } else {
+      let body = '';
+      try { body = await readBody(req); }
+      catch (error) { sendJson(req, res, 400, { error: 'Failed to read request body.' }); return true; }
+
+      try { payload = body ? JSON.parse(body) : {}; }
+      catch (error) { sendJson(req, res, 400, { error: 'Invalid JSON body' }); return true; }
+    }
 
     const deleted = await deleteConversationById(payload.id, userId);
     sendJson(req, res, 200, { deleted });
