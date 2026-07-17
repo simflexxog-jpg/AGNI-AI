@@ -139,9 +139,17 @@
         <div class="chat-input-container">
             <div class="composer-stack">
                 <div class="attachment-preview" id="attachment-preview"></div>
+                <div class="recording-indicator" id="recording-indicator" hidden>
+                    <span class="recording-dot"></span>
+                    Recording…
+                </div>
                 <div class="composer-row">
                     <input type="text" id="user-input" placeholder="Ask anything, add files, or share images..." autocomplete="off">
                     <div class="composer-actions">
+                        <div class="composer-toggle-group">
+                            <button id="tts-toggle-btn" class="toggle-chip" type="button" aria-pressed="false">TTS</button>
+                            <button id="auto-submit-toggle-btn" class="toggle-chip" type="button" aria-pressed="false">Auto-send</button>
+                        </div>
                         <button id="voice-input-btn" class="icon-btn voice-btn" type="button" title="Speak your prompt">
                             <span class="material-symbols-outlined">mic</span>
                         </button>

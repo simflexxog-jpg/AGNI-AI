@@ -10,6 +10,8 @@ const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
 const { OAuth2Client } = require('google-auth-library');
 const { WebSocketServer } = require('ws');
+const busboy = require('busboy');
+const fetch = global.fetch || require('node-fetch');
 
 process.on('unhandledRejection', (reason, promise) => {
   console.warn('Unhandled promise rejection:', reason);
@@ -1091,6 +1093,8 @@ if (process.env.DATABASE_URL && process.env.NODE_ENV === 'production') {
 
 app.use(session(sessionOptions));
 app.use(setCorsHeaders);
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: false, limit: '20mb' }));
 
 // ---- Routes -----------------------------------------------------------------
 
@@ -1250,6 +1254,64 @@ app.get('/debug/check-session', (req, res) => {
 app.get('/api/user', (req, res) => {
   const user = req.session?.user || null;
   res.json({ user });
+});
+
+app.post('/api/transcribe', async (req, res) => {
+  try {
+    if (!req.headers['content-type']?.includes('multipart/form-data')) {
+      return res.status(400).json({ error: 'Expected multipart/form-data audio upload.' });
+    }
+
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) {
+      return res.status(200).json({ transcript: '', fallback: true });
+    }
+
+    const bb = busboy({ headers: req.headers });
+    const chunks = [];
+
+    bb.on('file', (fieldname, fileStream) => {
+      fileStream.on('data', chunk => chunks.push(Buffer.from(chunk)));
+    });
+
+    bb.on('error', (error) => {
+      res.status(400).json({ error: error.message || 'Audio upload failed.' });
+    });
+
+    bb.on('finish', async () => {
+      const audioBuffer = Buffer.concat(chunks);
+      if (!audioBuffer.length) {
+        return res.status(400).json({ error: 'No audio provided.' });
+      }
+
+      const formData = new FormData();
+      formData.append('file', new Blob([audioBuffer]), 'voice.webm');
+      formData.append('model', 'whisper-large-v3');
+      formData.append('language', 'en');
+
+      const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${groqKey}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Groq transcription failed.');
+      }
+
+      const data = await response.json();
+      const transcript = typeof data?.text === 'string' ? data.text : '';
+      res.json({ transcript });
+    });
+
+    req.pipe(bb);
+  } catch (error) {
+    console.error('Groq transcription failed:', error.message);
+    res.status(500).json({ error: error.message || 'Transcription failed.' });
+  }
 });
 
 app.get('/health', (req, res) => {
