@@ -545,7 +545,9 @@ const suggestedPrompts = [
 
 function renderSuggestedPrompts() {
     const conv = getActiveConversation();
-    const shouldShow = Array.isArray(conv?.messages) && conv.messages.length <= 1 && conv.messages.every(message => message.role === 'bot');
+    // Show suggestions when the conversation contains no user messages
+    const hasUserMessage = Array.isArray(conv?.messages) && conv.messages.some(m => m.role === 'user' && (m.content || '').toString().trim() !== '');
+    const shouldShow = Array.isArray(conv?.messages) && !hasUserMessage;
 
     suggestionPromptBar.innerHTML = '';
     suggestionPromptBar.classList.toggle('visible', shouldShow);
