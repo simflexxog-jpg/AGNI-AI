@@ -28,8 +28,6 @@ const importInput = document.getElementById('import-input');
 const compactViewToggle = document.getElementById('compact-view-toggle');
 const compactViewToggleBtn = document.getElementById('compact-view-toggle-btn');
 const voiceInputBtn = document.getElementById('voice-input-btn');
-const recordingIndicator = document.getElementById('recording-indicator');
-const ttsToggleBtn = document.getElementById('tts-toggle-btn');
 const autoSubmitToggleBtn = document.getElementById('auto-submit-toggle-btn');
 
 // Same-origin relative path: works regardless of host/port, since server.js
@@ -63,7 +61,7 @@ let voiceRecorderTimer = null;
 let voiceRecorderSilenceTimer = null;
 let voiceIsRecording = false;
 let autoSubmitVoice = false;
-let ttsEnabled = false;
+let ttsEnabled = true;
 let voiceFallbackReason = '';
 let silenceMonitorId = null;
 let silenceDurationMs = 0;
@@ -918,12 +916,6 @@ function toggleThinking() {
     thinkingToggle.setAttribute('aria-checked', String(enabled));
 }
 
-function toggleTTS() {
-    ttsEnabled = !ttsEnabled;
-    ttsToggleBtn.classList.toggle('active', ttsEnabled);
-    ttsToggleBtn.setAttribute('aria-pressed', String(ttsEnabled));
-}
-
 function toggleAutoSubmit() {
     autoSubmitVoice = !autoSubmitVoice;
     autoSubmitToggleBtn.classList.toggle('active', autoSubmitVoice);
@@ -959,7 +951,6 @@ function setVoiceListening(isListening) {
         icon.textContent = isListening ? 'stop' : 'mic';
     }
     voiceInputBtn.setAttribute('aria-pressed', String(isListening));
-    recordingIndicator.hidden = !isListening;
 }
 
 function clearVoiceRecorderState() {
@@ -1576,7 +1567,6 @@ imageInput.addEventListener('change', handleAttachmentSelection);
 fileInput.addEventListener('change', handleAttachmentSelection);
 sendBtn.addEventListener('click', handleSend);
 voiceInputBtn.addEventListener('click', startVoiceInput);
-ttsToggleBtn.addEventListener('click', toggleTTS);
 autoSubmitToggleBtn.addEventListener('click', toggleAutoSubmit);
 userInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleSend();
