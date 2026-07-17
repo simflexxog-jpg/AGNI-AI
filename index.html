@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="dark light">
     <title>AGNI AI</title>
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
     <link rel="stylesheet" href="style.css?v=7">
-    <!-- Lottie player for animated icons -->
+    <!-- Google Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 </head>
 <body>
 <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
@@ -58,13 +58,7 @@
         </div> <!-- /.sidebar-body -->
 
         <footer class="sidebar-footer">
-            <button id="open-settings-btn" class="text-btn">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 1 1 2.27 16.88l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09c.7 0 1.3-.45 1.51-1a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 0 1 6.53 2.27l.06.06a1.65 1.65 0 0 0 1.82.33H8.5A1.65 1.65 0 0 0 10 3.66V3a2 2 0 1 1 4 0v.66c.36.08.7.25 1 .51h.09a1.65 1.65 0 0 0 1.51 1 1.65 1.65 0 0 0 1.82-.33l.06-.06A2 2 0 0 1 21.73 7.12l-.06.06a1.65 1.65 0 0 0-.33 1.82V10c.2.55.81 1 1.51 1H21a2 2 0 1 1 0 4h-.09c-.7 0-1.3.45-1.51 1z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Settings
-            </button>
+            <button id="open-settings-btn" class="text-btn"><span class="material-symbols-outlined">settings</span> Settings</button>
 
             <div class="sidebar-settings" id="sidebar-settings" hidden>
                 <div class="settings-header">
@@ -106,11 +100,7 @@
     <main class="chat-panel">
         <div class="chat-header">
             <div class="header-left">
-                <button id="toggle-sidebar-btn" class="toggle-btn" aria-label="Toggle sidebar">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
+                <button id="toggle-sidebar-btn" class="toggle-btn" aria-label="Toggle sidebar"><span class="material-symbols-outlined">menu</span></button>
                 <div>
                     <h3>AGNI AI</h3>
                     <p>Smart assistant ready to help</p>
@@ -127,13 +117,7 @@
                 <input type="checkbox" id="compact-view-toggle" hidden>
                 <div class="status-pill" id="status-pill">● Gemini · Flash</div>
                 <div class="action-menu">
-                    <button id="action-menu-btn" class="icon-header-btn" type="button" aria-haspopup="true" aria-expanded="false" title="More actions">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                            <circle cx="12" cy="5" r="1.6" fill="currentColor"/>
-                            <circle cx="12" cy="12" r="1.6" fill="currentColor"/>
-                            <circle cx="12" cy="19" r="1.6" fill="currentColor"/>
-                        </svg>
-                    </button>
+                    <button id="action-menu-btn" class="icon-header-btn" type="button" aria-haspopup="true" aria-expanded="false" title="More actions"><span class="material-symbols-outlined">more_vert</span></button>
                     <div class="action-menu-dropdown" id="action-menu-dropdown" hidden role="menu" aria-label="More actions menu">
                         <button type="button" id="export-btn" class="menu-item" role="menuitem">Export chat</button>
                         <button type="button" id="import-btn" class="menu-item" role="menuitem">Import chat</button>
@@ -159,30 +143,18 @@
                     <input type="text" id="user-input" placeholder="Ask anything, add files, or share images..." autocomplete="off">
                     <div class="composer-actions">
                         <button id="voice-input-btn" class="icon-btn voice-btn" type="button" title="Speak your prompt">
-                            <lottie-player id="voice-icon" class="icon-lottie" src="https://assets2.lottiefiles.com/packages/lf20_j1adxtyb.json" style="width:24px;height:24px;" background="transparent" speed="1" loop autoplay></lottie-player>
+                            <span class="material-symbols-outlined">mic</span>
                         </button>
                         <button id="auto-submit-toggle-btn" class="toggle-chip" type="button" aria-pressed="false">Auto-send</button>
                         <label class="icon-btn" title="Add image">
                             <input type="file" id="image-input" accept="image/*" hidden>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                <rect x="3" y="4" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.2"/>
-                                <path d="M8 11l2.5 3 3-4 4 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                            </svg>
+                            <span class="material-symbols-outlined">image</span>
                         </label>
                         <label class="icon-btn" title="Add file">
                             <input type="file" id="file-input" hidden>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M17 7l-5 5-3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
+                            <span class="material-symbols-outlined">attach_file</span>
                         </label>
-                        <button id="send-btn">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                <path d="M22 2L11 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M22 2L15 22l-4-9-9-4 18-7z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                            </svg>
-                            <span class="send-text">Send</span>
-                        </button>
+                        <button id="send-btn"><span class="material-symbols-outlined">send</span><span class="send-text">Send</span></button>
                     </div>
                 </div>
             </div>
