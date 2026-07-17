@@ -40,7 +40,7 @@ const THEME_KEY = 'agni-ai-theme-v1';
 const COMPACT_KEY = 'agni-ai-compact-mode-v1';
 const UI_FONT_KEY = 'agni-ai-ui-font-v1';
 const UI_DENSITY_KEY = 'agni-ai-ui-density-v1';
-const WELCOME_TEXT = 'Hello! I’m your AI assistant. Ask me anything and I’ll help.';
+const DEFAULT_WELCOME_TEXT = 'Hello! I’m your AI assistant. Ask me anything and I’ll help.';
 const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024; // 8MB per file
 
 let attachments = [];
@@ -61,6 +61,19 @@ const closeSettingsBtn = document.getElementById('close-settings-btn');
 const resetSettingsBtn = document.getElementById('reset-settings-btn');
 const fontOpts = Array.from(document.getElementsByClassName('font-opt'));
 const densityOpts = Array.from(document.getElementsByClassName('density-opt'));
+
+function getWelcomeText() {
+    if (!currentUser) return DEFAULT_WELCOME_TEXT;
+
+    const fullName = currentUser.name || currentUser.email || '';
+    const firstName = fullName
+        .split(/\s+/)
+        .find(Boolean)
+        ?.replace(/[^\p{L}\p{N}]/gu, '') || '';
+
+    const displayName = firstName || (currentUser.email ? currentUser.email.split('@')[0] : 'there');
+    return `Hello ${displayName}! I’m your AI assistant. Ask me anything and I’ll help.`;
+}
 
 function applyFontSize(size) {
     document.documentElement.classList.remove('font-small', 'font-normal', 'font-large');
@@ -238,6 +251,24 @@ function createConversation(initialBotText) {
     };
 }
 
+function personalizeWelcomeMessage() {
+    const conv = getActiveConversation();
+    if (!conv?.messages?.length) return;
+
+    const firstMessage = conv.messages[0];
+    const welcomeText = getWelcomeText();
+    const isGenericWelcome = firstMessage.role === 'bot' && (
+        firstMessage.content === DEFAULT_WELCOME_TEXT ||
+        firstMessage.content === 'Hello! I’m your AI assistant. Ask me anything and I’ll help.'
+    );
+
+    if (isGenericWelcome && firstMessage.content !== welcomeText) {
+        firstMessage.content = welcomeText;
+        saveState();
+        persistConversation(conv);
+    }
+}
+
 async function loadState() {
     try {
         const response = await fetch('/api/conversations');
@@ -264,7 +295,7 @@ async function loadState() {
         conversations = [];
     }
     if (!Array.isArray(conversations) || conversations.length === 0) {
-        conversations = [createConversation(WELCOME_TEXT)];
+        conversations = [createConversation(getWelcomeText())];
     }
 
     activeId = localStorage.getItem(ACTIVE_KEY);
@@ -355,7 +386,7 @@ function switchConversation(id) {
 function deleteConversation(id) {
     conversations = conversations.filter(c => c.id !== id);
     if (conversations.length === 0) {
-        conversations = [createConversation(WELCOME_TEXT)];
+        conversations = [createConversation(getWelcomeText())];
     }
     if (activeId === id) {
         activeId = conversations[0].id;
@@ -526,7 +557,7 @@ function clearActiveConversation() {
     if (!conv) return;
 
     conv.title = 'New chat';
-    conv.messages = [{ role: 'bot', content: WELCOME_TEXT }];
+    conv.messages = [{ role: 'bot', content: getWelcomeText() }];
     attachments = [];
     renderAttachments();
     saveState();
@@ -1186,7 +1217,7 @@ function handleSend() {
 // ---------------------------------------------------------------------------
 
 newChatBtn.addEventListener('click', async () => {
-    const conv = createConversation(WELCOME_TEXT);
+    const conv = createConversation(getWelcomeText());
     conversations.unshift(conv);
     activeId = conv.id;
     attachments = [];
@@ -1356,6 +1387,7 @@ async function initializeApp() {
         logoutBtn.addEventListener('click', handleLogout);
     }
     await loadState();
+    personalizeWelcomeMessage();
     renderAttachments();
     populateModels();
     renderActiveConversation();
