@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="100%" height="100%">
+  <defs>
+    <!-- Styles for the circuit board traces -->
+    <style>
+      .circuit-line {
+        fill: none;
+        stroke: #1a5a84;
+        stroke-width: 14;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .circuit-node {
+        fill: #ffffff;
+        stroke: #1a5a84;
+        stroke-width: 10;
+      }
+    </style>
+  </defs>
+
+  <!-- Left Side: Orange Flame -->
+  <path d="M 440,790
+           C 250,750 180,550 240,400
+           C 260,350 290,300 290,300
+           C 290,300 280,350 310,380
+           C 330,400 350,380 350,340
+           C 350,290 320,240 370,180
+           C 370,180 370,230 410,260
+           C 440,280 470,240 460,180
+           C 450,120 500,50 500,50
+           C 480,140 550,220 520,320
+           C 500,390 400,420 380,480
+           C 350,560 410,650 480,680
+           C 500,690 470,750 440,790 Z"
+        fill="#d84b24" />
+
+  <!-- Right Side: Blue Crescent Base -->
+  <path d="M 540,280
+           C 650,300 780,420 730,620
+           C 690,730 580,780 440,790
+           C 480,750 520,700 500,650
+           C 460,550 520,480 620,440
+           C 680,420 620,330 540,280 Z"
+        fill="#1a5a84" />
+
+  <!-- Center Right: Circuit Board Elements -->
+  <g>
+    <path class="circuit-line" d="M 610,450 L 580,480 L 520,480" />
+    <path class="circuit-line" d="M 640,510 L 600,550 L 460,550 L 430,580" />
+    <path class="circuit-line" d="M 540,550 L 510,580 L 480,580" />
+    <path class="circuit-line" d="M 550,620 L 520,620 L 490,590 L 490,560" />
+    <path class="circuit-line" d="M 660,550 L 630,580 L 590,580" />
+
+    <circle class="circuit-node" cx="520" cy="480" r="12" />
+    <circle class="circuit-node" cx="430" cy="580" r="12" />
+    <circle class="circuit-node" cx="480" cy="580" r="12" />
+    <circle class="circuit-node" cx="490" cy="560" r="12" />
+    <circle class="circuit-node" cx="590" cy="580" r="12" />
+  </g>
+</svg>

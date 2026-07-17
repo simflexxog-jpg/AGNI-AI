@@ -370,7 +370,7 @@ async function fetchCurrentUser() {
 
 function renderUserHeader() {
     if (!sidebarUserInfo || !currentUser) return;
-    sidebarUserAvatar.src = currentUser.avatar || 'Sitelogo.png';
+    sidebarUserAvatar.src = currentUser.avatar || 'Sitelogo.svg';
     sidebarUserAvatar.alt = currentUser.name ? `${currentUser.name}'s avatar` : 'User avatar';
     sidebarUserName.textContent = currentUser.name || currentUser.email || 'Signed in user';
     sidebarUserInfo.hidden = false;

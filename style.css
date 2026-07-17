@@ -312,20 +312,18 @@ html.light-mode .status-pill {
     padding-top: 20px;
 }
 
-.header-user-info {
+.sidebar-user-info {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 12px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: 0 8px 20px rgba(2, 6, 23, 0.12);
+    margin-top: 18px;
+    padding: 12px 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
 }
 
 .sidebar-user-avatar {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     object-fit: cover;
     box-shadow: 0 8px 18px rgba(0,0,0,0.16);
@@ -334,24 +332,22 @@ html.light-mode .status-pill {
 .sidebar-user-meta {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     min-width: 0;
 }
 
 .sidebar-user-name {
     margin: 0;
-    font-size: 0.88rem;
+    font-size: 0.95rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: white;
     line-height: 1.2;
 }
 
 .sidebar-logout-btn {
-    padding: 0;
-    font-size: 0.75rem;
-    color: var(--accent-blue);
-    border: none;
-    background: transparent;
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
 }
 
 .brand-block,
@@ -585,11 +581,6 @@ html.light-mode .status-pill {
     background: rgba(96, 165, 250, 0.9);
 }
 
-.sidebar-body {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(96, 165, 250, 0.75) rgba(15, 23, 42, 0.7);
-}
-
 .sidebar.collapsed {
     width: 0;
     padding-left: 0;
@@ -756,9 +747,9 @@ html.light-mode .status-pill {
 }
 
 .control-row select {
-    appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
+    appearance: none;
     border: 1px solid rgba(96,165,250,0.35);
     border-radius: 14px;
     padding: 12px 14px 12px 14px;
@@ -1035,11 +1026,6 @@ html.light-mode .status-pill {
     background: linear-gradient(180deg, rgba(244, 63, 94, 0.85), rgba(168, 85, 247, 0.9));
 }
 
-#chat-box {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(168, 85, 247, 0.8) rgba(255, 255, 255, 0.08);
-}
-
 .message {
     max-width: 78%;
     padding: 12px 14px;
@@ -1190,30 +1176,6 @@ html.light-mode .status-pill {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.composer-toggle-group {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.toggle-chip {
-    border: 1px solid rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.08);
-    color: var(--text-secondary);
-    border-radius: 999px;
-    padding: 8px 10px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.toggle-chip.active {
-    background: rgba(96, 165, 250, 0.2);
-    color: #dbeafe;
-    border-color: rgba(96, 165, 250, 0.45);
 }
 
 .icon-btn {
