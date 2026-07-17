@@ -1114,18 +1114,22 @@ app.get('/api/google-client-id', (req, res) => {
 });
 
 app.post('/auth/google/callback', async (req, res) => {
-  let body = '';
-  try {
-    body = await readBody(req);
-  } catch (error) {
-    return res.status(400).json({ error: 'Failed to read request body.' });
-  }
-
   let payload = {};
-  try {
-    payload = body ? JSON.parse(body) : {};
-  } catch (error) {
-    return res.status(400).json({ error: 'Invalid JSON body' });
+  if (req.body && Object.keys(req.body).length > 0) {
+    payload = req.body;
+  } else {
+    let body = '';
+    try {
+      body = await readBody(req);
+    } catch (error) {
+      return res.status(400).json({ error: 'Failed to read request body.' });
+    }
+
+    try {
+      payload = body ? JSON.parse(body) : {};
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid JSON body' });
+    }
   }
 
   const idToken = typeof payload.id_token === 'string'
