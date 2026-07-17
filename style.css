@@ -312,18 +312,20 @@ html.light-mode .status-pill {
     padding-top: 20px;
 }
 
-.sidebar-user-info {
+.header-user-info {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 18px;
-    padding: 12px 0;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 8px 20px rgba(2, 6, 23, 0.12);
 }
 
 .sidebar-user-avatar {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     object-fit: cover;
     box-shadow: 0 8px 18px rgba(0,0,0,0.16);
@@ -332,22 +334,24 @@ html.light-mode .status-pill {
 .sidebar-user-meta {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     min-width: 0;
 }
 
 .sidebar-user-name {
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     font-weight: 700;
-    color: white;
+    color: var(--text-primary);
     line-height: 1.2;
 }
 
 .sidebar-logout-btn {
-    padding: 6px 10px;
-    font-size: 0.82rem;
-    color: var(--text-secondary);
+    padding: 0;
+    font-size: 0.75rem;
+    color: var(--accent-blue);
+    border: none;
+    background: transparent;
 }
 
 .brand-block,
@@ -932,8 +936,6 @@ html.light-mode .status-pill {
 
 .compact-mode .settings-actions {
     gap: 6px;
-}
-    height: 38px;
 }
 
 .compact-mode .history-item {
