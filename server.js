@@ -403,9 +403,11 @@ function normalizeConversation(doc) {
   };
 }
 
+// *** FIX: include googleId in the returned object so session auth check works ***
 function normalizeUser(doc) {
   return {
     id: doc.googleId,
+    googleId: doc.googleId,
     name: doc.name,
     email: doc.email,
     avatar: doc.avatar
@@ -1107,8 +1109,6 @@ app.get('/api/google-client-id', (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID || '' });
 });
 
-// *** KEY FIX: return a redirect instead of JSON so the browser
-//     commits the Set-Cookie header before navigating away ***
 app.post('/auth/google/callback', async (req, res) => {
   let body = '';
   try {
@@ -1160,14 +1160,11 @@ app.post('/auth/google/callback', async (req, res) => {
   const savedUser = await upsertUser(user);
   req.session.user = savedUser;
 
-  // Save session first, THEN respond — this ensures Set-Cookie is sent
-  // before the client does anything else
   req.session.save(err => {
     if (err) {
       console.warn('Session save failed:', err?.message);
       return res.status(500).json({ error: 'Session save failed' });
     }
-    // Return JSON with a redirect flag so the client can navigate cleanly
     res.json({ user: savedUser, ok: true, redirect: '/' });
   });
 });
@@ -1244,7 +1241,7 @@ app.get('/debug/check-session', (req, res) => {
   res.json({
     sessionId: req.sessionID || null,
     hasUser: Boolean(req.session?.user),
-    user: req.session?.user ? { id: req.session.user.googleId } : null,
+    user: req.session?.user || null,
     requestCookies: cookieHeader,
     usingPgStore: Boolean(process.env.DATABASE_URL && process.env.NODE_ENV === 'production')
   });
