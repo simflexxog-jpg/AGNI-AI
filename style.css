@@ -405,21 +405,21 @@ html.light-mode .status-pill {
     border-radius: 10px;
 }
 
-/* Material Symbols styling */
-.material-symbols-outlined {
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    font-family: 'Material Symbols Outlined';
-    font-size: 20px;
+/* Local SVG icon styling */
+.icon-img {
+    width: 20px;
+    height: 20px;
     vertical-align: middle;
-    line-height: 1;
+    display: inline-block;
 }
 
-.icon-btn .material-symbols-outlined,
-.icon-header-btn .material-symbols-outlined {
-    font-size: 18px;
+.icon-btn img,
+.icon-header-btn img {
+    width: 18px;
+    height: 18px;
 }
 
-#send-btn .material-symbols-outlined {
+#send-btn img {
     margin-right: 8px;
 }
 
@@ -1241,8 +1241,8 @@ html.light-mode .status-pill {
     animation: pulseVoice 1s ease-in-out infinite;
 }
 
-.voice-btn.listening .material-symbols-outlined {
-    color: #fda4af;
+.voice-btn.listening img {
+    filter: hue-rotate(-10deg) saturate(1.2);
 }
 
 #send-btn {

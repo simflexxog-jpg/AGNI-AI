@@ -948,9 +948,10 @@ function setComposerBusy(isBusy) {
 function setVoiceListening(isListening) {
     isVoiceListening = isListening;
     voiceInputBtn.classList.toggle('listening', isListening);
-    const icon = voiceInputBtn.querySelector('.material-symbols-outlined');
+    const icon = voiceInputBtn.querySelector('img.icon-img');
     if (icon) {
-        icon.textContent = isListening ? 'stop' : 'mic';
+        icon.src = isListening ? 'icons/stop.svg' : 'icons/mic.svg';
+        icon.alt = isListening ? 'Stop' : 'Mic';
     }
     voiceInputBtn.setAttribute('aria-pressed', String(isListening));
 }
