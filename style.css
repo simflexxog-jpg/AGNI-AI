@@ -321,6 +321,19 @@ html.light-mode .status-pill {
     border-top: 1px solid rgba(255,255,255,0.08);
 }
 
+.header-user-info {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    gap: 10px;
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
 .sidebar-user-avatar {
     width: 44px;
     height: 44px;
@@ -335,6 +348,12 @@ html.light-mode .status-pill {
     flex-direction: column;
     gap: 4px;
     min-width: 0;
+}
+
+.header-user-info .sidebar-user-meta {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
 }
 
 .sidebar-user-name {
