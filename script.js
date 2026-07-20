@@ -41,6 +41,7 @@ const THEME_KEY = 'agni-ai-theme-v1';
 const COMPACT_KEY = 'agni-ai-compact-mode-v1';
 const UI_FONT_KEY = 'agni-ai-ui-font-v1';
 const UI_DENSITY_KEY = 'agni-ai-ui-density-v1';
+const TTS_KEY = 'agni-ai-tts-enabled-v1';
 const DEFAULT_WELCOME_TEXT = 'Hello! I’m your AI assistant. Ask me anything and I’ll help.';
 const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024; // 8MB per file
 
@@ -61,7 +62,7 @@ let voiceRecorderTimer = null;
 let voiceRecorderSilenceTimer = null;
 let voiceIsRecording = false;
 let autoSubmitVoice = false;
-let ttsEnabled = true;
+let ttsEnabled = false;
 let voiceFallbackReason = '';
 let silenceMonitorId = null;
 let silenceDurationMs = 0;
@@ -73,6 +74,7 @@ const openSettingsBtn = document.getElementById('open-settings-btn');
 const sidebarSettings = document.getElementById('sidebar-settings');
 const closeSettingsBtn = document.getElementById('close-settings-btn');
 const resetSettingsBtn = document.getElementById('reset-settings-btn');
+const ttsToggleBtn = document.getElementById('tts-toggle-btn');
 const fontOpts = Array.from(document.getElementsByClassName('font-opt'));
 const densityOpts = Array.from(document.getElementsByClassName('density-opt'));
 
@@ -176,6 +178,28 @@ function updateThemeButton() {
     const isLightMode = document.documentElement.classList.contains('light-mode');
     themeToggleBtn.classList.toggle('active', isLightMode);
     themeToggleBtn.setAttribute('aria-checked', String(isLightMode));
+}
+
+// ---------------------------------------------------------------------------
+// TTS management
+// ---------------------------------------------------------------------------
+
+function initTTS() {
+    const savedTTS = localStorage.getItem(TTS_KEY) || 'false';
+    ttsEnabled = savedTTS === 'true';
+    updateTTSButton();
+}
+
+function toggleTTS() {
+    ttsEnabled = !ttsEnabled;
+    localStorage.setItem(TTS_KEY, String(ttsEnabled));
+    updateTTSButton();
+}
+
+function updateTTSButton() {
+    if (!ttsToggleBtn) return;
+    ttsToggleBtn.classList.toggle('active', ttsEnabled);
+    ttsToggleBtn.setAttribute('aria-checked', String(ttsEnabled));
 }
 
 // ---------------------------------------------------------------------------
@@ -1503,6 +1527,7 @@ window.addEventListener('resize', () => {
 });
 
 themeToggleBtn.addEventListener('click', toggleTheme);
+ttsToggleBtn.addEventListener('click', toggleTTS);
 actionMenuBtn.addEventListener('click', (event) => {
     event.stopPropagation();
     toggleActionMenu();
@@ -1616,6 +1641,7 @@ densityOpts.forEach(btn => btn.addEventListener('click', (e) => {
 
 async function initializeApp() {
     initTheme();
+    initTTS();
     initCompactMode();
     loadUISettings();
     currentUser = await fetchCurrentUser();

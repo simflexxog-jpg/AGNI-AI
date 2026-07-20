@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="dark light">
     <title>AGNI AI</title>
-    <link rel="stylesheet" href="style.css?v=7">
-    <!-- Google Material Symbols -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css?v=8">
+    <!-- Premium Typography & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Material+Symbols+Outlined" rel="stylesheet" />
 </head>
 <body>
 <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
@@ -89,6 +89,15 @@
                         <span class="theme-label">Light</span>
                     </div>
                 </div>
+                <div class="settings-section accessibility-settings">
+                    <label>Accessibility</label>
+                    <div class="settings-row">
+                        <span style="font-size: 0.9rem; color: var(--text-tertiary); margin-bottom: 8px; display: block;">Text-to-Speech</span>
+                        <button id="tts-toggle-btn" class="theme-switch" type="button" role="switch" aria-checked="false" aria-label="Toggle text-to-speech">
+                            <span class="theme-switch-knob"></span>
+                        </button>
+                    </div>
+                </div>
                 <div class="settings-actions">
                     <button id="reset-settings-btn" class="text-btn">Reset</button>
                     <button id="close-settings-btn" class="text-btn">Close</button>
@@ -142,9 +151,6 @@
                 <div class="composer-row">
                     <input type="text" id="user-input" placeholder="Ask anything, add files, or share images..." autocomplete="off">
                     <div class="composer-actions">
-                        <button id="voice-input-btn" class="icon-btn voice-btn" type="button" title="Speak your prompt">
-                            <span class="material-symbols-outlined">mic</span>
-                        </button>
                         <button id="auto-submit-toggle-btn" class="toggle-chip" type="button" aria-pressed="false">Auto-send</button>
                         <label class="icon-btn" title="Add image">
                             <input type="file" id="image-input" accept="image/*" hidden>
@@ -154,6 +160,9 @@
                             <input type="file" id="file-input" hidden>
                             <span class="material-symbols-outlined">attach_file</span>
                         </label>
+                        <button id="voice-input-btn" class="icon-btn voice-btn" type="button" title="Speak your prompt">
+                            <span class="material-symbols-outlined">mic</span>
+                        </button>
                         <button id="send-btn"><span class="material-symbols-outlined">send</span><span class="send-text">Send</span></button>
                     </div>
                 </div>

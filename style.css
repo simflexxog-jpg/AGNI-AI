@@ -42,7 +42,7 @@ html.light-mode {
 
 body {
     margin: 0;
-    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Geist', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background:
         radial-gradient(circle at top left, rgba(96, 165, 250, 0.35), transparent 28%),
         radial-gradient(circle at top right, rgba(139, 92, 246, 0.28), transparent 24%),
@@ -52,7 +52,7 @@ body {
     overflow-x: hidden;
     overflow-y: hidden;
     letter-spacing: -0.01em;
-    transition: background 0.6s ease, color 0.45s ease;
+    transition: background 0.6s cubic-bezier(0.32, 0.72, 0, 1), color 0.45s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 html.light-mode body {
@@ -192,49 +192,91 @@ html.light-mode .attachment-chip {
 
 .login-card {
     width: 100%;
-    padding: 38px;
+    padding: 2px;
     border-radius: 32px;
-    background: rgba(10, 14, 30, 0.96);
+    background: rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 32px 96px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.12);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 18px;
+    gap: 0;
     text-align: center;
+    position: relative;
+}
+
+.login-card::before {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border-radius: 30px;
+    background: rgba(10, 14, 30, 0.96);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.login-card::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border-radius: 30px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent 60%);
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.login-card > * {
+    position: relative;
+    z-index: 2;
 }
 
 .login-logo {
-    width: 92px;
-    min-width: 92px;
-    height: 92px;
+    width: 96px;
+    min-width: 96px;
+    height: 96px;
     object-fit: cover;
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.07);
-    padding: 18px;
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 20px;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.24), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+    margin-top: 28px;
 }
 
 .login-card h1 {
     margin: 0;
-    font-size: clamp(2rem, 2.5vw, 2.5rem);
+    padding: 38px 38px 16px 38px;
+    font-size: clamp(2rem, 2.5vw, 2.8rem);
     line-height: 1.05;
     letter-spacing: -0.04em;
+    font-weight: 800;
     color: #f8fafc;
+    background: transparent;
 }
 
 .login-card p {
     margin: 0;
+    padding: 0 38px 0 38px;
     color: var(--text-secondary);
     line-height: 1.75;
     max-width: 100%;
+    font-weight: 500;
 }
 
 .google-signin-button {
     width: 100%;
-    max-width: 320px;
-    min-height: 54px;
-    margin-top: 4px;
+    max-width: 360px;
+    min-height: 56px;
+    margin: 18px 38px 38px 38px;
+    padding: 12px 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    border: 1.5px solid rgba(255, 255, 255, 0.16);
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16), inset 0 1px 2px rgba(255, 255, 255, 0.12);
+    transition: all 0.32s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .login-note {
@@ -296,9 +338,9 @@ html.light-mode .status-pill {
     height: 100%;
     /* body handles scrolling; keep header/footer fixed */
     overflow: hidden;
-    transition: width 0.42s cubic-bezier(0.22, 1, 0.36, 1), padding 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.32s ease, transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: width 0.42s cubic-bezier(0.22, 1, 0.36, 1), padding 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.32s cubic-bezier(0.32, 0.72, 0, 1), transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
     transform: translateX(0);
-    box-shadow: 20px 0 50px rgba(2, 6, 23, 0.24);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12), inset 1px 0 0 rgba(255, 255, 255, 0.04);
     -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
     position: relative;
@@ -434,30 +476,34 @@ html.light-mode .status-pill {
     justify-content: center;
     min-width: 100px;
     border-radius: 999px;
-    padding: 10px 16px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.07);
+    padding: 12px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
     color: var(--text-primary);
     font-size: 0.93rem;
     font-weight: 700;
     cursor: pointer;
-    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), background 0.28s cubic-bezier(0.32, 0.72, 0, 1), border-color 0.28s cubic-bezier(0.32, 0.72, 0, 1), color 0.28s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .toggle-chip:hover {
-    transform: translateY(-1px);
-    background: rgba(96, 165, 250, 0.14);
-    border-color: rgba(96, 165, 250, 0.35);
+    transform: translateY(-2px);
+    background: rgba(96, 165, 250, 0.16);
+    border-color: rgba(96, 165, 250, 0.32);
+    box-shadow: 0 8px 20px rgba(96, 165, 250, 0.16);
 }
 
 .toggle-chip[aria-pressed="true"] {
     background: linear-gradient(135deg, #2563eb, #7c3aed);
     color: white;
     border-color: transparent;
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.32);
 }
 
 .toggle-chip[aria-pressed="true"]:hover {
     background: linear-gradient(135deg, #1d4ed8, #6d28d9);
+    box-shadow: 0 12px 32px rgba(37, 99, 235, 0.4);
 }
 
 .sidebar-logout-btn {
@@ -475,12 +521,20 @@ html.light-mode .status-pill {
 }
 
 .site-logo {
-    width: 48px;
-    height: 48px;
+    width: 50px;
+    height: 50px;
     object-fit: contain;
     border-radius: 14px;
     flex-shrink: 0;
-    box-shadow: 0 10px 20px rgba(2, 6, 23, 0.18);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 4px;
+    transition: all 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.site-logo:hover {
+    transform: scale(1.04);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.24);
 }
 
 .site-logo--small {
@@ -513,8 +567,16 @@ html.light-mode .status-pill {
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    padding: 8px 10px;
+    padding: 10px 12px;
     border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.sidebar-footer .text-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: var(--text-primary);
+    transform: translateY(-1px);
 }
 
 /* Material Symbols styling */
@@ -572,43 +634,56 @@ html.light-mode .status-pill {
     border: 1px solid rgba(255,255,255,0.08);
     background: rgba(255,255,255,0.02);
     color: var(--text-secondary);
-    padding: 8px 10px;
+    padding: 10px 14px;
     border-radius: 12px;
     cursor: pointer;
-    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    font-weight: 600;
+    font-size: 0.92rem;
+    transition: all 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .settings-opt:hover {
-    background: rgba(96,165,250,0.12);
-    border-color: rgba(96,165,250,0.22);
+    background: rgba(96,165,250,0.14);
+    border-color: rgba(96,165,250,0.28);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.12);
 }
 
 .settings-opt.active {
-    background: linear-gradient(135deg, rgba(96,165,250,0.18), rgba(139,92,246,0.18));
+    background: linear-gradient(135deg, rgba(96,165,250,0.18), rgba(139,92,246,0.12));
     color: var(--text-primary);
-    border-color: rgba(96,165,250,0.28);
-    transform: translateY(-1px);
+    border-color: rgba(96,165,250,0.32);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(96, 165, 250, 0.16);
 }
 
 #open-settings-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 10px;
     width: 100%;
-    padding: 12px 16px;
+    padding: 14px 16px;
     border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.14);
-    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.1);
+    background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
     color: var(--text-primary);
-    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.06);
 }
 
 #open-settings-btn:hover {
-    background: rgba(96,165,250,0.16);
-    border-color: rgba(96,165,250,0.35);
-    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.12);
-    transform: translateY(-1px);
+    background: rgba(96,165,250,0.14);
+    border-color: rgba(96,165,250,0.32);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.16), inset 0 1px 1px rgba(255, 255, 255, 0.06);
+    transform: translateY(-2px);
+}
+
+#open-settings-btn:active {
+    transform: scale(0.98);
 }
 
 .settings-actions {
@@ -621,11 +696,13 @@ html.light-mode .status-pill {
 
 .settings-actions .text-btn {
     min-width: 100px;
-    padding: 12px 16px;
+    padding: 14px 18px;
     border-radius: 14px;
-    border: 1px solid rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.12);
     font-weight: 700;
-    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    font-size: 0.95rem;
+    transition: all 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 #reset-settings-btn {
@@ -634,20 +711,23 @@ html.light-mode .status-pill {
 }
 
 #reset-settings-btn:hover {
-    background: rgba(255,255,255,0.14);
-    border-color: rgba(96,165,250,0.2);
-    transform: translateY(-1px);
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(96,165,250,0.24);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
 
 #close-settings-btn {
     background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(139, 92, 246, 0.95));
     color: white;
     border-color: transparent;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.24);
 }
 
 #close-settings-btn:hover {
-    filter: brightness(1.06);
-    transform: translateY(-1px);
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(37, 99, 235, 0.32);
 }
 
 /* UI personalization helper classes */
@@ -746,8 +826,11 @@ html.light-mode .status-pill {
 
 .sidebar-header h2 {
     margin: 0;
-    font-size: 1.35rem;
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
     color: var(--text-primary);
+    transition: color 0.32s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .history-search input {
@@ -818,41 +901,71 @@ html.light-mode .status-pill {
 }
 
 .eyebrow {
-    margin: 0 0 4px;
+    margin: 0 0 6px;
     text-transform: uppercase;
-    letter-spacing: 0.18em;
-    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    font-size: 0.70rem;
+    font-weight: 700;
     color: #93c5fd;
 }
 
 #new-chat-btn {
     width: 100%;
     border: none;
-    border-radius: 12px;
-    padding: 10px 12px;
+    border-radius: 16px;
+    padding: 12px 16px;
     background: linear-gradient(135deg, #2563eb, #8b5cf6);
     color: white;
     cursor: pointer;
     font-weight: 700;
-    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
-    transition: transform 0.28s ease, box-shadow 0.28s ease, filter 0.28s ease;
+    box-shadow: 0 12px 32px rgba(37, 99, 235, 0.28), 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.32s cubic-bezier(0.32, 0.72, 0, 1), filter 0.32s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 #new-chat-btn:hover {
-    transform: translateY(-2px) scale(1.01);
-    box-shadow: 0 14px 30px rgba(37, 99, 235, 0.3);
-    filter: brightness(1.04);
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 18px 42px rgba(37, 99, 235, 0.35), 0 4px 12px rgba(0, 0, 0, 0.2);
+    filter: brightness(1.06);
+}
+
+#new-chat-btn:active {
+    transform: scale(0.98);
 }
 
 .control-card {
-    padding: 14px;
-    border-radius: 18px;
-    background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
-    border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    padding: 2px;
+    border-radius: 22px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 0;
+    position: relative;
+}
+    
+.control-card::before {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border-radius: 20px;
+    background: linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    pointer-events: none;
+    z-index: 0;
+}
+
+.control-card > * {
+    position: relative;
+    z-index: 1;
+    padding: 0 14px;
+}
+
+.control-card > :first-child {
+    padding-top: 14px;
+}
+
+.control-card > :last-child {
+    padding-bottom: 14px;
 }
 
 .control-row {
@@ -871,19 +984,21 @@ html.light-mode .status-pill {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    border: 1px solid rgba(96,165,250,0.35);
-    border-radius: 14px;
-    padding: 12px 14px 12px 14px;
-    padding-right: 42px;
-    background: linear-gradient(145deg, rgba(96,165,250,0.12), rgba(124,58,237,0.08));
+    border: 1px solid rgba(96,165,250,0.28);
+    border-radius: 16px;
+    padding: 14px 16px 14px 16px;
+    padding-right: 44px;
+    background: linear-gradient(145deg, rgba(96,165,250,0.1), rgba(124,58,237,0.06));
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 14px center;
-    background-size: 14px 14px;
+    background-position: right 16px center;
+    background-size: 16px 16px;
     color: #e0f2fe;
     font-size: 0.95rem;
+    font-weight: 500;
     outline: none;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12), inset 0 1px 2px rgba(255,255,255,0.08);
+    transition: border-color 0.28s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.28s cubic-bezier(0.32, 0.72, 0, 1), background 0.28s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .control-row select option {
@@ -893,7 +1008,7 @@ html.light-mode .status-pill {
 
 .control-row select:focus {
     border-color: #7c3aed;
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.16);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18), 0 8px 24px rgba(124, 58, 237, 0.16);
 }
 
 .switch-row {
@@ -904,29 +1019,33 @@ html.light-mode .status-pill {
 }
 
 .switch {
-    width: 48px;
-    height: 28px;
-    border: none;
+    width: 52px;
+    height: 32px;
+    border: 1px solid rgba(255,255,255,0.12);
     border-radius: 999px;
-    background: rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.08);
     position: relative;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background 0.32s cubic-bezier(0.32, 0.72, 0, 1), border-color 0.32s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.08);
 }
 
 .switch.active {
     background: linear-gradient(135deg, #38bdf8, #8b5cf6);
+    border-color: rgba(56, 189, 248, 0.3);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12), 0 6px 16px rgba(56, 189, 248, 0.2);
 }
 
 .switch-knob {
     position: absolute;
     top: 3px;
     left: 3px;
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     background: white;
-    transition: transform 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.16);
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .switch.active .switch-knob {
@@ -941,11 +1060,11 @@ html.light-mode .status-pill {
 }
 
 .history-item {
-    padding: 10px 12px;
-    border-radius: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
     color: var(--text-secondary);
     cursor: pointer;
-    transition: background 0.28s ease, color 0.28s ease, transform 0.28s ease, box-shadow 0.28s ease;
+    transition: background 0.32s cubic-bezier(0.32, 0.72, 0, 1), color 0.32s cubic-bezier(0.32, 0.72, 0, 1), transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.32s cubic-bezier(0.32, 0.72, 0, 1);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -966,10 +1085,10 @@ html.light-mode .status-pill {
     cursor: pointer;
     font-size: 1rem;
     line-height: 1;
-    padding: 2px 6px;
-    border-radius: 6px;
+    padding: 4px 8px;
+    border-radius: 8px;
     opacity: 0;
-    transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+    transition: opacity 0.2s cubic-bezier(0.32, 0.72, 0, 1), color 0.2s cubic-bezier(0.32, 0.72, 0, 1), background 0.2s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .history-item:hover .history-delete-btn,
@@ -979,15 +1098,15 @@ html.light-mode .status-pill {
 
 .history-delete-btn:hover {
     color: #f87171;
-    background: rgba(248, 113, 113, 0.14);
+    background: rgba(248, 113, 113, 0.18);
 }
 
 .history-item:hover,
 .history-item.active {
-    background: rgba(96, 165, 250, 0.16);
+    background: rgba(96, 165, 250, 0.14);
     color: var(--text-primary);
-    transform: translateX(2px);
-    box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.18);
+    transform: translateX(3px);
+    box-shadow: inset 0 0 0 1.5px rgba(96, 165, 250, 0.2), 0 4px 12px rgba(96, 165, 250, 0.08);
 }
 
 .compact-mode .sidebar {
@@ -1305,23 +1424,30 @@ html.light-mode .status-pill {
     gap: 8px;
 }
 
+.voice-btn {
+    margin-left: auto;
+}
+
 .icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.12);
     cursor: pointer;
-    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    transition: all 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    color: var(--text-primary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .icon-btn:hover {
-    transform: translateY(-1px);
-    background: rgba(255,255,255,0.14);
-    border-color: rgba(96, 165, 250, 0.45);
+    transform: translateY(-2px) scale(1.08);
+    background: rgba(96, 165, 250, 0.16);
+    border-color: rgba(96, 165, 250, 0.32);
+    box-shadow: 0 6px 16px rgba(96, 165, 250, 0.16);
 }
 
 .voice-btn.listening {
@@ -1338,17 +1464,28 @@ html.light-mode .status-pill {
     background: linear-gradient(135deg, #2563eb, #7c3aed);
     color: white;
     border: none;
-    padding: 0 18px;
-    height: 42px;
+    padding: 0 22px;
+    height: 44px;
     border-radius: 999px;
     cursor: pointer;
     font-weight: 700;
-    transition: transform 0.28s ease, opacity 0.28s ease, box-shadow 0.28s ease;
-    box-shadow: 0 12px 26px rgba(37, 99, 235, 0.24);
+    font-size: 0.95rem;
+    transition: all 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 #send-btn:hover {
-    transform: translateY(-1px) scale(1.01);
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 16px 40px rgba(37, 99, 235, 0.36);
+}
+
+#send-btn:active {
+    transform: scale(0.98);
+}
     opacity: 0.95;
     box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
 }
