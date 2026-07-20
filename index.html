@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -143,7 +143,12 @@
             <div class="message bot-message">Hello! I’m your AI assistant. Ask me anything and I’ll help.</div>
         </div>
 
-        <div class="suggestion-prompt-bar" id="suggestion-prompt-bar" aria-label="Suggested prompts"></div>
+        <div class="suggestion-prompt-bar visible" id="suggestion-prompt-bar" aria-label="Suggested prompts">
+            <button type="button" class="suggestion-prompt-chip">Summarize this idea in a few bullets</button>
+            <button type="button" class="suggestion-prompt-chip">Help me write a polished email</button>
+            <button type="button" class="suggestion-prompt-chip">Give me a short plan for a new project</button>
+            <button type="button" class="suggestion-prompt-chip">Explain this concept simply</button>
+        </div>
 
         <div class="chat-input-container">
             <div class="composer-stack">
