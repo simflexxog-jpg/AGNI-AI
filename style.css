@@ -180,29 +180,32 @@ html.light-mode .attachment-chip {
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: radial-gradient(circle at top left, rgba(96, 165, 250, 0.22), transparent 32%),
-      radial-gradient(circle at top right, rgba(139, 92, 246, 0.18), transparent 28%),
-      linear-gradient(135deg, #020617 0%, #06111d 36%, #0d1727 100%);
+    background:
+        radial-gradient(circle at top left, rgba(96, 165, 250, 0.22), transparent 28%),
+        radial-gradient(circle at top right, rgba(168, 85, 247, 0.18), transparent 20%),
+        radial-gradient(circle at 25% 80%, rgba(244, 114, 182, 0.12), transparent 18%),
+        linear-gradient(135deg, #030611 0%, #060f1d 42%, #030710 100%);
 }
 
 .login-shell {
     width: 100%;
-    max-width: 420px;
+    max-width: 480px;
 }
 
 .login-card {
     width: 100%;
     padding: 2px;
     border-radius: 32px;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 32px 96px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+    background: rgba(5, 10, 24, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0;
+    gap: 18px;
     text-align: center;
     position: relative;
+    overflow: hidden;
 }
 
 .login-card::before {
@@ -210,7 +213,8 @@ html.light-mode .attachment-chip {
     position: absolute;
     inset: 2px;
     border-radius: 30px;
-    background: rgba(10, 14, 30, 0.96);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0));
+    opacity: 0.16;
     pointer-events: none;
     z-index: 0;
 }
@@ -218,10 +222,9 @@ html.light-mode .attachment-chip {
 .login-card::after {
     content: '';
     position: absolute;
-    inset: 2px;
-    border-radius: 30px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent 60%);
-    opacity: 0.4;
+    inset: 0;
+    background: radial-gradient(circle at top left, rgba(255,255,255,0.08), transparent 24%);
+    opacity: 0.12;
     pointer-events: none;
     z-index: 1;
 }
@@ -233,56 +236,58 @@ html.light-mode .attachment-chip {
 
 .login-logo {
     width: 96px;
-    min-width: 96px;
     height: 96px;
     object-fit: cover;
     border-radius: 24px;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.08);
     padding: 20px;
-    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.24), inset 0 1px 2px rgba(255, 255, 255, 0.1);
-    margin-top: 28px;
+    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.24), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+    margin-top: 22px;
 }
 
 .login-card h1 {
     margin: 0;
-    padding: 38px 38px 16px 38px;
-    font-size: clamp(2rem, 2.5vw, 2.8rem);
-    line-height: 1.05;
-    letter-spacing: -0.04em;
+    padding: 0 36px 0 36px;
+    font-size: clamp(2rem, 2.4vw, 2.5rem);
+    line-height: 1.04;
+    letter-spacing: -0.05em;
     font-weight: 800;
     color: #f8fafc;
-    background: transparent;
 }
 
 .login-card p {
     margin: 0;
-    padding: 0 38px 0 38px;
+    padding: 0 36px;
     color: var(--text-secondary);
-    line-height: 1.75;
+    line-height: 1.8;
     max-width: 100%;
     font-weight: 500;
 }
 
 .google-signin-button {
-    width: 100%;
-    max-width: 360px;
+    width: calc(100% - 72px);
+    max-width: 420px;
     min-height: 56px;
-    margin: 18px 38px 38px 38px;
-    padding: 12px 24px;
+    margin: 0 36px 24px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 14px;
-    border: 1.5px solid rgba(255, 255, 255, 0.16);
-    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16), inset 0 1px 2px rgba(255, 255, 255, 0.12);
-    transition: all 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255,255,255,0.06);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.2);
+    transition: transform 0.28s ease, background 0.28s ease, border-color 0.28s ease;
+}
+
+.google-signin-button:hover {
+    transform: translateY(-2px);
+    background: rgba(255,255,255,0.1);
 }
 
 .login-note {
-    margin: 0;
+    margin: 0 36px 28px;
     color: var(--text-tertiary);
-    font-size: 0.94rem;
+    font-size: 0.96rem;
 }
 
 .login-note.error {
@@ -290,8 +295,22 @@ html.light-mode .attachment-chip {
 }
 
 @media (max-width: 520px) {
+    .login-shell {
+        max-width: 100%;
+    }
+
     .login-card {
-        padding: 28px 20px;
+        padding: 2px;
+        border-radius: 28px;
+    }
+
+    .login-card h1 {
+        font-size: 2.1rem;
+    }
+
+    .google-signin-button {
+        width: calc(100% - 48px);
+        margin: 0 24px 22px;
     }
 }
 
@@ -1396,21 +1415,23 @@ html.light-mode .status-pill {
 }
 
 .composer-row {
-    display: flex;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
     align-items: center;
 }
 
 #user-input {
-    flex: 1;
-    padding: 14px 16px;
-    border: 1px solid rgba(255,255,255,0.14);
+    width: 100%;
+    min-width: 0;
+    padding: 16px 18px;
+    border: 1px solid rgba(255,255,255,0.16);
     border-radius: 999px;
     outline: none;
     font-size: 0.95rem;
     background: rgba(255,255,255,0.08);
     color: var(--text-primary);
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.12);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.14);
     transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease, background 0.25s ease;
 }
 
@@ -1421,17 +1442,20 @@ html.light-mode .status-pill {
 #user-input:focus {
     border-color: #60a5fa;
     box-shadow: 0 0 0 3px rgba(96,165,250,0.2);
-    transform: translateY(-1px);
 }
 
 .composer-actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+    justify-content: flex-end;
 }
 
 .voice-btn {
-    margin-left: auto;
+    width: 44px;
+    height: 44px;
+    padding: 0;
 }
 
 .icon-btn {
@@ -1447,6 +1471,15 @@ html.light-mode .status-pill {
     transition: all 0.28s cubic-bezier(0.32, 0.72, 0, 1);
     color: var(--text-primary);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.icon-btn svg,
+.icon-header-btn svg,
+.toggle-btn svg,
+#send-btn svg {
+    width: 18px;
+    height: 18px;
+    color: inherit;
 }
 
 .icon-btn:hover {
@@ -1470,30 +1503,29 @@ html.light-mode .status-pill {
     background: linear-gradient(135deg, #2563eb, #7c3aed);
     color: white;
     border: none;
-    padding: 0 22px;
-    height: 44px;
+    padding: 0 24px;
+    height: 48px;
     border-radius: 999px;
     cursor: pointer;
     font-weight: 700;
     font-size: 0.95rem;
-    transition: all 0.32s cubic-bezier(0.32, 0.72, 0, 1);
-    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.28s ease;
+    box-shadow: 0 14px 34px rgba(37, 99, 235, 0.3);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    flex-shrink: 0;
+    margin-left: auto;
 }
 
 #send-btn:hover {
-    transform: translateY(-2px) scale(1.04);
-    box-shadow: 0 16px 40px rgba(37, 99, 235, 0.36);
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 18px 44px rgba(37, 99, 235, 0.4);
 }
 
 #send-btn:active {
     transform: scale(0.98);
-}
-    opacity: 0.95;
-    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
 }
 
 .bot-message .thinking-label {
