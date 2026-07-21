@@ -1423,6 +1423,31 @@ html.light-mode .status-pill {
     width: 100%;
 }
 
+/* Composer layout tweaks: left Auto-send chip and flush right send button */
+.composer-left {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.composer-right {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+}
+
+.chip.auto-send {
+    border-radius: 999px;
+    padding: 8px 12px;
+    background: linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 0.92rem;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
 #user-input {
     flex: 1;
     min-width: 0;
