@@ -1417,39 +1417,14 @@ html.light-mode .status-pill {
 }
 
 .composer-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
     align-items: center;
-    gap: 16px;
-    width: 100%;
-}
-
-/* Composer layout tweaks: left Auto-send chip and flush right send button */
-.composer-left {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.composer-right {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-}
-
-.chip.auto-send {
-    border-radius: 999px;
-    padding: 8px 12px;
-    background: linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-    border: 1px solid rgba(255,255,255,0.10);
-    color: var(--text-primary);
-    font-weight: 700;
-    font-size: 0.92rem;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
 }
 
 #user-input {
-    flex: 1;
+    width: 100%;
     min-width: 0;
     padding: 18px 20px;
     border: 1px solid rgba(255,255,255,0.16);
@@ -1475,13 +1450,13 @@ html.light-mode .status-pill {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     justify-content: flex-end;
 }
 
 .voice-btn {
-    width: 46px;
-    height: 46px;
+    width: 44px;
+    height: 44px;
     padding: 0;
 }
 
@@ -1530,8 +1505,8 @@ html.light-mode .status-pill {
     background: linear-gradient(135deg, #2563eb, #7c3aed);
     color: white;
     border: none;
-    padding: 0 26px;
-    height: 54px;
+    padding: 0 24px;
+    height: 52px;
     border-radius: 999px;
     cursor: pointer;
     font-weight: 700;
@@ -1543,7 +1518,8 @@ html.light-mode .status-pill {
     justify-content: center;
     gap: 10px;
     flex-shrink: 0;
-    min-width: 152px;
+    margin-left: auto;
+    min-width: 140px;
 }
 
 #send-btn:hover {

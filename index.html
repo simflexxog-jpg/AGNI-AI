@@ -153,25 +153,22 @@
         <div class="chat-input-container">
             <div class="composer-stack">
                 <div class="attachment-preview" id="attachment-preview"></div>
-                <div class="composer-row d-flex align-items-center">
-                    <div class="composer-left d-flex align-items-center gap-2 me-3">
-                        <div class="chip auto-send p-1 px-2">Auto-send</div>
-                        <div class="composer-actions d-flex gap-2 align-items-center">
-                            <button class="btn btn-ghost" id="attach-btn" title="Attach">
-                                <span class="material-symbols-outlined">attach_file</span>
-                            </button>
-                            <button class="btn btn-ghost" id="emoji-btn" title="Emoji">
-                                <span class="material-symbols-outlined">sentiment_satisfied</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <input id="user-input" class="form-control flex-grow-1" placeholder="Write a message..." aria-label="Message input">
-
-                    <div class="composer-right ms-3">
-                        <button id="send-btn" class="btn btn-primary d-flex align-items-center justify-content-center">
-                            <span class="material-symbols-outlined">send</span>
+                <div class="composer-row">
+                    <input type="text" id="user-input" placeholder="Ask anything, add files, or share images..." autocomplete="off">
+                    <div class="composer-actions">
+                        <button id="auto-submit-toggle-btn" class="toggle-chip" type="button" aria-pressed="false">Auto-send</button>
+                        <label class="icon-btn" title="Add image">
+                            <input type="file" id="image-input" accept="image/*" hidden>
+                            <span class="material-symbols-outlined">image</span>
+                        </label>
+                        <label class="icon-btn" title="Add file">
+                            <input type="file" id="file-input" hidden>
+                            <span class="material-symbols-outlined">attach_file</span>
+                        </label>
+                        <button id="voice-input-btn" class="icon-btn voice-btn" type="button" title="Speak your prompt">
+                            <span class="material-symbols-outlined">mic</span>
                         </button>
+                        <button id="send-btn"><span class="material-symbols-outlined">send</span><span class="send-text">Send</span></button>
                     </div>
                 </div>
             </div>
