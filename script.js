@@ -48,6 +48,7 @@ const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024; // 8MB per file
 let attachments = [];
 let conversations = [];
 let activeId = null;
+let csrfToken = '';
 let socket = null;
 let socketReady = false;
 let pendingRequest = null;
@@ -309,6 +310,7 @@ function personalizeWelcomeMessage() {
 
 async function loadState() {
     try {
+        await fetchCsrfToken();
         const response = await fetch('/api/conversations');
         if (response.ok) {
             const payload = await response.json();
@@ -351,13 +353,33 @@ function saveState() {
     }
 }
 
+async function fetchCsrfToken() {
+    try {
+        const response = await fetch('/api/csrf-token', { credentials: 'include' });
+        if (!response.ok) return;
+        const data = await response.json();
+        csrfToken = data?.csrfToken || '';
+    } catch (error) {
+        csrfToken = '';
+    }
+}
+
+function buildJsonHeaders(extra = {}) {
+    const headers = { 'Content-Type': 'application/json', ...(extra || {}) };
+    if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+    }
+    return headers;
+}
+
 async function persistConversation(conv) {
     if (!conv) return;
 
     try {
         await fetch('/api/conversations', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: buildJsonHeaders(),
+            credentials: 'include',
             body: JSON.stringify(conv)
         });
     } catch (error) {
@@ -371,7 +393,8 @@ async function deleteConversationFromServer(id) {
     try {
         await fetch('/api/conversations', {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
+            headers: buildJsonHeaders(),
+            credentials: 'include',
             body: JSON.stringify({ id })
         });
     } catch (error) {
@@ -402,7 +425,7 @@ function renderUserHeader() {
 
 async function handleLogout() {
     try {
-        await fetch('/auth/logout', { method: 'POST' });
+        await fetch('/auth/logout', { method: 'POST', headers: buildJsonHeaders(), credentials: 'include' });
     } catch (error) {
         // ignore logout errors
     }

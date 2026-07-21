@@ -1,11 +1,15 @@
 require('dotenv').config();
 
+const crypto = require('crypto');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 const express = require('express');
 const session = require('express-session');
+const helmet = require('helmet');
+const cors = require('cors');
+const csrf = require('csurf');
 const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
 const { OAuth2Client } = require('google-auth-library');
@@ -73,6 +77,24 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
+app.disable('x-powered-by');
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://fonts.googleapis.com'],
+      connectSrc: ["'self'", 'https:', 'wss:', 'ws:'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'none'"]
+    }
+  },
+  crossOriginResourcePolicy: { policy: 'same-site' }
+}));
+
 const oauthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '');
 const inMemoryConversations = new Map();
 const inMemoryUsers = new Map();
@@ -82,6 +104,24 @@ let ragIndexCacheTime = 0;
 
 function normalizeText(text) {
   return (text || '').replace(/\r/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function sanitizeTextInput(value, { maxLength = 4000, allowEmpty = false } = {}) {
+  if (typeof value !== 'string') {
+    return allowEmpty ? '' : '';
+  }
+
+  const cleaned = value
+    .replace(/\u0000/g, '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleaned && allowEmpty) {
+    return '';
+  }
+
+  return maxLength && cleaned.length > maxLength ? cleaned.slice(0, maxLength) : cleaned;
 }
 
 function isAuthenticated(req, res, next) {
@@ -254,8 +294,8 @@ function setCorsHeaders(req, res, next) {
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token');
   if (typeof next === 'function') {
     next();
   }
@@ -397,57 +437,58 @@ async function connectToDatabase() {
 
 function normalizeConversation(doc) {
   return {
-    id: doc._id || doc.id,
-    title: doc.title || 'New chat',
+    id: sanitizeTextInput(doc._id || doc.id, { maxLength: 200 }) || 'chat',
+    title: sanitizeTextInput(doc.title || 'New chat', { maxLength: 120 }),
     messages: Array.isArray(doc.messages) ? doc.messages : [],
     createdAt: doc.createdAt || new Date().toISOString(),
     updatedAt: doc.updatedAt || new Date().toISOString()
   };
 }
 
-// *** FIX: include googleId in the returned object so session auth check works ***
 function normalizeUser(doc) {
   return {
-    id: doc.googleId,
-    googleId: doc.googleId,
-    name: doc.name,
-    email: doc.email,
-    avatar: doc.avatar
+    id: sanitizeTextInput(doc.googleId, { maxLength: 200 }),
+    googleId: sanitizeTextInput(doc.googleId, { maxLength: 200 }),
+    name: sanitizeTextInput(doc.name, { maxLength: 200 }),
+    email: sanitizeTextInput(doc.email, { maxLength: 200 }),
+    avatar: sanitizeTextInput(doc.avatar, { maxLength: 500 })
   };
 }
 
 async function getUserByGoogleId(googleId) {
   if (!googleId) return null;
+  const safeGoogleId = sanitizeTextInput(googleId, { maxLength: 200 });
   const pool = await connectToDatabase();
   if (!pool) {
-    return inMemoryUsers.get(googleId) || null;
+    return inMemoryUsers.get(safeGoogleId) || null;
   }
 
   const { rows } = await pool.query(
     'SELECT google_id AS "googleId", name, email, avatar FROM users WHERE google_id = $1',
-    [googleId]
+    [safeGoogleId]
   );
   return rows[0] ? normalizeUser(rows[0]) : null;
 }
 
 async function upsertUser(user) {
   if (!user || !user.googleId) return null;
+  const safeGoogleId = sanitizeTextInput(user.googleId, { maxLength: 200 });
   const doc = {
-    googleId: user.googleId,
-    name: user.name || '',
-    email: user.email || '',
-    avatar: user.avatar || '',
+    googleId: safeGoogleId,
+    name: sanitizeTextInput(user.name || '', { maxLength: 200 }),
+    email: sanitizeTextInput(user.email || '', { maxLength: 200 }),
+    avatar: sanitizeTextInput(user.avatar || '', { maxLength: 500 }),
     updatedAt: new Date().toISOString()
   };
 
   const pool = await connectToDatabase();
   if (!pool) {
-    if (!inMemoryUsers.has(user.googleId)) {
+    if (!inMemoryUsers.has(safeGoogleId)) {
       doc.createdAt = new Date().toISOString();
     } else {
-      doc.createdAt = inMemoryUsers.get(user.googleId).createdAt;
+      doc.createdAt = inMemoryUsers.get(safeGoogleId).createdAt;
     }
-    inMemoryUsers.set(user.googleId, doc);
+    inMemoryUsers.set(safeGoogleId, doc);
     return normalizeUser(doc);
   }
 
@@ -460,24 +501,25 @@ async function upsertUser(user) {
        avatar = EXCLUDED.avatar,
        updated_at = NOW()
      RETURNING google_id AS "googleId", name, email, avatar`,
-    [user.googleId, doc.name, doc.email, doc.avatar]
+    [safeGoogleId, doc.name, doc.email, doc.avatar]
   );
 
   return rows[0] ? normalizeUser(rows[0]) : null;
 }
 
 async function listConversations(userId) {
+  const safeUserId = sanitizeTextInput(userId, { maxLength: 200 });
   const pool = await connectToDatabase();
   if (!pool) {
     return Array.from(inMemoryConversations.values())
-      .filter(doc => doc.userId === userId)
+      .filter(doc => doc.userId === safeUserId)
       .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
       .map(normalizeConversation);
   }
 
   const { rows } = await pool.query(
     'SELECT id, title, messages, created_at, updated_at FROM conversations WHERE user_id = $1 ORDER BY updated_at DESC, created_at DESC',
-    [userId]
+    [safeUserId]
   );
 
   return rows.map(row => normalizeConversation({
@@ -491,11 +533,12 @@ async function listConversations(userId) {
 }
 
 async function upsertConversation(conversation, userId) {
+  const safeUserId = sanitizeTextInput(userId, { maxLength: 200 });
   const doc = {
-    _id: conversation.id,
-    id: conversation.id,
-    userId,
-    title: conversation.title || 'New chat',
+    _id: sanitizeTextInput(conversation.id, { maxLength: 200 }) || `chat-${Date.now()}`,
+    id: sanitizeTextInput(conversation.id, { maxLength: 200 }) || `chat-${Date.now()}`,
+    userId: safeUserId,
+    title: sanitizeTextInput(conversation.title || 'New chat', { maxLength: 120 }),
     messages: Array.isArray(conversation.messages) ? conversation.messages : [],
     createdAt: conversation.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -515,7 +558,7 @@ async function upsertConversation(conversation, userId) {
        messages = EXCLUDED.messages,
        updated_at = NOW()
      RETURNING id, title, messages, created_at, updated_at`,
-    [conversation.id, userId, doc.title, JSON.stringify(doc.messages), doc.createdAt]
+    [doc.id, safeUserId, doc.title, JSON.stringify(doc.messages), doc.createdAt]
   );
 
   const row = rows[0];
@@ -530,12 +573,14 @@ async function upsertConversation(conversation, userId) {
 }
 
 async function deleteConversationById(id, userId) {
+  const safeId = sanitizeTextInput(id, { maxLength: 200 });
+  const safeUserId = sanitizeTextInput(userId, { maxLength: 200 });
   const pool = await connectToDatabase();
   if (!pool) {
-    return inMemoryConversations.delete(id);
+    return inMemoryConversations.delete(safeId);
   }
 
-  const { rowCount } = await pool.query('DELETE FROM conversations WHERE id = $1 AND user_id = $2 RETURNING id', [id, userId]);
+  const { rowCount } = await pool.query('DELETE FROM conversations WHERE id = $1 AND user_id = $2 RETURNING id', [safeId, safeUserId]);
   return rowCount > 0;
 }
 
@@ -578,7 +623,7 @@ function sanitizeHistory(rawHistory) {
     .filter(item => item && typeof item.content === 'string' && item.content.trim())
     .map(item => ({
       role: (item.role === 'assistant' || item.role === 'bot') ? 'assistant' : 'user',
-      content: item.content.trim().slice(0, MAX_HISTORY_MESSAGE_CHARS)
+      content: sanitizeTextInput(item.content, { maxLength: MAX_HISTORY_MESSAGE_CHARS })
     }));
 }
 
@@ -588,8 +633,8 @@ function sanitizeAttachments(rawAttachments) {
     .filter(item => item && typeof item.name === 'string')
     .slice(0, MAX_ATTACHMENTS)
     .map(item => ({
-      name: item.name.slice(0, 200),
-      type: typeof item.type === 'string' ? item.type : '',
+      name: sanitizeTextInput(item.name, { maxLength: 200 }),
+      type: typeof item.type === 'string' ? sanitizeTextInput(item.type, { maxLength: 100 }) : '',
       previewUrl: (typeof item.previewUrl === 'string' && item.previewUrl.length <= MAX_ATTACHMENT_DATA_URL_LENGTH)
         ? item.previewUrl
         : null
@@ -896,7 +941,7 @@ async function handleChat(req, res) {
     return;
   }
 
-  const userMessage = typeof payload.message === 'string' ? payload.message : '';
+  const userMessage = sanitizeTextInput(typeof payload.message === 'string' ? payload.message : '', { maxLength: 12000 });
   if (!userMessage.trim()) {
     sendJson(req, res, 400, { error: 'Message is required.' });
     return;
@@ -1075,8 +1120,15 @@ async function handleConversationPersistence(req, res) {
 
 // ---- Session setup ----------------------------------------------------------
 
+const sessionSecret = process.env.SESSION_SECRET || (isDev ? crypto.randomBytes(32).toString('hex') : null);
+
+if (!sessionSecret) {
+  console.error('SESSION_SECRET is required in production. Set it before starting the app.');
+  process.exit(1);
+}
+
 const sessionOptions = {
-  secret: process.env.SESSION_SECRET || 'supersecretlocal',
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -1099,10 +1151,46 @@ if (process.env.DATABASE_URL && process.env.NODE_ENV === 'production') {
   console.warn('SESSION WARNING: Using in-memory session store. Sessions will be lost on restart.');
 }
 
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || isOriginAllowed(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('Origin not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'X-CSRF-Token']
+};
+
 app.use(session(sessionOptions));
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(setCorsHeaders);
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: false, limit: '20mb' }));
+
+const csrfProtection = csrf({
+  cookie: {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: process.env.NODE_ENV === 'production'
+  },
+  value: req => req.get('X-CSRF-Token') || req.body?._csrf || ''
+});
+
+app.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    return next();
+  }
+
+  if (req.path === '/api/csrf-token' || req.path === '/api/chat' || req.path === '/api/transcribe' || req.path === '/auth/google/callback' || req.path === '/auth/google/redirect') {
+    return next();
+  }
+
+  return csrfProtection(req, res, next);
+});
 
 // ---- Routes -----------------------------------------------------------------
 
@@ -1119,6 +1207,10 @@ app.get('/auth/google', (req, res) => {
 
 app.get('/api/google-client-id', (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID || '' });
+});
+
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+  res.json({ csrfToken: req.csrfToken ? req.csrfToken() : '' });
 });
 
 app.post('/auth/google/callback', async (req, res) => {

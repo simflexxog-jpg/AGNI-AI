@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="style.css?v=11">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-2QPhm+X8rl5y2QLM/OS+3kSvI7P014/UKZdI9Yn2tYj1c3B7OZs2Gfok/0KGMqZ2" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Material+Symbols+Outlined" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/lucide@1.0.0/dist/lucide.min.js" defer></script>
 </head>
 <body>
 <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
@@ -59,7 +58,7 @@
         </div> <!-- /.sidebar-body -->
 
         <footer class="sidebar-footer">
-            <button id="open-settings-btn" class="text-btn"><i data-lucide="settings"></i> Settings</button>
+<button id="open-settings-btn" class="text-btn"><span class="material-symbols-outlined">settings</span> Settings</button>
 
             <div class="sidebar-settings" id="sidebar-settings" hidden>
                 <div class="settings-header">
@@ -110,7 +109,7 @@
     <main class="chat-panel">
         <div class="chat-header">
             <div class="header-left">
-                <button id="toggle-sidebar-btn" class="toggle-btn" aria-label="Toggle sidebar"><i data-lucide="menu"></i></button>
+                <button id="toggle-sidebar-btn" class="toggle-btn" aria-label="Toggle sidebar"><span class="material-symbols-outlined">menu</span></button>
                 <div>
                     <h3>AGNI AI</h3>
                     <p>Smart assistant ready to help</p>
@@ -127,7 +126,7 @@
                 <input type="checkbox" id="compact-view-toggle" hidden>
                 <div class="status-pill" id="status-pill">● Gemini · Flash</div>
                 <div class="action-menu">
-                    <button id="action-menu-btn" class="icon-header-btn" type="button" aria-haspopup="true" aria-expanded="false" title="More actions"><i data-lucide="more-vertical"></i></button>
+                    <button id="action-menu-btn" class="icon-header-btn" type="button" aria-haspopup="true" aria-expanded="false" title="More actions"><span class="material-symbols-outlined">more_vert</span></button>
                     <div class="action-menu-dropdown" id="action-menu-dropdown" hidden role="menu" aria-label="More actions menu">
                         <button type="button" id="export-btn" class="menu-item" role="menuitem">Export chat</button>
                         <button type="button" id="import-btn" class="menu-item" role="menuitem">Import chat</button>
@@ -160,16 +159,16 @@
                         <button id="auto-submit-toggle-btn" class="toggle-chip" type="button" aria-pressed="false">Auto-send</button>
                         <label class="icon-btn" title="Add image">
                             <input type="file" id="image-input" accept="image/*" hidden>
-                            <i data-lucide="image"></i>
+                            <span class="material-symbols-outlined">image</span>
                         </label>
                         <label class="icon-btn" title="Add file">
                             <input type="file" id="file-input" hidden>
-                            <i data-lucide="paperclip"></i>
+                            <span class="material-symbols-outlined">attach_file</span>
                         </label>
                         <button id="voice-input-btn" class="icon-btn voice-btn" type="button" title="Speak your prompt">
-                            <i data-lucide="mic"></i>
+                            <span class="material-symbols-outlined">mic</span>
                         </button>
-                        <button id="send-btn"><i data-lucide="send"></i><span class="send-text">Send</span></button>
+                        <button id="send-btn"><span class="material-symbols-outlined">send</span><span class="send-text">Send</span></button>
                     </div>
                 </div>
             </div>
@@ -216,6 +215,5 @@
 </div>
 
 <script src="script.js?v=7"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.replace(); });</script>
 </body>
 </html>
