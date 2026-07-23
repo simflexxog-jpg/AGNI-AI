@@ -189,12 +189,34 @@ function initTTS() {
     const savedTTS = localStorage.getItem(TTS_KEY) || 'false';
     ttsEnabled = savedTTS === 'true';
     updateTTSButton();
+    syncVoiceControlsPanel();
+    // Voices may load async
+    populateTTSVoices();
+    if (window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = populateTTSVoices;
+    }
+    // Wire up rate/pitch sliders
+    const rateInput = document.getElementById('tts-rate');
+    const pitchInput = document.getElementById('tts-pitch');
+    const rateValue = document.getElementById('tts-rate-value');
+    const pitchValue = document.getElementById('tts-pitch-value');
+    if (rateInput && rateValue) {
+        rateInput.addEventListener('input', () => {
+            rateValue.textContent = parseFloat(rateInput.value).toFixed(1) + '×';
+        });
+    }
+    if (pitchInput && pitchValue) {
+        pitchInput.addEventListener('input', () => {
+            pitchValue.textContent = parseFloat(pitchInput.value).toFixed(1);
+        });
+    }
 }
 
 function toggleTTS() {
     ttsEnabled = !ttsEnabled;
     localStorage.setItem(TTS_KEY, String(ttsEnabled));
     updateTTSButton();
+    syncVoiceControlsPanel();
 }
 
 function updateTTSButton() {
@@ -726,6 +748,27 @@ function createStreamingBotMessage() {
     copyBtn.addEventListener('click', () => copyToClipboard(content.textContent || '', copyBtn));
     actions.appendChild(copyBtn);
 
+    const speakBtn2 = document.createElement('button');
+    speakBtn2.type = 'button';
+    speakBtn2.className = 'msg-action-btn speak-msg-btn';
+    speakBtn2.textContent = '🔊 Speak';
+    speakBtn2.addEventListener('click', () => {
+        const rawText = content.textContent || '';
+        if (speakBtn2.classList.contains('speaking')) {
+            window.speechSynthesis.cancel();
+            speakBtn2.textContent = '🔊 Speak';
+            speakBtn2.classList.remove('speaking');
+        } else {
+            speakBtn2.textContent = '⏹ Stop';
+            speakBtn2.classList.add('speaking');
+            speakResponse(rawText, () => {
+                speakBtn2.textContent = '🔊 Speak';
+                speakBtn2.classList.remove('speaking');
+            });
+        }
+    });
+    actions.appendChild(speakBtn2);
+
     messageDiv.appendChild(actions);
     chatBox.appendChild(messageDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
@@ -803,6 +846,26 @@ function appendMessage(text, sender, options = {}) {
         copyBtn.textContent = 'Copy';
         copyBtn.addEventListener('click', () => copyToClipboard(text, copyBtn));
         actions.appendChild(copyBtn);
+
+        const speakBtn = document.createElement('button');
+        speakBtn.type = 'button';
+        speakBtn.className = 'msg-action-btn speak-msg-btn';
+        speakBtn.textContent = '🔊 Speak';
+        speakBtn.addEventListener('click', () => {
+            if (speakBtn.classList.contains('speaking')) {
+                window.speechSynthesis.cancel();
+                speakBtn.textContent = '🔊 Speak';
+                speakBtn.classList.remove('speaking');
+            } else {
+                speakBtn.textContent = '⏹ Stop';
+                speakBtn.classList.add('speaking');
+                speakResponse(text, () => {
+                    speakBtn.textContent = '🔊 Speak';
+                    speakBtn.classList.remove('speaking');
+                });
+            }
+        });
+        actions.appendChild(speakBtn);
 
         messageDiv.appendChild(actions);
 
@@ -971,13 +1034,43 @@ function toggleAutoSubmit() {
     autoSubmitToggleBtn.setAttribute('aria-pressed', String(autoSubmitVoice));
 }
 
-function speakResponse(text) {
-    if (!ttsEnabled || !text) return;
+function speakResponse(text, onEnd) {
+    if (!text) return;
     if (typeof window.speechSynthesis === 'undefined') return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
+
+    // Apply voice settings if controls exist
+    const voiceSelect = document.getElementById('tts-voice-select');
+    const rateInput = document.getElementById('tts-rate');
+    const pitchInput = document.getElementById('tts-pitch');
+    const voices = window.speechSynthesis.getVoices();
+    if (voiceSelect && voices[parseInt(voiceSelect.value)]) {
+        utterance.voice = voices[parseInt(voiceSelect.value)];
+    }
+    if (rateInput) utterance.rate = parseFloat(rateInput.value);
+    if (pitchInput) utterance.pitch = parseFloat(pitchInput.value);
+
+    if (onEnd) utterance.onend = onEnd;
     window.speechSynthesis.speak(utterance);
+}
+
+// Populate TTS voice dropdown
+function populateTTSVoices() {
+    const voiceSelect = document.getElementById('tts-voice-select');
+    if (!voiceSelect) return;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return;
+    voiceSelect.innerHTML = voices
+        .map((v, i) => `<option value="${i}">${v.name} (${v.lang})</option>`)
+        .join('');
+}
+
+// Show/hide voice controls panel when TTS is toggled
+function syncVoiceControlsPanel() {
+    const panel = document.getElementById('voice-controls-panel');
+    if (panel) panel.style.display = ttsEnabled ? 'block' : 'none';
 }
 
 // ---------------------------------------------------------------------------
