@@ -281,6 +281,10 @@ html.light-mode #live-voice-select {
     border-color: rgba(15, 23, 42, 0.12);
 }
 
+#live-voice-modal[hidden] {
+    display: none !important;
+}
+
 html.light-mode .user-message {
     background: linear-gradient(135deg, #2563eb, #4f46e5);
     color: white;
