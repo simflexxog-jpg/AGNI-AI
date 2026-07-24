@@ -29,6 +29,13 @@ const compactViewToggle = document.getElementById('compact-view-toggle');
 const compactViewToggleBtn = document.getElementById('compact-view-toggle-btn');
 const voiceInputBtn = document.getElementById('voice-input-btn');
 const autoSubmitToggleBtn = document.getElementById('auto-submit-toggle-btn');
+const liveVoiceBtn = document.getElementById('live-voice-btn');
+const liveVoiceModal = document.getElementById('live-voice-modal');
+const liveOrb = document.getElementById('live-orb');
+const liveStatusText = document.getElementById('live-status-text');
+const liveTranscript = document.getElementById('live-transcript');
+const liveEndCallBtn = document.getElementById('live-end-call-btn');
+const liveVoiceSelect = document.getElementById('live-voice-select');
 
 // Same-origin relative path: works regardless of host/port, since server.js
 // serves both the static frontend and the /api/chat endpoint.
@@ -69,6 +76,17 @@ let silenceMonitorId = null;
 let silenceDurationMs = 0;
 let audioContext = null;
 let analyserNode = null;
+let liveSocket = null;
+let liveSessionActive = false;
+let liveMicStream = null;
+let liveAudioContext = null;
+let liveAudioWorkletNode = null;
+let liveSourceNode = null;
+let liveScriptProcessor = null;
+let liveMicCaptureTimer = null;
+let livePendingAudioSamples = [];
+let liveCurrentVoice = 'Aoede';
+let liveTranscriptBuffer = '';
 
 // Settings panel elements (sidebar)
 const openSettingsBtn = document.getElementById('open-settings-btn');
@@ -980,6 +998,364 @@ function speakResponse(text) {
     window.speechSynthesis.speak(utterance);
 }
 
+function setLiveOrbState(state) {
+    if (!liveOrb) return;
+    liveOrb.classList.remove('listening', 'speaking', 'error');
+    if (state) liveOrb.classList.add(state);
+}
+
+function setLiveStatus(text, state = '') {
+    if (liveStatusText) {
+        liveStatusText.textContent = text || 'Connecting…';
+    }
+    if (state) {
+        setLiveOrbState(state);
+    }
+}
+
+function setLiveTranscript(text) {
+    if (!liveTranscript) return;
+    liveTranscript.textContent = text || 'Tap the orb to begin speaking with Gemini Live.';
+}
+
+async function loadGeminiConfig() {
+    try {
+        const response = await fetch('/api/config');
+        if (!response.ok) return;
+        const data = await response.json();
+        window.GEMINI_API_KEY = data?.geminiKey || '';
+    } catch (error) {
+        window.GEMINI_API_KEY = window.GEMINI_API_KEY || '';
+    }
+}
+
+function float32ToPcm16Base64(samples) {
+    const pcm = new Int16Array(samples.length);
+    for (let i = 0; i < samples.length; i += 1) {
+        const sample = Math.max(-1, Math.min(1, samples[i] || 0));
+        pcm[i] = Math.max(-32768, Math.min(32767, Math.round(sample * 32767)));
+    }
+
+    const buffer = new ArrayBuffer(pcm.byteLength);
+    const view = new DataView(buffer);
+    for (let i = 0; i < pcm.length; i += 1) {
+        view.setInt16(i * 2, pcm[i], true);
+    }
+
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 1) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+function stopLiveAudioCapture() {
+    if (liveMicCaptureTimer) {
+        window.clearInterval(liveMicCaptureTimer);
+        liveMicCaptureTimer = null;
+    }
+
+    if (liveScriptProcessor) {
+        try { liveScriptProcessor.disconnect(); } catch (error) {}
+        liveScriptProcessor.onaudioprocess = null;
+        liveScriptProcessor = null;
+    }
+
+    if (liveAudioWorkletNode) {
+        try { liveAudioWorkletNode.disconnect(); } catch (error) {}
+        liveAudioWorkletNode.port.onmessage = null;
+        liveAudioWorkletNode = null;
+    }
+
+    if (liveSourceNode) {
+        try { liveSourceNode.disconnect(); } catch (error) {}
+        liveSourceNode = null;
+    }
+
+    if (liveMicStream) {
+        liveMicStream.getTracks().forEach(track => track.stop());
+        liveMicStream = null;
+    }
+
+    livePendingAudioSamples = [];
+
+    if (liveAudioContext) {
+        liveAudioContext.close().catch(() => {});
+        liveAudioContext = null;
+    }
+}
+
+async function ensureLiveAudioContext() {
+    if (!liveAudioContext) {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) return null;
+        liveAudioContext = new AudioContextCtor();
+    }
+
+    if (liveAudioContext.state === 'suspended') {
+        await liveAudioContext.resume();
+    }
+
+    return liveAudioContext;
+}
+
+function playAudioChunk(base64pcm) {
+    if (!base64pcm) return;
+
+    const playChunk = async () => {
+        const audioContextToUse = await ensureLiveAudioContext();
+        if (!audioContextToUse) return;
+
+        try {
+            const binary = atob(base64pcm);
+            const buffer = new ArrayBuffer(binary.length);
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < binary.length; i += 1) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+
+            const pcmData = new Int16Array(buffer);
+            const pcmBuffer = audioContextToUse.createBuffer(1, pcmData.length, 24000);
+            const channelData = pcmBuffer.getChannelData(0);
+            for (let i = 0; i < pcmData.length; i += 1) {
+                channelData[i] = pcmData[i] / 32768;
+            }
+
+            const source = audioContextToUse.createBufferSource();
+            source.buffer = pcmBuffer;
+            source.connect(audioContextToUse.destination);
+            source.start();
+        } catch (error) {
+            // Ignore playback issues and continue.
+        }
+    };
+
+    playChunk();
+}
+
+async function captureMicPCM16(onChunk) {
+    if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Microphone access is not supported in this browser.');
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+        }
+    });
+
+    liveMicStream = stream;
+    const audioContextToUse = await ensureLiveAudioContext();
+    if (!audioContextToUse) {
+        throw new Error('Audio context is unavailable.');
+    }
+
+    livePendingAudioSamples = [];
+
+    const processAudioData = (samples) => {
+        if (!samples || !samples.length) return;
+        livePendingAudioSamples.push(...samples);
+    };
+
+    try {
+        if (typeof window.AudioWorkletNode !== 'undefined' && audioContextToUse.audioWorklet) {
+            const workletCode = `class MicCaptureProcessor extends AudioWorkletProcessor { process(inputs) { const input = inputs[0]; if (input && input[0]) { this.port.postMessage(input[0]); } return true; } } registerProcessor('mic-capture-processor', MicCaptureProcessor);`;
+            const workletUrl = URL.createObjectURL(new Blob([workletCode], { type: 'text/javascript' }));
+            await audioContextToUse.audioWorklet.addModule(workletUrl);
+            liveAudioWorkletNode = new AudioWorkletNode(audioContextToUse, 'mic-capture-processor');
+            liveAudioWorkletNode.port.onmessage = (event) => {
+                processAudioData(Array.from(event.data));
+            };
+            liveSourceNode = audioContextToUse.createMediaStreamSource(stream);
+            liveSourceNode.connect(liveAudioWorkletNode);
+
+            const silenceGain = audioContextToUse.createGain();
+            silenceGain.gain.value = 0;
+            liveAudioWorkletNode.connect(silenceGain);
+            silenceGain.connect(audioContextToUse.destination);
+        } else {
+            liveScriptProcessor = audioContextToUse.createScriptProcessor(4096, 1, 1);
+            liveSourceNode = audioContextToUse.createMediaStreamSource(stream);
+            liveSourceNode.connect(liveScriptProcessor);
+
+            const silenceGain = audioContextToUse.createGain();
+            silenceGain.gain.value = 0;
+            liveScriptProcessor.connect(silenceGain);
+            silenceGain.connect(audioContextToUse.destination);
+
+            liveScriptProcessor.onaudioprocess = (event) => {
+                const samples = event.inputBuffer.getChannelData(0);
+                processAudioData(Array.from(samples));
+            };
+        }
+    } catch (error) {
+        try { stream.getTracks().forEach(track => track.stop()); } catch (stopError) {}
+        throw error;
+    }
+
+    liveMicCaptureTimer = window.setInterval(() => {
+        if (!livePendingAudioSamples.length) return;
+        const chunk = livePendingAudioSamples.splice(0, livePendingAudioSamples.length);
+        const base64 = float32ToPcm16Base64(chunk);
+        if (typeof onChunk === 'function') {
+            onChunk(base64);
+        }
+    }, 100);
+}
+
+function sendLiveSetupMessage() {
+    if (!liveSocket || liveSocket.readyState !== WebSocket.OPEN) return;
+
+    liveSocket.send(JSON.stringify({
+        setup: {
+            model: 'models/gemini-2.0-flash-live-001',
+            generation_config: {
+                response_modalities: ['AUDIO'],
+                speech_config: {
+                    voice_config: {
+                        prebuilt_voice_config: {
+                            voice_name: liveCurrentVoice
+                        }
+                    }
+                }
+            }
+        }
+    }));
+}
+
+function openLiveVoiceModal() {
+    if (liveVoiceModal) {
+        liveVoiceModal.hidden = false;
+    }
+    setLiveStatus('Connecting…');
+    setLiveTranscript('Connecting to Gemini Live…');
+    setLiveOrbState('');
+    startGeminiLiveSession();
+}
+
+function closeLiveVoiceModal() {
+    liveSessionActive = false;
+    setLiveStatus('Disconnected', '');
+    setLiveTranscript('Session ended.');
+    setLiveOrbState('');
+
+    if (liveSocket) {
+        const socket = liveSocket;
+        liveSocket = null;
+        try { socket.close(); } catch (error) {}
+    }
+
+    stopLiveAudioCapture();
+
+    if (liveVoiceModal) {
+        liveVoiceModal.hidden = true;
+    }
+}
+
+async function startGeminiLiveSession() {
+    if (liveSessionActive) return;
+
+    if (!window.GEMINI_API_KEY) {
+        await loadGeminiConfig();
+    }
+
+    if (!window.GEMINI_API_KEY) {
+        setLiveStatus('Gemini API key is missing.', 'error');
+        setLiveTranscript('Add a Gemini API key in the app config to enable live voice.');
+        return;
+    }
+
+    const liveEndpoint = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(window.GEMINI_API_KEY)}`;
+    liveSessionActive = true;
+    liveCurrentVoice = liveVoiceSelect?.value || liveCurrentVoice;
+    setLiveStatus('Connecting…', '');
+
+    liveSocket = new WebSocket(liveEndpoint);
+
+    liveSocket.addEventListener('open', () => {
+        setLiveStatus('Listening…', 'listening');
+        sendLiveSetupMessage();
+        captureMicPCM16((pcmBase64) => {
+            if (!liveSocket || liveSocket.readyState !== WebSocket.OPEN) return;
+            liveSocket.send(JSON.stringify({
+                realtime_input: {
+                    media_chunks: [{
+                        mime_type: 'audio/pcm',
+                        data: pcmBase64
+                    }]
+                }
+            }));
+        }).catch((error) => {
+            setLiveStatus(`Mic error: ${error.message || 'Unable to start microphone.'}`, 'error');
+            setLiveTranscript('Microphone capture failed.');
+            closeLiveVoiceModal();
+        });
+    });
+
+    liveSocket.addEventListener('message', (event) => {
+        handleLiveMessage(event);
+    });
+
+    liveSocket.addEventListener('error', () => {
+        setLiveStatus('Live connection error.', 'error');
+        setLiveTranscript('The live session could not be established.');
+        closeLiveVoiceModal();
+    });
+
+    liveSocket.addEventListener('close', () => {
+        if (liveSessionActive) {
+            setLiveStatus('Connection closed.', '');
+            setLiveTranscript('The Gemini Live session ended.');
+        }
+        stopLiveAudioCapture();
+        liveSessionActive = false;
+    });
+}
+
+function handleLiveMessage(event) {
+    try {
+        const data = JSON.parse(event.data);
+        const serverContent = data?.serverContent || {};
+        const parts = serverContent?.modelTurn?.parts || [];
+        const textParts = [];
+        const audioChunks = [];
+
+        parts.forEach((part) => {
+            if (part?.text) {
+                textParts.push(part.text);
+            }
+            if (part?.inlineData?.data) {
+                audioChunks.push(part.inlineData.data);
+            }
+        });
+
+        if (audioChunks.length) {
+            setLiveStatus('AI Speaking…', 'speaking');
+            audioChunks.forEach(chunk => playAudioChunk(chunk));
+        } else if (textParts.length) {
+            setLiveStatus('Listening…', 'listening');
+        }
+
+        if (textParts.length) {
+            const fullText = textParts.join(' ').trim();
+            liveTranscriptBuffer = `${liveTranscriptBuffer} ${fullText}`.trim();
+            setLiveTranscript(liveTranscriptBuffer);
+        }
+
+        if (data?.error?.message) {
+            setLiveStatus(`Error: ${data.error.message}`, 'error');
+            setLiveTranscript(data.error.message);
+            closeLiveVoiceModal();
+        }
+    } catch (error) {
+        setLiveStatus('Received an unexpected live message.', 'error');
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Sending messages
 // ---------------------------------------------------------------------------
@@ -1621,6 +1997,20 @@ fileInput.addEventListener('change', handleAttachmentSelection);
 sendBtn.addEventListener('click', handleSend);
 voiceInputBtn.addEventListener('click', startVoiceInput);
 autoSubmitToggleBtn.addEventListener('click', toggleAutoSubmit);
+if (liveVoiceBtn) {
+    liveVoiceBtn.addEventListener('click', openLiveVoiceModal);
+}
+if (liveEndCallBtn) {
+    liveEndCallBtn.addEventListener('click', closeLiveVoiceModal);
+}
+if (liveVoiceSelect) {
+    liveVoiceSelect.addEventListener('change', () => {
+        liveCurrentVoice = liveVoiceSelect.value;
+        if (liveSocket && liveSocket.readyState === WebSocket.OPEN) {
+            sendLiveSetupMessage();
+        }
+    });
+}
 userInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleSend();
 });
@@ -1679,6 +2069,7 @@ async function initializeApp() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', handleLogout);
     }
+    await loadGeminiConfig();
     await loadState();
     personalizeWelcomeMessage();
     renderAttachments();

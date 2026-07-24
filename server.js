@@ -64,7 +64,7 @@ const MAX_HISTORY_MESSAGES = 20;
 const MAX_HISTORY_MESSAGE_CHARS = 6000;
 const UPSTREAM_TIMEOUT_MS = 30000;
 const isDev = process.env.NODE_ENV !== 'production';
-const RAG_ENABLED = process.env.RAG_ENABLED !== 'false';
+const RAG_ENABLED = process.env.RAG_ENABLED === 'true';
 const RAG_TOP_K = 3;
 const RAG_CHUNK_SIZE = 700;
 const RAG_CACHE_TTL_MS = 1000 * 60 * 5;
@@ -1211,6 +1211,10 @@ app.get('/api/google-client-id', (req, res) => {
 
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
   res.json({ csrfToken: req.csrfToken ? req.csrfToken() : '' });
+});
+
+app.get('/api/config', (req, res) => {
+  res.json({ geminiKey: process.env.GEMINI_API_KEY || '' });
 });
 
 app.post('/auth/google/callback', async (req, res) => {
