@@ -1606,7 +1606,7 @@ html.light-mode .status-pill {
 
 .composer-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 8px;
     justify-content: flex-end;
@@ -1616,6 +1616,24 @@ html.light-mode .status-pill {
     width: 44px;
     height: 44px;
     padding: 0;
+    min-width: 44px;
+}
+
+#user-input {
+    padding-right: 90px;
+}
+
+.composer-row {
+    position: relative;
+}
+
+.composer-actions {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    gap: 8px;
 }
 
 .icon-btn {
