@@ -634,6 +634,17 @@ function renderActiveConversation() {
     chatBox.innerHTML = '';
     const conv = getActiveConversation();
     conv.messages.forEach(m => appendMessage(m.content, m.role, { persist: false }));
+    
+    // Show suggestion bar only if there are no user messages yet
+    const hasUserMessages = conv.messages.some(m => m.role === 'user');
+    if (hasUserMessages) {
+        suggestionPromptBar.classList.remove('visible');
+        suggestionPromptBar.hidden = true;
+    } else {
+        suggestionPromptBar.classList.add('visible');
+        suggestionPromptBar.hidden = false;
+    }
+    
     renderSuggestedPrompts();
 }
 
@@ -1492,6 +1503,11 @@ function handleSend() {
     const attachmentsSnapshot = attachments.slice();
 
     appendMessage(text || 'Shared attachments', 'user');
+    
+    // Hide suggestion prompt bar after first user message
+    suggestionPromptBar.classList.remove('visible');
+    suggestionPromptBar.hidden = true;
+    
     userInput.value = '';
     attachments = [];
     renderAttachments();
@@ -1509,6 +1525,11 @@ newChatBtn.addEventListener('click', async () => {
     activeId = conv.id;
     attachments = [];
     renderAttachments();
+    
+    // Show suggestion prompt bar for new chat
+    suggestionPromptBar.classList.add('visible');
+    suggestionPromptBar.hidden = false;
+    
     saveState();
     await persistConversation(conv);
     renderActiveConversation();
