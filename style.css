@@ -561,7 +561,6 @@ html.light-mode .status-pill {
     flex-direction: column;
     gap: 16px;
     padding: 22px 0 18px 16px;
-    overflow-y: auto;
     min-height: 0;
     flex: 1 1 auto;
 }
@@ -1038,7 +1037,7 @@ html.light-mode .status-pill {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 4px;
+    padding-top: 16px;
 }
 
 .switch {
@@ -1080,6 +1079,9 @@ html.light-mode .status-pill {
     flex-direction: column;
     gap: 8px;
     margin-top: 2px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .history-item {
