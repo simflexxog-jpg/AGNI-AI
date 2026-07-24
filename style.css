@@ -77,6 +77,7 @@ html.light-mode .control-row select {
     background: var(--input-bg);
     border-color: var(--input-border);
     color: var(--text-primary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 }
 
 html.light-mode .control-row select:focus {
@@ -348,7 +349,9 @@ html.light-mode .status-pill {
     gap: 10px;
     min-height: 0;
     height: 100%;
-    overflow: hidden;
+    overflow: visible;
+    position: relative;
+    z-index: 1;
     transition: width 0.42s cubic-bezier(0.22, 1, 0.36, 1), padding 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.32s cubic-bezier(0.32, 0.72, 0, 1), transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
     transform: translateX(0);
     box-shadow: 0 26px 84px rgba(0, 0, 0, 0.22), inset 1px 0 0 rgba(255, 255, 255, 0.04);
@@ -557,10 +560,12 @@ html.light-mode .status-pill {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding: 22px 0 18px 0;
+    padding: 22px 16px 18px 0;
+    margin-right: 8px;
     overflow-y: auto;
     min-height: 0;
     flex: 1 1 auto;
+    scrollbar-gutter: stable both-edges;
 }
 
 .sidebar-footer {
@@ -572,9 +577,10 @@ html.light-mode .status-pill {
     justify-content: space-between;
     background: rgba(255,255,255,0.04);
     backdrop-filter: blur(18px);
-    position: sticky;
+    position: relative;
     bottom: 0;
-    z-index: 5;
+    z-index: 20;
+    overflow: visible;
 }
 
 .sidebar-footer .text-btn {
@@ -618,14 +624,14 @@ html.light-mode .status-pill {
     position: absolute;
     left: 16px;
     right: 16px;
-    bottom: 72px;
+    bottom: 78px;
     max-height: calc(100% - 160px);
     overflow-y: auto;
     background: rgba(2,6,23,0.92);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 16px;
     padding: 16px;
-    z-index: 40;
+    z-index: 120;
     box-shadow: 0 18px 40px rgba(0,0,0,0.24);
 }
 
@@ -999,6 +1005,7 @@ html.light-mode .status-pill {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
+    cursor: pointer;
     border: 1px solid rgba(96,165,250,0.28);
     border-radius: 16px;
     padding: 14px 16px 14px 16px;
@@ -2060,6 +2067,10 @@ body {
 .control-row select {
     background: rgba(255,255,255,0.05);
     border-color: rgba(255,255,255,0.12);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 16px 16px;
 }
 
 .sidebar-body {
