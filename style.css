@@ -560,8 +560,7 @@ html.light-mode .status-pill {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding: 22px 0 18px 0;
-    padding-right: 12px;
+    padding: 22px 0 18px 16px;
     overflow-y: auto;
     min-height: 0;
     flex: 1 1 auto;
@@ -979,7 +978,7 @@ html.light-mode .status-pill {
 .control-card > * {
     position: relative;
     z-index: 1;
-    padding: 0 14px;
+    padding: 0 20px;
 }
 
 .control-card > :first-child {
@@ -994,7 +993,7 @@ html.light-mode .status-pill {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 0 14px;
+    padding: 0 20px;
 }
 
 .control-row label,
