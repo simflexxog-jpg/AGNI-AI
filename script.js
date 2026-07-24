@@ -1500,7 +1500,7 @@ function handleSend() {
     renderSuggestedPrompts();
 
     fetchAIResponse(text || 'Please review the attached files.', attachmentsSnapshot, historyForRequest);
-}}
+}
 
 // ---------------------------------------------------------------------------
 // Event wiring
