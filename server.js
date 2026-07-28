@@ -82,13 +82,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com', 'https://accounts.google.com'],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
       imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://fonts.googleapis.com'],
-      connectSrc: ["'self'", 'https:', 'wss:', 'ws:'],
-      objectSrc: ["'none'"],
-      baseUri: ["'self'"],
+      connectSrc: ["'self'", 'https:', 'wss:', 'ws:', 'https://accounts.google.com'],
+      frameSrc: ['https://accounts.google.com'],
       frameAncestors: ["'none'"]
     }
   },
