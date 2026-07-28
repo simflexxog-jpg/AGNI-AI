@@ -1218,7 +1218,7 @@ app.get('/api/config', (req, res) => {
   res.json({ geminiKey: process.env.GEMINI_API_KEY || '' });
 });
 
-app.post('/auth/google/callback', async (req, res) => {
+app.post('/auth/google/callback', express.urlencoded({ extended: false }), async (req, res) => {
   let payload = {};
   if (req.body && Object.keys(req.body).length > 0) {
     payload = req.body;

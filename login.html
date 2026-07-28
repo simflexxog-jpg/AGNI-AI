@@ -80,7 +80,7 @@
           client_id: clientId,
           callback: handleCredentialResponse,
           ux_mode: 'redirect',
-          redirect_uri: `${loginOrigin}/auth/google/redirect`,
+          redirect_uri: `${loginOrigin}/auth/google/callback`,
           auto_select: false
         });
         window.google.accounts.id.renderButton(
