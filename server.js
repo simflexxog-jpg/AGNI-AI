@@ -82,13 +82,15 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com', 'https://accounts.google.com'],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com', 'https://accounts.google.com', 'https://www.gstatic.com'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com', 'https://www.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://fonts.googleapis.com'],
-      connectSrc: ["'self'", 'https:', 'wss:', 'ws:', 'https://accounts.google.com'],
-      frameSrc: ['https://accounts.google.com'],
-      frameAncestors: ["'none'"]
+      connectSrc: ["'self'", 'https:', 'wss:', 'ws:', 'https://accounts.google.com', 'https://www.googleapis.com'],
+      frameSrc: ['https://accounts.google.com', 'https://*.google.com', 'https://*.gstatic.com'],
+      frameAncestors: ["'self'", 'https://accounts.google.com'],
+      baseUri: ["'self'"],
+      objectSrc: ["'none'"]
     }
   },
   crossOriginResourcePolicy: { policy: 'same-site' }
