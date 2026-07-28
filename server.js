@@ -1207,7 +1207,10 @@ app.get('/auth/google', (req, res) => {
 });
 
 app.get('/api/google-client-id', (req, res) => {
-  res.json({ clientId: process.env.GOOGLE_CLIENT_ID || '' });
+  res.json({
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    callbackUrl: process.env.CALLBACK_URL || ''
+  });
 });
 
 app.get('/api/csrf-token', csrfProtection, (req, res) => {

@@ -65,7 +65,7 @@
 
       const data = await response.json();
       const clientId = data.clientId;
-      const redirectUri = data.googleCallbackUrl || `${loginOrigin}/auth/google/callback`;
+      const redirectUri = data.callbackUrl || `${loginOrigin}/auth/google/callback`;
       if (!clientId) {
         setLoginNote('Google login is not configured. Please set GOOGLE_CLIENT_ID in .env.', true);
         return;
