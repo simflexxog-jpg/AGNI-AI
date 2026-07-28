@@ -1206,6 +1206,10 @@ app.get('/auth/google', (req, res) => {
   res.redirect('/login');
 });
 
+app.get('/auth/google/callback', (req, res) => {
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
 app.get('/api/google-client-id', (req, res) => {
   res.json({
     clientId: process.env.GOOGLE_CLIENT_ID || '',
