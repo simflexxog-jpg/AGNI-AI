@@ -1215,7 +1215,10 @@ app.get('/api/csrf-token', csrfProtection, (req, res) => {
 });
 
 app.get('/api/config', (req, res) => {
-  res.json({ geminiKey: process.env.GEMINI_API_KEY || '' });
+  res.json({
+    geminiKey: process.env.GEMINI_API_KEY || '',
+    googleCallbackUrl: process.env.CALLBACK_URL || ''
+  });
 });
 
 app.post('/auth/google/callback', express.urlencoded({ extended: false }), async (req, res) => {

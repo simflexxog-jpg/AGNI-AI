@@ -65,6 +65,7 @@
 
       const data = await response.json();
       const clientId = data.clientId;
+      const redirectUri = data.googleCallbackUrl || `${loginOrigin}/auth/google/callback`;
       if (!clientId) {
         setLoginNote('Google login is not configured. Please set GOOGLE_CLIENT_ID in .env.', true);
         return;
@@ -80,7 +81,7 @@
           client_id: clientId,
           callback: handleCredentialResponse,
           ux_mode: 'redirect',
-          redirect_uri: `${loginOrigin}/auth/google/callback`,
+          redirect_uri: redirectUri,
           auto_select: false
         });
         window.google.accounts.id.renderButton(
