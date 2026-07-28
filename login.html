@@ -28,10 +28,8 @@
       note.classList.toggle('error', isError);
     }
 
-    function showOriginHint() {
-      setLoginNote(`Configure your Google OAuth client with origin ${loginOrigin} under Authorized JavaScript origins.`, true);
-    }
-
+    // This callback fires after the user picks their Google account.
+    // We POST the credential token to our backend to verify and create a session.
     async function handleCredentialResponse(response) {
       if (!response || !response.credential) return;
 
@@ -50,24 +48,28 @@
           throw new Error(error.error || 'Login failed');
         }
 
-        window.location.href = '/';
+        const data = await result.json().catch(() => ({}));
+        window.location.href = data.redirect || '/';
       } catch (error) {
         setLoginNote(error.message || 'Login failed. Please try again.', true);
       }
     }
 
     async function initGoogleSignin() {
-      const response = await fetch('/api/google-client-id');
-      if (!response.ok) {
+      let clientId = '';
+
+      try {
+        const response = await fetch('/api/google-client-id');
+        if (!response.ok) throw new Error('Failed to fetch client ID');
+        const data = await response.json();
+        clientId = data.clientId || '';
+      } catch (err) {
         setLoginNote('Failed to fetch Google client ID. Try refreshing the page.', true);
         return;
       }
 
-      const data = await response.json();
-      const clientId = data.clientId;
-      const redirectUri = data.callbackUrl || `${loginOrigin}/auth/google/callback`;
       if (!clientId) {
-        setLoginNote('Google login is not configured. Please set GOOGLE_CLIENT_ID in .env.', true);
+        setLoginNote('Google login is not configured. Please set GOOGLE_CLIENT_ID in your environment.', true);
         return;
       }
 
@@ -77,24 +79,31 @@
       }
 
       try {
+        // KEY FIX: use ux_mode 'popup' so Google returns the credential to the
+        // JS callback instead of doing a page redirect. This means no redirect_uri
+        // is sent to Google at all, so redirect_uri_mismatch cannot occur.
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: handleCredentialResponse,
-          ux_mode: 'redirect',
-          redirect_uri: redirectUri,
-          auto_select: false
+          ux_mode: 'popup',
+          auto_select: false,
+          cancel_on_tap_outside: true
         });
+
         window.google.accounts.id.renderButton(
           document.getElementById('google-signin-button'),
           { theme: 'outline', size: 'large', width: 320 }
         );
       } catch (error) {
-        if (String(error).includes('invalid_client') || String(error).includes('origin')) {
-          showOriginHint();
+        if (String(error).includes('origin')) {
+          setLoginNote(
+            `Add ${loginOrigin} to Authorized JavaScript Origins in Google Cloud Console.`,
+            true
+          );
           return;
         }
         setLoginNote('Google login failed to initialize. Check your OAuth client config.', true);
-        console.error(error);
+        console.error('Google init error:', error);
       }
     }
 
@@ -104,7 +113,7 @@
       script.async = true;
       script.defer = true;
       script.onload = initGoogleSignin;
-      script.onerror = () => setLoginNote('Failed to load Google login. Please check your network.', true);
+      script.onerror = () => setLoginNote('Failed to load Google sign-in script. Check your network.', true);
       document.body.appendChild(script);
     }
 
