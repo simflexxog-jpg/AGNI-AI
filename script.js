@@ -1269,19 +1269,10 @@ function sendLiveSetupMessage() {
     if (!liveSocket || liveSocket.readyState !== WebSocket.OPEN) return;
 
     liveSocket.send(JSON.stringify({
-        setup: {
-            model: 'models/gemini-2.0-flash-live-001',
-            generationConfig: {
-                responseModalities: ['AUDIO'],
-                speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: {
-                            voiceName: liveCurrentVoice
-                        }
-                    }
-                }
-            }
-        }
+        type: 'live-voice',
+        action: 'setup',
+        model: 'models/gemini-2.0-flash-live-001',
+        voiceName: liveCurrentVoice
     }));
 }
 
@@ -1331,23 +1322,13 @@ function retryLiveVoiceSession() {
 async function startGeminiLiveSession() {
     if (liveSessionActive) return;
 
-    if (!window.GEMINI_API_KEY) {
-        await loadGeminiConfig();
-    }
-
-    if (!window.GEMINI_API_KEY) {
-        setLiveStatus('Gemini API key is missing.', 'error');
-        setLiveTranscript('Add a Gemini API key in the app config to enable live voice.');
-        return;
-    }
-
-    const liveEndpoint = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(window.GEMINI_API_KEY)}`;
     liveSessionActive = true;
     liveCurrentVoice = liveVoiceSelect?.value || liveCurrentVoice;
     liveTranscriptBuffer = '';
     setLiveStatus('Connecting…', '');
 
-    liveSocket = new WebSocket(liveEndpoint);
+    const liveEndpoint = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/`;
+    liveSocket = new WebSocket(`${liveEndpoint}api/live-voice`);
 
     liveSocket.addEventListener('open', () => {
         setLiveStatus('Listening…', 'listening');
@@ -1355,12 +1336,9 @@ async function startGeminiLiveSession() {
         captureMicPCM16((pcmBase64) => {
             if (!liveSocket || liveSocket.readyState !== WebSocket.OPEN) return;
             liveSocket.send(JSON.stringify({
-                realtimeInput: {
-                    mediaChunks: [{
-                        mimeType: 'audio/pcm;rate=24000',
-                        data: pcmBase64
-                    }]
-                }
+                type: 'live-voice',
+                action: 'audio',
+                data: pcmBase64
             }));
         }).catch((error) => {
             const message = error?.message || 'Unable to start microphone.';
@@ -1376,7 +1354,7 @@ async function startGeminiLiveSession() {
 
     liveSocket.addEventListener('error', () => {
         setLiveStatus('Live connection error.', 'error');
-        setLiveTranscript('The live session could not be established. Check the Gemini API key and browser permissions.');
+        setLiveTranscript('The live session could not be established. Check the server and browser permissions.');
         stopGeminiLiveSession({ hideModal: false, resetStatus: false });
     });
 

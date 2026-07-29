@@ -13,7 +13,7 @@ const csrf = require('csurf');
 const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
 const { OAuth2Client } = require('google-auth-library');
-const { WebSocketServer } = require('ws');
+const { WebSocketServer, WebSocket: NodeWebSocket } = require('ws');
 const busboy = require('busboy');
 const fetch = global.fetch || require('node-fetch');
 
@@ -1540,6 +1540,15 @@ const wss = new WebSocketServer({ server });
 wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'connected' }));
 
+  let geminiSocket = null;
+
+  const cleanupGeminiSocket = () => {
+    if (geminiSocket && geminiSocket.readyState === NodeWebSocket.OPEN) {
+      try { geminiSocket.close(); } catch (error) {}
+    }
+    geminiSocket = null;
+  };
+
   ws.on('message', async (raw) => {
     let payload = {};
     try {
@@ -1549,13 +1558,82 @@ wss.on('connection', (ws) => {
       return;
     }
 
-    if (payload.type !== 'chat') {
+    if (payload.type === 'chat') {
+      await handleWebSocketChat(ws, payload);
+      return;
+    }
+
+    if (payload.type !== 'live-voice') {
       ws.send(JSON.stringify({ type: 'error', error: 'Unsupported message type.' }));
       return;
     }
 
-    await handleWebSocketChat(ws, payload);
+    if (payload.action === 'setup') {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        ws.send(JSON.stringify({ error: { message: 'Missing GEMINI_API_KEY' } }));
+        return;
+      }
+
+      cleanupGeminiSocket();
+      const target = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(apiKey)}`;
+      geminiSocket = new NodeWebSocket(target);
+
+      geminiSocket.on('open', () => {
+        geminiSocket.send(JSON.stringify({
+          setup: {
+            model: payload.model || 'models/gemini-2.0-flash-live-001',
+            generationConfig: {
+              responseModalities: ['AUDIO'],
+              speechConfig: {
+                voiceConfig: {
+                  prebuiltVoiceConfig: {
+                    voiceName: payload.voiceName || 'Aoede'
+                  }
+                }
+              }
+            }
+          }
+        }));
+      });
+
+      geminiSocket.on('message', (data) => {
+        try {
+          ws.send(data.toString());
+        } catch (error) {}
+      });
+
+      geminiSocket.on('error', () => {
+        ws.send(JSON.stringify({ error: { message: 'Live voice service unavailable.' } }));
+        cleanupGeminiSocket();
+      });
+
+      geminiSocket.on('close', () => {
+        cleanupGeminiSocket();
+      });
+      return;
+    }
+
+    if (payload.action === 'audio' && geminiSocket && geminiSocket.readyState === NodeWebSocket.OPEN) {
+      geminiSocket.send(JSON.stringify({
+        realtimeInput: {
+          mediaChunks: [{
+            mimeType: 'audio/pcm;rate=24000',
+            data: payload.data
+          }]
+        }
+      }));
+      return;
+    }
+
+    if (payload.action === 'end') {
+      cleanupGeminiSocket();
+      ws.close();
+    }
   });
+
+  ws.on('close', cleanupGeminiSocket);
+  ws.on('error', cleanupGeminiSocket);
 });
 
 if (require.main === module) {
