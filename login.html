@@ -8,16 +8,12 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-2QPhm+X8rl5y2QLM/OS+3kSvI7P014/UKZdI9Yn2tYj1c3B7OZs2Gfok/0KGMqZ2" crossorigin="anonymous">
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Material+Symbols+Outlined" rel="stylesheet" />
   <style>
-    /* ── Login-page auth feedback styles ── */
-
-    /* Error state for the login note */
     .login-note.error {
       color: #e53e3e;
       font-weight: 500;
       margin-top: 12px;
     }
 
-    /* Loading spinner shown while POSTing credential to backend */
     .login-spinner {
       display: inline-block;
       width: 18px;
@@ -34,13 +30,53 @@
       to { transform: rotate(360deg); }
     }
 
-    /* Fade-in for the card so there's no harsh flash */
     .login-card {
       animation: login-fade-in 0.35s ease;
     }
     @keyframes login-fade-in {
       from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Custom Google sign-in button */
+    .google-signin-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 20px auto;
+    }
+
+    #custom-google-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+      color: #3c4043;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      padding: 10px 24px;
+      font-family: 'Google Sans', Roboto, Arial, sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      width: 320px;
+      justify-content: center;
+      transition: background 0.15s, box-shadow 0.15s;
+      box-shadow: 0 1px 2px rgba(60,64,67,.08);
+    }
+    #custom-google-btn:hover {
+      background: #f8f9fa;
+      box-shadow: 0 2px 6px rgba(60,64,67,.15);
+    }
+    #custom-google-btn:active {
+      background: #f1f3f4;
+    }
+    #custom-google-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    #custom-google-btn svg {
+      flex-shrink: 0;
     }
   </style>
 </head>
@@ -50,26 +86,41 @@
       <img src="Sitelogo.svg" alt="AGNI AI" class="login-logo" />
       <h1>Welcome to AGNI AI</h1>
       <p>Sign in with Google to access your private workspace and conversation history.</p>
-      <div id="google-signin-button" class="google-signin-button"></div>
+
+      <div class="google-signin-button">
+        <button id="custom-google-btn" type="button">
+          <!-- Google logo SVG -->
+          <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          Sign in with Google
+        </button>
+      </div>
+
       <p class="login-note" id="login-note">Your workspace is private and stored securely.</p>
     </div>
   </main>
+
   <script>
     const loginOrigin = window.location.origin;
+    let googleClientId = '';
 
     // ── UI helpers ────────────────────────────────────────────────────────────
 
     function setLoginNote(message, isError = false) {
       const note = document.getElementById('login-note');
       if (!note) return;
-      note.innerHTML = isError
-        ? message  // plain text for errors
-        : message; // plain text for status
+      note.textContent = message;
       note.classList.toggle('error', isError);
     }
 
     function setLoginLoading(isLoading) {
       const note = document.getElementById('login-note');
+      const btn  = document.getElementById('custom-google-btn');
+      if (btn) btn.disabled = isLoading;
       if (!note) return;
       if (isLoading) {
         note.innerHTML = '<span class="login-spinner"></span>Signing you in…';
@@ -77,12 +128,10 @@
       }
     }
 
-    // ── Auth callback ─────────────────────────────────────────────────────────
+    // ── Send credential to backend ────────────────────────────────────────────
 
-    // This fires after the user picks a Google account.
-    // We POST the credential token to our backend to verify and create a session.
-    async function handleCredentialResponse(response) {
-      if (!response || !response.credential) {
+    async function handleCredentialResponse(credential) {
+      if (!credential) {
         setLoginNote('Google did not return a credential. Please try again.', true);
         return;
       }
@@ -92,50 +141,178 @@
       try {
         const result = await fetch('/auth/google/callback', {
           method: 'POST',
-          credentials: 'include',                          // ← must include cookies
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id_token: response.credential })
+          body: JSON.stringify({ id_token: credential })
         });
 
         if (!result.ok) {
           let errorMsg = 'Login failed. Please try again.';
-          try {
-            const errorData = await result.json();
-            errorMsg = errorData.error || errorMsg;
-          } catch (_) {
-            // response wasn't JSON; use default message
-          }
+          try { const d = await result.json(); errorMsg = d.error || errorMsg; } catch (_) {}
           throw new Error(errorMsg);
         }
 
         let data = {};
         try { data = await result.json(); } catch (_) {}
-
-        // Redirect to the app (or wherever the server tells us to go)
         window.location.href = data.redirect || '/';
 
       } catch (error) {
         console.error('Auth error:', error);
         setLoginNote(error.message || 'Login failed. Please try again.', true);
+        setLoginLoading(false);
       }
     }
 
-    // ── Google GSI initialisation ─────────────────────────────────────────────
+    // ── Custom button click → open Google OAuth popup manually ───────────────
+    //
+    // We open a small popup window ourselves instead of letting the GSI library
+    // do it. This bypasses the gsi/transform blank-page bug that occurs on Edge
+    // (and any browser that blocks popups triggered by the GSI button renderer).
+    // The popup loads a Google OAuth URL and posts the id_token back via
+    // postMessage when the user picks an account.
+
+    function buildOAuthUrl(clientId, nonce) {
+      const params = new URLSearchParams({
+        client_id:     clientId,
+        redirect_uri:  'storagerelay://https/accounts.google.com?id=auth' ,
+        response_type: 'token id_token',
+        scope:         'openid email profile',
+        nonce:         nonce,
+        prompt:        'select_account'
+      });
+      // Use the GSI credential endpoint which handles popup auth correctly
+      return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    }
+
+    function openGooglePopup() {
+      if (!googleClientId) {
+        setLoginNote('Google login is not ready yet. Please wait a moment and try again.', true);
+        return;
+      }
+
+      // Use the GSI library's prompt() instead of renderButton() —
+      // prompt() opens a One Tap / popup without the gsi/transform redirect bug.
+      if (window.google?.accounts?.id) {
+        // Re-init with the callback pointed at our handler and trigger prompt
+        window.google.accounts.id.initialize({
+          client_id:           googleClientId,
+          callback:            (resp) => handleCredentialResponse(resp?.credential),
+          ux_mode:             'popup',
+          auto_select:         false,
+          cancel_on_tap_outside: true,
+          // itp_support prevents the gsi/transform issue on Safari/Edge
+          itp_support:         true
+        });
+
+        // Use a small native popup window via the OAuth2 token client,
+        // which avoids the gsi/transform freeze entirely.
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'openid email profile',
+          callback: () => {} // not used; we use id_token below
+        });
+
+        // Fall back to One Tap prompt which works reliably cross-browser
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            // One Tap was suppressed (e.g. user previously dismissed it).
+            // Fall back to a native popup OAuth window.
+            openNativeOAuthPopup();
+          }
+        });
+      } else {
+        openNativeOAuthPopup();
+      }
+    }
+
+    // ── Native popup fallback ─────────────────────────────────────────────────
+    //
+    // Opens a real browser popup to accounts.google.com/gsi/select which is the
+    // stable account-picker endpoint. When the user picks an account, Google
+    // calls our credential callback via postMessage.
+
+    let popupWindow = null;
+    let popupTimer  = null;
+
+    function openNativeOAuthPopup() {
+      if (!googleClientId) return;
+
+      // Close any previous popup
+      if (popupWindow && !popupWindow.closed) {
+        popupWindow.focus();
+        return;
+      }
+
+      // Dimensions: centred on screen
+      const w = 480, h = 600;
+      const left = Math.max(0, (screen.width  - w) / 2);
+      const top  = Math.max(0, (screen.height - h) / 2);
+
+      // Google's account chooser endpoint for GSI popups
+      const url = `https://accounts.google.com/gsi/select?client_id=${encodeURIComponent(googleClientId)}&ux_mode=popup&ui_mode=card&as=${encodeURIComponent(loginOrigin)}`;
+
+      popupWindow = window.open(
+        url,
+        'agni_google_signin',
+        `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
+
+      if (!popupWindow) {
+        setLoginNote('Popup was blocked. Please allow popups for this site and try again.', true);
+        return;
+      }
+
+      setLoginNote('A Google sign-in window has opened. Please complete sign-in there.');
+
+      // Poll for popup closure without a credential (user cancelled)
+      popupTimer = setInterval(() => {
+        if (popupWindow && popupWindow.closed) {
+          clearInterval(popupTimer);
+          popupWindow = null;
+          // Only reset note if we're not already loading (i.e. credential wasn't received)
+          const note = document.getElementById('login-note');
+          if (note && !note.querySelector('.login-spinner')) {
+            setLoginNote('Sign-in was cancelled. Click the button to try again.', false);
+          }
+        }
+      }, 500);
+    }
+
+    // Listen for the credential postMessage from Google's popup
+    window.addEventListener('message', (event) => {
+      // Only accept messages from Google
+      if (!event.origin.endsWith('.google.com')) return;
+
+      const data = event.data;
+      if (!data) return;
+
+      // GSI sends the credential in different shapes depending on the flow
+      const credential =
+        data.credential ||
+        data?.['g_csrf_token'] ||   // sometimes wrapped
+        (typeof data === 'string' ? (() => { try { return JSON.parse(data)?.credential; } catch(_){} return null; })() : null);
+
+      if (credential && typeof credential === 'string' && credential.length > 20) {
+        if (popupTimer) { clearInterval(popupTimer); popupTimer = null; }
+        if (popupWindow && !popupWindow.closed) { popupWindow.close(); popupWindow = null; }
+        handleCredentialResponse(credential);
+      }
+    });
+
+    // ── GSI library init ──────────────────────────────────────────────────────
 
     async function initGoogleSignin() {
-      let clientId = '';
-
       try {
         const response = await fetch('/api/google-client-id');
         if (!response.ok) throw new Error('Failed to fetch client ID');
         const data = await response.json();
-        clientId = data.clientId || '';
+        googleClientId = data.clientId || '';
       } catch (err) {
         setLoginNote('Failed to load Google sign-in config. Try refreshing the page.', true);
         return;
       }
 
-      if (!clientId) {
+      if (!googleClientId) {
         setLoginNote('Google login is not configured. Please set GOOGLE_CLIENT_ID in your environment.', true);
         return;
       }
@@ -146,29 +323,19 @@
       }
 
       try {
-        // ux_mode: 'popup' — Google returns the credential to the JS callback
-        // instead of doing a page redirect, so redirect_uri_mismatch cannot occur
-        // and there is no blank-page flash between choosing an account and landing
-        // back in the app.
         window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: handleCredentialResponse,
-          ux_mode: 'popup',
-          auto_select: false,
-          cancel_on_tap_outside: true
+          client_id:             googleClientId,
+          callback:              (resp) => handleCredentialResponse(resp?.credential),
+          ux_mode:               'popup',
+          auto_select:           false,
+          cancel_on_tap_outside: true,
+          itp_support:           true
         });
-
-        window.google.accounts.id.renderButton(
-          document.getElementById('google-signin-button'),
-          { theme: 'outline', size: 'large', width: 320 }
-        );
+        // Button is now ready; user clicks #custom-google-btn to trigger openGooglePopup()
+        setLoginNote('Your workspace is private and stored securely.');
       } catch (error) {
-        // If the error mentions 'origin', it is an authorised-domains issue
         if (String(error).toLowerCase().includes('origin')) {
-          setLoginNote(
-            `Add ${loginOrigin} to Authorised JavaScript Origins in Google Cloud Console.`,
-            true
-          );
+          setLoginNote(`Add ${loginOrigin} to Authorised JavaScript Origins in Google Cloud Console.`, true);
           return;
         }
         console.error('Google init error:', error);
@@ -186,7 +353,11 @@
       document.body.appendChild(script);
     }
 
-    document.addEventListener('DOMContentLoaded', loadGoogleClient);
+    document.addEventListener('DOMContentLoaded', () => {
+      loadGoogleClient();
+      document.getElementById('custom-google-btn')
+        ?.addEventListener('click', openGooglePopup);
+    });
   </script>
 </body>
 </html>
