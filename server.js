@@ -1179,12 +1179,8 @@ app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: false, limit: '20mb' }));
 
 const csrfProtection = csrf({
-  cookie: {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production'
-  },
-  value: req => req.get('X-CSRF-Token') || req.body?._csrf || ''
+  cookie: false,
+  ignoreMethods: ['GET', 'HEAD', 'OPTIONS']
 });
 
 app.use((req, res, next) => {
@@ -1202,14 +1198,6 @@ app.use((req, res, next) => {
     || req.path === '/auth/logout';
 
   if (exemptPath) {
-    return next();
-  }
-
-  const origin = req.get('origin');
-  const host = req.get('host');
-  const sameOrigin = !origin || origin === `https://${host}` || origin === `http://${host}`;
-
-  if (sameOrigin) {
     return next();
   }
 
