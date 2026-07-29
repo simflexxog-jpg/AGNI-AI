@@ -7,6 +7,42 @@
   <link rel="stylesheet" href="style.css?v=11" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-2QPhm+X8rl5y2QLM/OS+3kSvI7P014/UKZdI9Yn2tYj1c3B7OZs2Gfok/0KGMqZ2" crossorigin="anonymous">
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Material+Symbols+Outlined" rel="stylesheet" />
+  <style>
+    /* ── Login-page auth feedback styles ── */
+
+    /* Error state for the login note */
+    .login-note.error {
+      color: #e53e3e;
+      font-weight: 500;
+      margin-top: 12px;
+    }
+
+    /* Loading spinner shown while POSTing credential to backend */
+    .login-spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: login-spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+      opacity: 0.7;
+    }
+    @keyframes login-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Fade-in for the card so there's no harsh flash */
+    .login-card {
+      animation: login-fade-in 0.35s ease;
+    }
+    @keyframes login-fade-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 <body class="login-page">
   <main class="login-shell">
@@ -15,45 +51,76 @@
       <h1>Welcome to AGNI AI</h1>
       <p>Sign in with Google to access your private workspace and conversation history.</p>
       <div id="google-signin-button" class="google-signin-button"></div>
-      <p class="login-note">Your workspace is private and stored securely.</p>
+      <p class="login-note" id="login-note">Your workspace is private and stored securely.</p>
     </div>
   </main>
   <script>
     const loginOrigin = window.location.origin;
 
+    // ── UI helpers ────────────────────────────────────────────────────────────
+
     function setLoginNote(message, isError = false) {
-      const note = document.querySelector('.login-note');
+      const note = document.getElementById('login-note');
       if (!note) return;
-      note.textContent = message;
+      note.innerHTML = isError
+        ? message  // plain text for errors
+        : message; // plain text for status
       note.classList.toggle('error', isError);
     }
 
-    // This callback fires after the user picks their Google account.
+    function setLoginLoading(isLoading) {
+      const note = document.getElementById('login-note');
+      if (!note) return;
+      if (isLoading) {
+        note.innerHTML = '<span class="login-spinner"></span>Signing you in…';
+        note.classList.remove('error');
+      }
+    }
+
+    // ── Auth callback ─────────────────────────────────────────────────────────
+
+    // This fires after the user picks a Google account.
     // We POST the credential token to our backend to verify and create a session.
     async function handleCredentialResponse(response) {
-      if (!response || !response.credential) return;
+      if (!response || !response.credential) {
+        setLoginNote('Google did not return a credential. Please try again.', true);
+        return;
+      }
+
+      setLoginLoading(true);
 
       try {
-        setLoginNote('Signing you in…');
-
         const result = await fetch('/auth/google/callback', {
           method: 'POST',
-          credentials: 'include',
+          credentials: 'include',                          // ← must include cookies
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id_token: response.credential })
         });
 
         if (!result.ok) {
-          const error = await result.json().catch(() => ({}));
-          throw new Error(error.error || 'Login failed');
+          let errorMsg = 'Login failed. Please try again.';
+          try {
+            const errorData = await result.json();
+            errorMsg = errorData.error || errorMsg;
+          } catch (_) {
+            // response wasn't JSON; use default message
+          }
+          throw new Error(errorMsg);
         }
 
-        const data = await result.json().catch(() => ({}));
+        let data = {};
+        try { data = await result.json(); } catch (_) {}
+
+        // Redirect to the app (or wherever the server tells us to go)
         window.location.href = data.redirect || '/';
+
       } catch (error) {
+        console.error('Auth error:', error);
         setLoginNote(error.message || 'Login failed. Please try again.', true);
       }
     }
+
+    // ── Google GSI initialisation ─────────────────────────────────────────────
 
     async function initGoogleSignin() {
       let clientId = '';
@@ -64,7 +131,7 @@
         const data = await response.json();
         clientId = data.clientId || '';
       } catch (err) {
-        setLoginNote('Failed to fetch Google client ID. Try refreshing the page.', true);
+        setLoginNote('Failed to load Google sign-in config. Try refreshing the page.', true);
         return;
       }
 
@@ -74,14 +141,15 @@
       }
 
       if (!window.google?.accounts?.id) {
-        setLoginNote('Unable to initialize Google login. Please refresh the page.', true);
+        setLoginNote('Unable to initialise Google login. Please refresh the page.', true);
         return;
       }
 
       try {
-        // KEY FIX: use ux_mode 'popup' so Google returns the credential to the
-        // JS callback instead of doing a page redirect. This means no redirect_uri
-        // is sent to Google at all, so redirect_uri_mismatch cannot occur.
+        // ux_mode: 'popup' — Google returns the credential to the JS callback
+        // instead of doing a page redirect, so redirect_uri_mismatch cannot occur
+        // and there is no blank-page flash between choosing an account and landing
+        // back in the app.
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: handleCredentialResponse,
@@ -95,15 +163,16 @@
           { theme: 'outline', size: 'large', width: 320 }
         );
       } catch (error) {
-        if (String(error).includes('origin')) {
+        // If the error mentions 'origin', it is an authorised-domains issue
+        if (String(error).toLowerCase().includes('origin')) {
           setLoginNote(
-            `Add ${loginOrigin} to Authorized JavaScript Origins in Google Cloud Console.`,
+            `Add ${loginOrigin} to Authorised JavaScript Origins in Google Cloud Console.`,
             true
           );
           return;
         }
-        setLoginNote('Google login failed to initialize. Check your OAuth client config.', true);
         console.error('Google init error:', error);
+        setLoginNote('Google login failed to initialise. Check your OAuth client config.', true);
       }
     }
 

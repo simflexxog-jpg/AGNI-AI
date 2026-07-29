@@ -1135,7 +1135,9 @@ const sessionOptions = {
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    // Use 'lax' — frontend and backend share the same domain, so 'none' is unnecessary
+    // and causes cookies to be silently dropped on HTTP, causing white screen after login.
+    sameSite: 'lax',
     maxAge: 1000 * 60 * 60 * 24 * 7
   }
 };
@@ -1175,7 +1177,7 @@ app.use(express.urlencoded({ extended: false, limit: '20mb' }));
 const csrfProtection = csrf({
   cookie: {
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production'
   },
   value: req => req.get('X-CSRF-Token') || req.body?._csrf || ''
@@ -1228,24 +1230,9 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-app.post('/auth/google/callback', express.urlencoded({ extended: false }), async (req, res) => {
-  let payload = {};
-  if (req.body && Object.keys(req.body).length > 0) {
-    payload = req.body;
-  } else {
-    let body = '';
-    try {
-      body = await readBody(req);
-    } catch (error) {
-      return res.status(400).json({ error: 'Failed to read request body.' });
-    }
-
-    try {
-      payload = body ? JSON.parse(body) : {};
-    } catch (error) {
-      return res.status(400).json({ error: 'Invalid JSON body' });
-    }
-  }
+app.post('/auth/google/callback', async (req, res) => {
+  // express.json() middleware already parsed the body — read req.body directly.
+  const payload = req.body || {};
 
   const idToken = typeof payload.id_token === 'string'
     ? payload.id_token
@@ -1292,11 +1279,13 @@ app.post('/auth/google/callback', express.urlencoded({ extended: false }), async
   });
 });
 
-app.post('/auth/google/redirect', express.urlencoded({ extended: false }), async (req, res) => {
-  const idToken = typeof req.body.credential === 'string'
-    ? req.body.credential
-    : typeof req.body.id_token === 'string'
-      ? req.body.id_token
+app.post('/auth/google/redirect', async (req, res) => {
+  // express.json() middleware already parsed the body — read req.body directly.
+  const body = req.body || {};
+  const idToken = typeof body.credential === 'string'
+    ? body.credential
+    : typeof body.id_token === 'string'
+      ? body.id_token
       : '';
 
   if (!idToken) {
@@ -1351,7 +1340,7 @@ app.get('/debug/set-cookie', (req, res) => {
   res.cookie('agni_debug', '1', {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'none',
+    sameSite: 'lax',
     maxAge: 60 * 1000
   });
   res.json({ ok: true, note: 'Debug cookie set (agni_debug)' });
