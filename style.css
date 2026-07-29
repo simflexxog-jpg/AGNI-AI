@@ -2495,6 +2495,67 @@ body {
     cursor: pointer;
 }
 
+.live-voice-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 18px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+    color: #fff;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    box-shadow: 0 10px 24px rgba(14, 13, 40, 0.15);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    cursor: pointer;
+}
+
+.live-voice-btn:hover,
+.live-voice-btn:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 32px rgba(14, 13, 40, 0.2);
+    opacity: 0.98;
+}
+
+.live-voice-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 8px 18px rgba(14, 13, 40, 0.12);
+}
+
+.live-voice-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.live-retry-btn {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+
+.live-retry-btn:hover,
+.live-retry-btn:focus-visible {
+    background: var(--bg-secondary);
+    border-color: var(--accent-blue);
+    transform: translateY(-1px);
+}
+
+.live-retry-btn:active {
+    transform: translateY(0);
+}
+
 /* ── SPEAK BUTTON on messages ── */
 .speak-msg-btn {
     font-size: 0.75rem !important;

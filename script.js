@@ -35,6 +35,7 @@ const liveOrb = document.getElementById('live-orb');
 const liveStatusText = document.getElementById('live-status-text');
 const liveTranscript = document.getElementById('live-transcript');
 const liveEndCallBtn = document.getElementById('live-end-call-btn');
+const liveRetryBtn = document.getElementById('live-retry-btn');
 const liveVoiceSelect = document.getElementById('live-voice-select');
 
 // Same-origin relative path: works regardless of host/port, since server.js
@@ -1272,6 +1273,13 @@ function closeLiveVoiceModal() {
     stopGeminiLiveSession({ hideModal: true, resetStatus: true });
 }
 
+function retryLiveVoiceSession() {
+    stopGeminiLiveSession({ hideModal: false, resetStatus: false });
+    setLiveStatus('Retrying…', '');
+    setLiveTranscript('Attempting to reconnect to Gemini Live…');
+    startGeminiLiveSession();
+}
+
 async function startGeminiLiveSession() {
     if (liveSessionActive) return;
 
@@ -1978,6 +1986,9 @@ if (liveVoiceBtn) {
 }
 if (liveEndCallBtn) {
     liveEndCallBtn.addEventListener('click', closeLiveVoiceModal);
+}
+if (liveRetryBtn) {
+    liveRetryBtn.addEventListener('click', retryLiveVoiceSession);
 }
 if (liveVoiceSelect) {
     liveVoiceSelect.addEventListener('change', () => {
