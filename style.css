@@ -18,12 +18,14 @@ html {
     --border-color: rgba(255, 255, 255, 0.08);
     --message-bot-bg: rgba(15, 23, 42, 0.84);
     --accent-blue: #60a5fa;
+    --accent-indigo: #818cf8;
 }
 
 html.light-mode {
     --bg-primary: #f8fafc;
     --bg-secondary: #f1f5f9;
     --bg-tertiary: #e2e8f0;
+    --accent-indigo: #a78bfa;
     --text-primary: #0f172a;
     --text-secondary: #475569;
     --text-tertiary: #64748b;
