@@ -1535,7 +1535,7 @@ app.use(express.static(path.join(__dirname)));
 // ---- Server & WebSocket -----------------------------------------------------
 
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, path: '/api/live-voice' });
 
 wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'connected' }));
@@ -1580,6 +1580,8 @@ wss.on('connection', (ws) => {
       geminiSocket = new NodeWebSocket(target);
 
       geminiSocket.on('open', () => {
+        console.log('Gemini Live websocket opened.');
+        ws.send(JSON.stringify({ type: 'live-status', status: 'gemini-connected' }));
         geminiSocket.send(JSON.stringify({
           setup: {
             model: payload.model || 'models/gemini-2.0-flash-live-001',
@@ -1600,11 +1602,14 @@ wss.on('connection', (ws) => {
       geminiSocket.on('message', (data) => {
         try {
           ws.send(data.toString());
-        } catch (error) {}
+        } catch (error) {
+          console.error('Proxy send failed:', error);
+        }
       });
 
-      geminiSocket.on('error', () => {
-        ws.send(JSON.stringify({ error: { message: 'Live voice service unavailable.' } }));
+      geminiSocket.on('error', (error) => {
+        console.error('Gemini socket error:', error?.message || error);
+        ws.send(JSON.stringify({ type: 'error', error: { message: 'Live voice service unavailable.' } }));
         cleanupGeminiSocket();
       });
 

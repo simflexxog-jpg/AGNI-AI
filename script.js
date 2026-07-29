@@ -1345,10 +1345,10 @@ async function startGeminiLiveSession() {
     liveTranscriptBuffer = '';
     setLiveStatus('Connecting…', '');
 
-    const liveEndpoint = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/`;
-    liveSocket = new WebSocket(`${liveEndpoint}api/live-voice`);
+    liveSocket = new WebSocket('/api/live-voice');
 
     liveSocket.addEventListener('open', () => {
+        console.log('Live voice websocket opened', liveSocket.url);
         setLiveStatus('Listening…', 'listening');
         sendLiveSetupMessage();
         captureMicPCM16((pcmBase64) => {
