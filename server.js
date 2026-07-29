@@ -1192,7 +1192,24 @@ app.use((req, res, next) => {
     return next();
   }
 
-  if (req.path === '/api/csrf-token' || req.path === '/api/chat' || req.path === '/api/transcribe' || req.path === '/auth/google/callback' || req.path === '/auth/google/redirect' || req.path === '/auth/logout') {
+  const exemptPath = req.path === '/api/csrf-token'
+    || req.path === '/api/chat'
+    || req.path === '/api/transcribe'
+    || req.path === '/api/config'
+    || req.path === '/api/google-client-id'
+    || req.path === '/auth/google/callback'
+    || req.path === '/auth/google/redirect'
+    || req.path === '/auth/logout';
+
+  if (exemptPath) {
+    return next();
+  }
+
+  const origin = req.get('origin');
+  const host = req.get('host');
+  const sameOrigin = !origin || origin === `https://${host}` || origin === `http://${host}`;
+
+  if (sameOrigin) {
     return next();
   }
 
