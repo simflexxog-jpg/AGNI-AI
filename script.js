@@ -1172,21 +1172,39 @@ async function captureMicPCM16(onChunk) {
     };
 
     try {
-        if (typeof window.AudioWorkletNode !== 'undefined' && audioContextToUse.audioWorklet) {
-            const workletCode = `class MicCaptureProcessor extends AudioWorkletProcessor { process(inputs) { const input = inputs[0]; if (input && input[0]) { this.port.postMessage(input[0]); } return true; } } registerProcessor('mic-capture-processor', MicCaptureProcessor);`;
-            const workletUrl = URL.createObjectURL(new Blob([workletCode], { type: 'text/javascript' }));
-            await audioContextToUse.audioWorklet.addModule(workletUrl);
-            liveAudioWorkletNode = new AudioWorkletNode(audioContextToUse, 'mic-capture-processor');
-            liveAudioWorkletNode.port.onmessage = (event) => {
-                processAudioData(Array.from(event.data));
-            };
-            liveSourceNode = audioContextToUse.createMediaStreamSource(stream);
-            liveSourceNode.connect(liveAudioWorkletNode);
+        const useWorklet = typeof window.AudioWorkletNode !== 'undefined' && audioContextToUse.audioWorklet;
+        if (useWorklet) {
+            try {
+                const workletCode = `class MicCaptureProcessor extends AudioWorkletProcessor { process(inputs) { const input = inputs[0]; if (input && input[0]) { this.port.postMessage(input[0]); } return true; } } registerProcessor('mic-capture-processor', MicCaptureProcessor);`;
+                const workletUrl = URL.createObjectURL(new Blob([workletCode], { type: 'text/javascript' }));
+                await audioContextToUse.audioWorklet.addModule(workletUrl);
+                liveAudioWorkletNode = new AudioWorkletNode(audioContextToUse, 'mic-capture-processor');
+                liveAudioWorkletNode.port.onmessage = (event) => {
+                    processAudioData(Array.from(event.data));
+                };
+                liveSourceNode = audioContextToUse.createMediaStreamSource(stream);
+                liveSourceNode.connect(liveAudioWorkletNode);
 
-            const silenceGain = audioContextToUse.createGain();
-            silenceGain.gain.value = 0;
-            liveAudioWorkletNode.connect(silenceGain);
-            silenceGain.connect(audioContextToUse.destination);
+                const silenceGain = audioContextToUse.createGain();
+                silenceGain.gain.value = 0;
+                liveAudioWorkletNode.connect(silenceGain);
+                silenceGain.connect(audioContextToUse.destination);
+            } catch (workletError) {
+                console.warn('AudioWorklet failed, falling back to ScriptProcessor:', workletError);
+                liveScriptProcessor = audioContextToUse.createScriptProcessor(4096, 1, 1);
+                liveSourceNode = audioContextToUse.createMediaStreamSource(stream);
+                liveSourceNode.connect(liveScriptProcessor);
+
+                const silenceGain = audioContextToUse.createGain();
+                silenceGain.gain.value = 0;
+                liveScriptProcessor.connect(silenceGain);
+                silenceGain.connect(audioContextToUse.destination);
+
+                liveScriptProcessor.onaudioprocess = (event) => {
+                    const samples = event.inputBuffer.getChannelData(0);
+                    processAudioData(Array.from(samples));
+                };
+            }
         } else {
             liveScriptProcessor = audioContextToUse.createScriptProcessor(4096, 1, 1);
             liveSourceNode = audioContextToUse.createMediaStreamSource(stream);
