@@ -1217,6 +1217,54 @@ async function captureMicPCM16(onChunk) {
     }, 100);
 }
 
+function handleLiveMessage(event) {
+    let payload;
+    try {
+        payload = typeof event?.data === 'string' ? JSON.parse(event.data) : JSON.parse(String(event?.data || ''));
+    } catch (error) {
+        return;
+    }
+
+    if (payload?.error) {
+        setLiveStatus('Live response error.', 'error');
+        setLiveTranscript(payload.error.message || 'The live session returned an error.');
+        return;
+    }
+
+    if (payload?.setupComplete) {
+        setLiveStatus('Connected', 'listening');
+        setLiveTranscript('Live voice ready. Speak now.');
+        return;
+    }
+
+    const parts = payload?.serverContent?.modelTurn?.parts || [];
+    let transcriptText = '';
+    let audioChunk = '';
+
+    parts.forEach((part) => {
+        if (part?.text) {
+            transcriptText += part.text;
+        }
+        if (part?.inlineData?.data && part.inlineData?.mimeType?.includes('audio')) {
+            audioChunk = part.inlineData.data;
+        }
+    });
+
+    if (transcriptText) {
+        liveTranscriptBuffer = (liveTranscriptBuffer + transcriptText).trim();
+        setLiveTranscript(liveTranscriptBuffer || transcriptText);
+    }
+
+    if (audioChunk) {
+        setLiveOrbState('speaking');
+        playAudioChunk(audioChunk);
+    }
+
+    if (payload?.turnComplete) {
+        setLiveOrbState('listening');
+    }
+}
+
 function sendLiveSetupMessage() {
     if (!liveSocket || liveSocket.readyState !== WebSocket.OPEN) return;
 
@@ -1296,6 +1344,7 @@ async function startGeminiLiveSession() {
     const liveEndpoint = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(window.GEMINI_API_KEY)}`;
     liveSessionActive = true;
     liveCurrentVoice = liveVoiceSelect?.value || liveCurrentVoice;
+    liveTranscriptBuffer = '';
     setLiveStatus('Connecting…', '');
 
     liveSocket = new WebSocket(liveEndpoint);
@@ -1314,8 +1363,9 @@ async function startGeminiLiveSession() {
                 }
             }));
         }).catch((error) => {
-            setLiveStatus(`Mic error: ${error.message || 'Unable to start microphone.'}`, 'error');
-            setLiveTranscript('Microphone capture failed.');
+            const message = error?.message || 'Unable to start microphone.';
+            setLiveStatus(`Mic error: ${message}`, 'error');
+            setLiveTranscript(`Microphone capture failed: ${message}`);
             stopGeminiLiveSession({ hideModal: false, resetStatus: false });
         });
     });
@@ -1326,7 +1376,7 @@ async function startGeminiLiveSession() {
 
     liveSocket.addEventListener('error', () => {
         setLiveStatus('Live connection error.', 'error');
-        setLiveTranscript('The live session could not be established.');
+        setLiveTranscript('The live session could not be established. Check the Gemini API key and browser permissions.');
         stopGeminiLiveSession({ hideModal: false, resetStatus: false });
     });
 
