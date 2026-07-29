@@ -1188,7 +1188,7 @@ app.use((req, res, next) => {
     return next();
   }
 
-  if (req.path === '/api/csrf-token' || req.path === '/api/chat' || req.path === '/api/transcribe' || req.path === '/auth/google/callback' || req.path === '/auth/google/redirect') {
+  if (req.path === '/api/csrf-token' || req.path === '/api/chat' || req.path === '/api/transcribe' || req.path === '/auth/google/callback' || req.path === '/auth/google/redirect' || req.path === '/auth/logout') {
     return next();
   }
 
@@ -1330,7 +1330,14 @@ app.post('/auth/google/redirect', async (req, res) => {
 app.post('/auth/logout', (req, res) => {
   req.session.destroy(err => {
     if (err) console.warn('Session destroy failed:', err.message);
-    res.clearCookie('connect.sid');
+    // Must pass the same cookie options used when the session was created,
+    // otherwise browsers ignore the clearCookie instruction.
+    res.clearCookie('connect.sid', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/'
+    });
     res.json({ ok: true });
   });
 });

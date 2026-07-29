@@ -443,11 +443,20 @@ function renderUserHeader() {
 
 async function handleLogout() {
     try {
-        await fetch('/auth/logout', { method: 'POST', headers: buildJsonHeaders(), credentials: 'include' });
+        const res = await fetch('/auth/logout', {
+            method: 'POST',
+            headers: buildJsonHeaders(),
+            credentials: 'include'
+        });
+        if (!res.ok) {
+            console.warn('Logout request failed with status', res.status);
+        }
     } catch (error) {
-        // ignore logout errors
+        // Network error — still proceed to login page so the user isn't stuck
+        console.warn('Logout network error:', error);
     }
-    window.location.href = '/login';
+    // Always redirect to login regardless of server response
+    window.location.replace('/login');
 }
 
 function getActiveConversation() {
