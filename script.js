@@ -1260,7 +1260,7 @@ function handleLiveMessage(event) {
         playAudioChunk(audioChunk);
     }
 
-    if (payload?.turnComplete) {
+    if (payload?.serverContent?.turnComplete) {
         setLiveOrbState('listening');
     }
 }
@@ -1271,12 +1271,12 @@ function sendLiveSetupMessage() {
     liveSocket.send(JSON.stringify({
         setup: {
             model: 'models/gemini-2.0-flash-live-001',
-            generation_config: {
-                response_modalities: ['AUDIO'],
-                speech_config: {
-                    voice_config: {
-                        prebuilt_voice_config: {
-                            voice_name: liveCurrentVoice
+            generationConfig: {
+                responseModalities: ['AUDIO'],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: {
+                            voiceName: liveCurrentVoice
                         }
                     }
                 }
@@ -1355,9 +1355,9 @@ async function startGeminiLiveSession() {
         captureMicPCM16((pcmBase64) => {
             if (!liveSocket || liveSocket.readyState !== WebSocket.OPEN) return;
             liveSocket.send(JSON.stringify({
-                realtime_input: {
-                    media_chunks: [{
-                        mime_type: 'audio/pcm',
+                realtimeInput: {
+                    mediaChunks: [{
+                        mimeType: 'audio/pcm;rate=24000',
                         data: pcmBase64
                     }]
                 }
