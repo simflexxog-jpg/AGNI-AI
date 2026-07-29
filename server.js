@@ -96,7 +96,11 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'same-site' }
 }));
 
-const oauthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '');
+const oauthClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID || '',
+  process.env.GOOGLE_CLIENT_SECRET || '',
+  // redirect_uri is set per-request during the code exchange
+);
 const inMemoryConversations = new Map();
 const inMemoryUsers = new Map();
 
@@ -1208,8 +1212,78 @@ app.get('/auth/google', (req, res) => {
   res.redirect('/login');
 });
 
-app.get('/auth/google/callback', (req, res) => {
-  res.sendFile(path.join(__dirname, 'login.html'));
+app.get('/auth/google/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  // User cancelled or Google returned an error
+  if (error || !code) {
+    const msg = encodeURIComponent(error || 'access_denied');
+    return res.redirect(`/login?error=${msg}`);
+  }
+
+  const redirectUri = `${req.protocol}://${req.get('host')}/auth/google/callback`;
+
+  // Create a per-request client with the redirect URI so the code exchange works
+  const callbackClient = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID || '',
+    process.env.GOOGLE_CLIENT_SECRET || '',
+    redirectUri
+  );
+
+  let tokens;
+  try {
+    const response = await callbackClient.getToken(code);
+    tokens = response.tokens;
+  } catch (err) {
+    console.error('Google code exchange failed:', err?.message);
+    return res.redirect('/login?error=token_exchange_failed');
+  }
+
+  const idToken = tokens.id_token;
+  if (!idToken) {
+    return res.redirect('/login?error=no_id_token');
+  }
+
+  let ticket;
+  try {
+    ticket = await oauthClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+  } catch (err) {
+    console.error('Google token verification failed:', err?.message);
+    return res.redirect('/login?error=token_verification_failed');
+  }
+
+  const tokenPayload = ticket.getPayload();
+  if (!tokenPayload) {
+    return res.redirect('/login?error=invalid_token_payload');
+  }
+
+  const user = {
+    googleId: tokenPayload.sub,
+    name:     tokenPayload.name    || '',
+    email:    tokenPayload.email   || '',
+    avatar:   tokenPayload.picture || ''
+  };
+
+  let savedUser;
+  try {
+    savedUser = await upsertUser(user);
+  } catch (err) {
+    console.error('User upsert failed:', err?.message);
+    return res.redirect('/login?error=user_save_failed');
+  }
+
+  req.session.user = savedUser;
+
+  req.session.save(err => {
+    if (err) {
+      console.warn('Session save failed:', err?.message);
+      return res.redirect('/login?error=session_save_failed');
+    }
+    res.redirect('/');
+  });
 });
 
 app.get('/api/google-client-id', (req, res) => {
