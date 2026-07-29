@@ -1246,10 +1246,8 @@ function openLiveVoiceModal() {
     startGeminiLiveSession();
 }
 
-function closeLiveVoiceModal() {
+function stopGeminiLiveSession({ hideModal = true, resetStatus = true } = {}) {
     liveSessionActive = false;
-    setLiveStatus('Disconnected', '');
-    setLiveTranscript('Session ended.');
     setLiveOrbState('');
 
     if (liveSocket) {
@@ -1260,9 +1258,18 @@ function closeLiveVoiceModal() {
 
     stopLiveAudioCapture();
 
-    if (liveVoiceModal) {
+    if (resetStatus) {
+        setLiveStatus('Disconnected', '');
+        setLiveTranscript('Session ended.');
+    }
+
+    if (hideModal && liveVoiceModal) {
         liveVoiceModal.hidden = true;
     }
+}
+
+function closeLiveVoiceModal() {
+    stopGeminiLiveSession({ hideModal: true, resetStatus: true });
 }
 
 async function startGeminiLiveSession() {
@@ -1301,7 +1308,7 @@ async function startGeminiLiveSession() {
         }).catch((error) => {
             setLiveStatus(`Mic error: ${error.message || 'Unable to start microphone.'}`, 'error');
             setLiveTranscript('Microphone capture failed.');
-            closeLiveVoiceModal();
+            stopGeminiLiveSession({ hideModal: false, resetStatus: false });
         });
     });
 
@@ -1312,7 +1319,7 @@ async function startGeminiLiveSession() {
     liveSocket.addEventListener('error', () => {
         setLiveStatus('Live connection error.', 'error');
         setLiveTranscript('The live session could not be established.');
-        closeLiveVoiceModal();
+        stopGeminiLiveSession({ hideModal: false, resetStatus: false });
     });
 
     liveSocket.addEventListener('close', () => {
@@ -1323,46 +1330,6 @@ async function startGeminiLiveSession() {
         stopLiveAudioCapture();
         liveSessionActive = false;
     });
-}
-
-function handleLiveMessage(event) {
-    try {
-        const data = JSON.parse(event.data);
-        const serverContent = data?.serverContent || {};
-        const parts = serverContent?.modelTurn?.parts || [];
-        const textParts = [];
-        const audioChunks = [];
-
-        parts.forEach((part) => {
-            if (part?.text) {
-                textParts.push(part.text);
-            }
-            if (part?.inlineData?.data) {
-                audioChunks.push(part.inlineData.data);
-            }
-        });
-
-        if (audioChunks.length) {
-            setLiveStatus('AI Speaking…', 'speaking');
-            audioChunks.forEach(chunk => playAudioChunk(chunk));
-        } else if (textParts.length) {
-            setLiveStatus('Listening…', 'listening');
-        }
-
-        if (textParts.length) {
-            const fullText = textParts.join(' ').trim();
-            liveTranscriptBuffer = `${liveTranscriptBuffer} ${fullText}`.trim();
-            setLiveTranscript(liveTranscriptBuffer);
-        }
-
-        if (data?.error?.message) {
-            setLiveStatus(`Error: ${data.error.message}`, 'error');
-            setLiveTranscript(data.error.message);
-            closeLiveVoiceModal();
-        }
-    } catch (error) {
-        setLiveStatus('Received an unexpected live message.', 'error');
-    }
 }
 
 // ---------------------------------------------------------------------------
