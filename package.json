@@ -6,7 +6,8 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "voice": "python voice_server.py"
   },
   "dependencies": {
     "busboy": "^1.6.0",

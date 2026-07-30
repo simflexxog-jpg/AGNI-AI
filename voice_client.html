@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pipecat Voice Client</title>
+  <style>
+    body { font-family: Inter, Arial, sans-serif; margin: 2rem; background: #07111f; color: #f7f9fc; }
+    button { padding: 0.7rem 1rem; border: 0; border-radius: 999px; cursor: pointer; margin-right: 0.5rem; }
+    .panel { max-width: 700px; margin: 0 auto; background: rgba(255,255,255,0.06); padding: 1.5rem; border-radius: 18px; }
+    #status { margin-top: 1rem; font-weight: 600; }
+    audio { width: 100%; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1>Local Pipecat Voice Assistant</h1>
+    <p>Connect to the local Pipecat WebRTC server at <code>http://localhost:7860</code>.</p>
+    <button id="startBtn">Start Voice Session</button>
+    <button id="stopBtn">Stop Voice Session</button>
+    <div id="status">Idle</div>
+    <audio id="remoteAudio" autoplay playsinline></audio>
+  </div>
+
+  <script>
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusEl = document.getElementById('status');
+    const remoteAudio = document.getElementById('remoteAudio');
+
+    let peerConnection = null;
+    let localStream = null;
+    let sessionActive = false;
+
+    async function startVoiceSession() {
+      if (sessionActive) return;
+      statusEl.textContent = 'Requesting microphone access...';
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (error) {
+        statusEl.textContent = 'Microphone access denied.';
+        console.error(error);
+        return;
+      }
+
+      statusEl.textContent = 'Connecting to WebRTC server...';
+      const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+      peerConnection = pc;
+
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+      pc.ontrack = (event) => {
+        if (event.streams?.[0]) {
+          remoteAudio.srcObject = event.streams[0];
+          remoteAudio.play().catch(() => {});
+        }
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log('ICE candidate', event.candidate);
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const response = await fetch('http://localhost:7860/offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/sdp' },
+        body: offer.sdp,
+      });
+
+      if (!response.ok) {
+        throw new Error('Server rejected offer');
+      }
+
+      const answerSdp = await response.text();
+      await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+
+      statusEl.textContent = 'Connected';
+      sessionActive = true;
+    }
+
+    async function stopVoiceSession() {
+      sessionActive = false;
+      statusEl.textContent = 'Disconnected';
+      if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+      }
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      remoteAudio.srcObject = null;
+    }
+
+    startBtn.addEventListener('click', startVoiceSession);
+    stopBtn.addEventListener('click', stopVoiceSession);
+  </script>
+</body>
+</html>
