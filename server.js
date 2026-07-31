@@ -657,7 +657,7 @@ function isImageAttachment(item) {
   return Boolean(item.type && item.type.startsWith('image/') && item.previewUrl);
 }
 
-async function callGemini(history, currentText, attachments, modelName, thinkingEnabled) {
+async function callGemini(history, currentText, attachments, modelName, thinkingEnabled, abortSignal) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('Missing GEMINI_API_KEY');
 
@@ -683,7 +683,7 @@ async function callGemini(history, currentText, attachments, modelName, thinking
         generationConfig: { temperature: thinkingEnabled ? 0.85 : 0.6 },
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }
       }),
-      signal: withTimeout(UPSTREAM_TIMEOUT_MS)
+      signal: abortSignal || withTimeout(UPSTREAM_TIMEOUT_MS)
     }
   );
 
@@ -692,7 +692,7 @@ async function callGemini(history, currentText, attachments, modelName, thinking
   return geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response.";
 }
 
-async function callGroq(history, currentText, modelName, thinkingEnabled) {
+async function callGroq(history, currentText, modelName, thinkingEnabled, abortSignal) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error('Missing GROQ_API_KEY');
 
@@ -706,7 +706,7 @@ async function callGroq(history, currentText, modelName, thinkingEnabled) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ model: modelName, temperature: thinkingEnabled ? 0.8 : 0.6, messages }),
-    signal: withTimeout(UPSTREAM_TIMEOUT_MS)
+    signal: abortSignal || withTimeout(UPSTREAM_TIMEOUT_MS)
   });
 
   const groqData = await response.json();
@@ -717,7 +717,7 @@ async function callGroq(history, currentText, modelName, thinkingEnabled) {
   return groqData?.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response.";
 }
 
-async function callOpenAI(history, currentText, attachments, modelName, thinkingEnabled) {
+async function callOpenAI(history, currentText, attachments, modelName, thinkingEnabled, abortSignal) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('Missing OPENAI_API_KEY');
 
@@ -739,7 +739,7 @@ async function callOpenAI(history, currentText, attachments, modelName, thinking
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ model: modelName, temperature: thinkingEnabled ? 0.8 : 0.6, messages }),
-    signal: withTimeout(UPSTREAM_TIMEOUT_MS)
+    signal: abortSignal || withTimeout(UPSTREAM_TIMEOUT_MS)
   });
 
   const openAiData = await response.json();
@@ -1029,7 +1029,7 @@ function buildChatPayload(payload) {
   return { userMessage, history, attachments, currentText, provider, modelName, thinkingEnabled };
 }
 
-async function handleWebSocketChat(ws, payload) {
+async function handleWebSocketChat(ws, payload, abortSignal) {
   const chatPayload = buildChatPayload(payload);
   if (!chatPayload) {
     ws.send(JSON.stringify({ type: 'error', error: 'Message is required.' }));
@@ -1045,11 +1045,11 @@ async function handleWebSocketChat(ws, payload) {
     let botText = '';
 
     if (provider === 'groq') {
-      botText = await callGroq(history, enrichedText, modelName, thinkingEnabled);
+      botText = await callGroq(history, enrichedText, modelName, thinkingEnabled, abortSignal);
     } else if (provider === 'openai') {
-      botText = await callOpenAI(history, enrichedText, attachments, modelName, thinkingEnabled);
+      botText = await callOpenAI(history, enrichedText, attachments, modelName, thinkingEnabled, abortSignal);
     } else {
-      botText = await callGemini(history, enrichedText, attachments, modelName, thinkingEnabled);
+      botText = await callGemini(history, enrichedText, attachments, modelName, thinkingEnabled, abortSignal);
     }
 
     if (!botText || !botText.trim() || botText === "Sorry, I couldn't generate a response.") {
@@ -1058,6 +1058,11 @@ async function handleWebSocketChat(ws, payload) {
 
     ws.send(JSON.stringify({ type: 'done', content: botText }));
   } catch (error) {
+    if (abortSignal?.aborted || error?.name === 'AbortError') {
+      ws.send(JSON.stringify({ type: 'status', message: 'Chat canceled.' }));
+      return;
+    }
+
     console.error('WebSocket chat provider failed, performing search fallback:', error.message);
     const fallbackText = await getSearchFallback(userMessage);
     ws.send(JSON.stringify({ type: 'done', content: fallbackText, fallback: true }));
@@ -1541,6 +1546,7 @@ wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'connected' }));
 
   let geminiSocket = null;
+  let activeChatAbortController = null;
 
   const cleanupGeminiSocket = () => {
     if (geminiSocket && geminiSocket.readyState === NodeWebSocket.OPEN) {
@@ -1558,8 +1564,17 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    if (payload.type === 'cancel') {
+      if (activeChatAbortController && !activeChatAbortController.signal.aborted) {
+        activeChatAbortController.abort();
+      }
+      ws.send(JSON.stringify({ type: 'status', message: 'Chat canceled.' }));
+      return;
+    }
+
     if (payload.type === 'chat') {
-      await handleWebSocketChat(ws, payload);
+      activeChatAbortController = new AbortController();
+      await handleWebSocketChat(ws, payload, activeChatAbortController.signal);
       return;
     }
 

@@ -1,6 +1,7 @@
 const chatBox = document.getElementById('chat-box');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
+const cancelBtn = document.getElementById('cancel-btn');
 const newChatBtn = document.getElementById('new-chat-btn');
 const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
 const sidebar = document.getElementById('sidebar');
@@ -1395,6 +1396,8 @@ function setComposerBusy(isBusy) {
     const sendLabel = sendBtn.querySelector('.send-text');
     if (sendLabel) sendLabel.textContent = isBusy ? 'Sending…' : 'Send';
     sendBtn.classList.toggle('busy', isBusy);
+    sendBtn.hidden = isBusy;
+    cancelBtn.hidden = !isBusy;
     userInput.disabled = isBusy;
 }
 
@@ -1749,6 +1752,24 @@ function connectWebSocket() {
     });
 }
 
+function cancelCurrentRequest() {
+    const activeRequest = pendingRequest;
+    if (!activeRequest) return;
+
+    activeRequest.cancelled = true;
+    if (activeRequest.abortController && activeRequest.abortController.signal && !activeRequest.abortController.signal.aborted) {
+        activeRequest.abortController.abort();
+    }
+
+    if (activeRequest.source === 'ws' && socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'cancel' }));
+    }
+
+    removeThinkingIndicator();
+    setComposerBusy(false);
+    showComposerNotice('Chat canceled.');
+}
+
 async function fetchAIResponse(userText, attachmentsSnapshot, historyForRequest) {
     setComposerBusy(true);
 
@@ -1760,9 +1781,11 @@ async function fetchAIResponse(userText, attachmentsSnapshot, historyForRequest)
     chatBox.appendChild(thinkingDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
 
-    pendingRequest = { thinkingId, userText, attachmentsSnapshot, historyForRequest };
+    const abortController = new AbortController();
+    pendingRequest = { thinkingId, userText, attachmentsSnapshot, historyForRequest, abortController, cancelled: false, source: 'http' };
 
     if (socketReady && socket && socket.readyState === WebSocket.OPEN) {
+        pendingRequest.source = 'ws';
         socket.send(JSON.stringify({
             type: 'chat',
             message: userText,
@@ -1781,6 +1804,7 @@ async function fetchAIResponse(userText, attachmentsSnapshot, historyForRequest)
             headers: {
                 'Content-Type': 'application/json'
             },
+            signal: abortController.signal,
             body: JSON.stringify({
                 message: userText,
                 history: historyForRequest,
@@ -1874,6 +1898,13 @@ async function fetchAIResponse(userText, attachmentsSnapshot, historyForRequest)
             speakResponse(partialText);
         }
     } catch (error) {
+        if (error?.name === 'AbortError' || abortController.signal.aborted) {
+            removeThinkingIndicator();
+            pendingRequest = null;
+            setComposerBusy(false);
+            return;
+        }
+
         removeThinkingIndicator();
         pendingRequest = null;
         const streamMessage = createStreamingBotMessage();
@@ -2025,6 +2056,7 @@ thinkingToggle.addEventListener('click', toggleThinking);
 imageInput.addEventListener('change', handleAttachmentSelection);
 fileInput.addEventListener('change', handleAttachmentSelection);
 sendBtn.addEventListener('click', handleSend);
+cancelBtn.addEventListener('click', cancelCurrentRequest);
 voiceInputBtn.addEventListener('click', startVoiceInput);
 autoSubmitToggleBtn.addEventListener('click', toggleAutoSubmit);
 if (liveVoiceBtn) {
