@@ -656,7 +656,7 @@ function renderSuggestedPrompts() {
     suggestedPrompts.forEach(prompt => {
         const chip = document.createElement('button');
         chip.type = 'button';
-        chip.className = 'suggestion-prompt-chip';
+        chip.className = 'suggestion-chip';
         chip.textContent = prompt;
         chip.addEventListener('click', () => {
             userInput.value = prompt;
