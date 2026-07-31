@@ -41,7 +41,7 @@ const liveVoiceSelect = document.getElementById('live-voice-select');
 // Same-origin relative path: works regardless of host/port, since server.js
 // serves both the static frontend and the /api/chat endpoint.
 const API_ENDPOINT = '/api/chat';
-const WS_ENDPOINT = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/`;
+const WS_ENDPOINT = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/live-voice`;
 
 const STORAGE_KEY = 'agni-ai-conversations-v1';
 const ACTIVE_KEY = 'agni-ai-active-id-v1';
