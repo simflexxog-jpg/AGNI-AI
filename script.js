@@ -125,6 +125,9 @@ function updateDensitySelection(density, save = true) {
     if (!density) return;
     applyDensity(density);
     densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === density));
+    if (compactViewToggle) {
+        compactViewToggle.checked = density === 'compact';
+    }
     if (save) {
         localStorage.setItem(UI_DENSITY_KEY, density);
     }
@@ -135,8 +138,8 @@ function loadUISettings() {
     const density = localStorage.getItem(UI_DENSITY_KEY) || 'comfortable';
     applyFontSize(font);
     updateDensitySelection(density, false);
-    // mark active buttons
     fontOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.font === font));
+    densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === density));
 }
 
 function saveUISettings(font, density) {
@@ -147,38 +150,49 @@ function saveUISettings(font, density) {
 function resetUISettings() {
     localStorage.removeItem(UI_FONT_KEY);
     localStorage.removeItem(UI_DENSITY_KEY);
-    loadUISettings();
+    localStorage.removeItem(THEME_KEY);
+    localStorage.removeItem(TTS_KEY);
+    applyFontSize('normal');
+    updateDensitySelection('comfortable', false);
+    applyTheme('dark');
+    ttsEnabled = false;
+    updateTTSButton();
+    fontOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.font === 'normal'));
+    densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === 'comfortable'));
+    if (compactViewToggle) compactViewToggle.checked = false;
+    updateCompactMode();
 }
 
 function toggleSidebarSettings(show) {
     if (!sidebarSettings) return;
     sidebarSettings.hidden = !show;
+    if (openSettingsBtn) {
+        openSettingsBtn.setAttribute('aria-expanded', String(show));
+    }
 }
 
 // ---------------------------------------------------------------------------
 // Theme management
 // ---------------------------------------------------------------------------
 
+function applyTheme(theme) {
+    const html = document.documentElement;
+    const resolvedTheme = theme === 'light' ? 'light' : 'dark';
+    html.setAttribute('data-theme', resolvedTheme);
+    html.classList.toggle('light-mode', resolvedTheme === 'light');
+    localStorage.setItem(THEME_KEY, resolvedTheme);
+    updateThemeButton();
+}
+
 function initTheme() {
     const savedTheme = localStorage.getItem(THEME_KEY) || 'dark';
-    if (savedTheme === 'light') {
-        document.documentElement.classList.add('light-mode');
-        updateThemeButton();
-    }
+    applyTheme(savedTheme);
 }
 
 function toggleTheme() {
     const html = document.documentElement;
-    const isLightMode = html.classList.contains('light-mode');
-    
-    if (isLightMode) {
-        html.classList.remove('light-mode');
-        localStorage.setItem(THEME_KEY, 'dark');
-    } else {
-        html.classList.add('light-mode');
-        localStorage.setItem(THEME_KEY, 'light');
-    }
-    updateThemeButton();
+    const isLightMode = html.getAttribute('data-theme') === 'light';
+    applyTheme(isLightMode ? 'dark' : 'light');
 }
 
 function closeActionMenu() {
@@ -195,9 +209,11 @@ function toggleActionMenu() {
 }
 
 function updateThemeButton() {
-    const isLightMode = document.documentElement.classList.contains('light-mode');
-    themeToggleBtn.classList.toggle('active', isLightMode);
-    themeToggleBtn.setAttribute('aria-checked', String(isLightMode));
+    const isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
+    if (themeToggleBtn) {
+        themeToggleBtn.classList.toggle('active', isLightMode);
+        themeToggleBtn.setAttribute('aria-checked', String(isLightMode));
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -527,7 +543,9 @@ function handleHistorySearch(event) {
 
 function initCompactMode() {
     const storedCompact = localStorage.getItem(COMPACT_KEY) === 'true';
-    compactViewToggle.checked = storedCompact;
+    if (compactViewToggle) {
+        compactViewToggle.checked = storedCompact;
+    }
     updateCompactMode();
     if (storedCompact) {
         updateDensitySelection('compact', false);
@@ -2151,9 +2169,8 @@ fontOpts.forEach(btn => btn.addEventListener('click', (e) => {
 
 densityOpts.forEach(btn => btn.addEventListener('click', (e) => {
     const d = e.currentTarget.dataset.density;
-    applyDensity(d);
+    updateDensitySelection(d, true);
     saveUISettings(null, d);
-    densityOpts.forEach(b => b.classList.toggle('active', b === e.currentTarget));
 }));
 
 // ---------------------------------------------------------------------------
