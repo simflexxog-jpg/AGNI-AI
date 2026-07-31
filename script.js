@@ -740,15 +740,24 @@ function createStreamingBotMessage() {
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message', 'bot-message', 'is-streaming');
 
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.setAttribute('aria-hidden', 'true');
+    avatar.innerHTML = '<span class="material-symbols-outlined">smart_toy</span>';
+    messageDiv.appendChild(avatar);
+
+    const messageBody = document.createElement('div');
+    messageBody.className = 'message-body';
+
     const content = document.createElement('div');
     content.className = 'message-content';
     content.textContent = '';
-    messageDiv.appendChild(content);
+    messageBody.appendChild(content);
 
     const cursor = document.createElement('span');
     cursor.className = 'stream-cursor';
     cursor.textContent = '|';
-    messageDiv.appendChild(cursor);
+    messageBody.appendChild(cursor);
 
     const actions = document.createElement('div');
     actions.className = 'message-actions';
@@ -756,11 +765,12 @@ function createStreamingBotMessage() {
     const copyBtn = document.createElement('button');
     copyBtn.type = 'button';
     copyBtn.className = 'msg-action-btn';
-    copyBtn.textContent = 'Copy';
+    copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>Copy';
     copyBtn.addEventListener('click', () => copyToClipboard(content.textContent || '', copyBtn));
     actions.appendChild(copyBtn);
 
-    messageDiv.appendChild(actions);
+    messageBody.appendChild(actions);
+    messageDiv.appendChild(messageBody);
     chatBox.appendChild(messageDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -823,22 +833,45 @@ function appendMessage(text, sender, options = {}) {
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
 
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.setAttribute('aria-hidden', 'true');
+    avatar.innerHTML = sender === 'user'
+        ? '<span class="material-symbols-outlined">person</span>'
+        : '<span class="material-symbols-outlined">smart_toy</span>';
+    messageDiv.appendChild(avatar);
+
+    const messageBody = document.createElement('div');
+    messageBody.className = 'message-body';
+    messageDiv.appendChild(messageBody);
+
+    const content = document.createElement('div');
+    content.className = 'message-content';
+    messageBody.appendChild(content);
+
+    const actions = document.createElement('div');
+    actions.className = 'message-actions';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'msg-action-btn';
+    copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>Copy';
+    copyBtn.addEventListener('click', () => copyToClipboard(text, copyBtn));
+    actions.appendChild(copyBtn);
+
     if (sender === 'bot') {
-        const content = document.createElement('div');
-        content.className = 'message-content';
-        messageDiv.appendChild(content);
-
-        const actions = document.createElement('div');
-        actions.className = 'message-actions';
-
-        const copyBtn = document.createElement('button');
-        copyBtn.type = 'button';
-        copyBtn.className = 'msg-action-btn';
-        copyBtn.textContent = 'Copy';
-        copyBtn.addEventListener('click', () => copyToClipboard(text, copyBtn));
-        actions.appendChild(copyBtn);
-
-        messageDiv.appendChild(actions);
+        const regenBtn = document.createElement('button');
+        regenBtn.type = 'button';
+        regenBtn.className = 'msg-action-btn regenerate-btn';
+        regenBtn.innerHTML = '<span class="material-symbols-outlined">sync</span>Regenerate';
+        regenBtn.addEventListener('click', () => {
+            messageDiv.remove();
+            const currentConv = getActiveConversation();
+            currentConv.messages.pop();
+            saveState();
+            fetchAIResponse(text, attachments, currentConv.messages.map(m => ({ role: m.role, content: m.content })));
+        });
+        actions.appendChild(regenBtn);
 
         if (animate) {
             messageDiv.classList.add('is-streaming');
@@ -847,9 +880,10 @@ function appendMessage(text, sender, options = {}) {
             content.innerHTML = renderMarkdown(text);
         }
     } else {
-        messageDiv.textContent = text;
+        content.textContent = text;
     }
 
+    messageBody.appendChild(actions);
     chatBox.appendChild(messageDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
 
