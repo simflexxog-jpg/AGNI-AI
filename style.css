@@ -1071,6 +1071,7 @@ html[data-theme="dark"] .action-dropdown {
     line-height: 1.65;
     word-wrap: break-word;
     overflow-wrap: anywhere;
+    padding-bottom: 32px;
 }
 
 .bot-message .message-content,
@@ -1094,14 +1095,25 @@ html[data-theme="dark"] .user-message .message-content {
     background: rgba(13,21,37,0.8);
 }
 
+.user-message .message-content {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    box-shadow: none;
+}
+
 /* ── Message actions ── */
 .message-actions {
+    position: absolute;
+    right: 10px;
+    bottom: 8px;
     display: inline-flex;
     align-items: center;
     gap: 4px;
     opacity: 0;
-    transition: opacity var(--t-fast);
-    transform: translateY(2px);
+    transition: opacity var(--t-fast), transform var(--t-fast);
+    transform: translateY(4px);
+    pointer-events: none;
 }
 
 .bot-message:hover .message-actions,
@@ -1110,6 +1122,7 @@ html[data-theme="dark"] .user-message .message-content {
 .user-message:focus-within .message-actions {
     opacity: 1;
     transform: translateY(0);
+    pointer-events: auto;
 }
 
 .msg-action-btn {

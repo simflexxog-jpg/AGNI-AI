@@ -860,19 +860,6 @@ function appendMessage(text, sender, options = {}) {
     actions.appendChild(copyBtn);
 
     if (sender === 'bot') {
-        const regenBtn = document.createElement('button');
-        regenBtn.type = 'button';
-        regenBtn.className = 'msg-action-btn regenerate-btn';
-        regenBtn.innerHTML = '<span class="material-symbols-outlined">sync</span>Regenerate';
-        regenBtn.addEventListener('click', () => {
-            messageDiv.remove();
-            const currentConv = getActiveConversation();
-            currentConv.messages.pop();
-            saveState();
-            fetchAIResponse(text, attachments, currentConv.messages.map(m => ({ role: m.role, content: m.content })));
-        });
-        actions.appendChild(regenBtn);
-
         if (animate) {
             messageDiv.classList.add('is-streaming');
             streamBotMessage(messageDiv, text);
