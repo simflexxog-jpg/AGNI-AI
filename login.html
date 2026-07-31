@@ -12,8 +12,10 @@
     body.login-page {
       min-height: 100dvh;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
+      padding: 24px;
+      overflow-y: auto;
       background: #0a0a0f;
       font-family: 'Geist', system-ui, sans-serif;
     }
@@ -33,22 +35,74 @@
     .login-shell {
       position: relative;
       z-index: 1;
-      width: 100%;
-      max-width: 420px;
-      padding: 24px;
-    }
-
-    .login-card {
+      width: min(980px, 100%);
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      overflow: hidden;
+      border-radius: 28px;
+      border: 1px solid rgba(255,255,255,0.10);
       background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px;
-      padding: 48px 40px 40px;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       box-shadow:
         0 0 0 1px rgba(255,255,255,0.04) inset,
-        0 32px 64px rgba(0,0,0,0.4);
+        0 32px 64px rgba(0,0,0,0.45);
       animation: card-in 0.45s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .login-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 52px;
+      background:
+        radial-gradient(circle at top left, rgba(99,102,241,0.30), transparent 25%),
+        linear-gradient(135deg, rgba(17,24,39,0.98), rgba(24,24,41,0.96));
+    }
+
+    .login-visual-inner {
+      max-width: 360px;
+    }
+
+    .login-visual .login-logo {
+      margin: 0 0 22px;
+      width: 78px;
+      height: 78px;
+    }
+
+    .login-visual h2 {
+      font-size: clamp(1.8rem, 3.3vw, 2.65rem);
+      line-height: 1.05;
+      margin-bottom: 12px;
+      color: #f8fafc;
+      letter-spacing: -0.04em;
+    }
+
+    .login-visual p {
+      color: rgba(226,232,240,0.78);
+      line-height: 1.7;
+      font-size: 0.98rem;
+      margin-bottom: 20px;
+    }
+
+    .login-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .login-badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.86);
+      font-size: 0.82rem;
+    }
+
+    .login-card {
+      padding: 48px 40px 40px;
+      background: rgba(8, 13, 29, 0.92);
     }
 
     @keyframes card-in {
@@ -246,6 +300,19 @@
 </head>
 <body class="login-page">
   <main class="login-shell">
+    <section class="login-visual">
+      <div class="login-visual-inner">
+        <img src="Sitelogo.svg" alt="AGNI AI" class="login-logo" />
+        <h2>Bring your ideas into focus.</h2>
+        <p>Your personal AI workspace, ready with a clean history, faster access, and a more effortless way to work.</p>
+        <div class="login-badges">
+          <span class="login-badge">Secure access</span>
+          <span class="login-badge">Private workspace</span>
+          <span class="login-badge">Fast onboarding</span>
+        </div>
+      </div>
+    </section>
+
     <div class="login-card">
       <img src="Sitelogo.svg" alt="AGNI AI" class="login-logo" />
       <h1>Sign in to AGNI AI</h1>

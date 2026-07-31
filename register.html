@@ -11,8 +11,10 @@
     body.login-page {
       min-height: 100dvh;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
+      padding: 24px;
+      overflow-y: auto;
       background: #0a0a0f;
       font-family: 'Geist', system-ui, sans-serif;
     }
@@ -26,15 +28,74 @@
         radial-gradient(ellipse 40% 40% at 50% 50%, rgba(239,68,68,0.06) 0%, transparent 60%);
       pointer-events: none;
     }
-    .login-shell { position: relative; z-index: 1; width: 100%; max-width: 460px; padding: 24px; }
-    .login-card {
+    .login-shell {
+      position: relative;
+      z-index: 1;
+      width: min(980px, 100%);
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      overflow: hidden;
+      border-radius: 28px;
+      border: 1px solid rgba(255,255,255,0.10);
       background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px;
-      padding: 42px 34px 36px;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 32px 64px rgba(0,0,0,0.4);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 32px 64px rgba(0,0,0,0.45);
+    }
+
+    .login-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 52px;
+      background:
+        radial-gradient(circle at top left, rgba(99,102,241,0.30), transparent 25%),
+        linear-gradient(135deg, rgba(17,24,39,0.98), rgba(24,24,41,0.96));
+    }
+
+    .login-visual-inner {
+      max-width: 360px;
+    }
+
+    .login-visual .login-logo {
+      margin: 0 0 22px;
+      width: 78px;
+      height: 78px;
+    }
+
+    .login-visual h2 {
+      font-size: clamp(1.8rem, 3.3vw, 2.65rem);
+      line-height: 1.05;
+      margin-bottom: 12px;
+      color: #f8fafc;
+      letter-spacing: -0.04em;
+    }
+
+    .login-visual p {
+      color: rgba(226,232,240,0.78);
+      line-height: 1.7;
+      font-size: 0.98rem;
+      margin-bottom: 20px;
+    }
+
+    .login-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .login-badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.86);
+      font-size: 0.82rem;
+    }
+
+    .login-card {
+      padding: 42px 34px 36px;
+      background: rgba(8, 13, 29, 0.92);
     }
     .login-logo { display: block; width: 56px; height: 56px; margin: 0 auto 24px; filter: drop-shadow(0 0 20px rgba(239,68,68,0.4)); }
     .login-card h1 { font-size: 1.6rem; color: #f8fafc; text-align: center; margin-bottom: 8px; font-weight: 700; }
@@ -42,8 +103,10 @@
     .form-grid { display: grid; gap: 14px; }
     .field { display: grid; gap: 6px; }
     label { color: rgba(255,255,255,0.82); font-size: 0.82rem; }
-    input { width: 100%; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: #f8fafc; padding: 12px 14px; font: inherit; }
+    input { width: 100%; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: #f8fafc; padding: 12px 14px; font: inherit; transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease; }
     input:focus { outline: 2px solid rgba(99,102,241,0.6); border-color: transparent; }
+    input.password-valid { border-color: rgba(34,197,94,0.75); box-shadow: 0 0 0 3px rgba(34,197,94,0.14); }
+    input.password-invalid { border-color: rgba(239,68,68,0.72); box-shadow: 0 0 0 3px rgba(239,68,68,0.14); }
     .primary-btn,
     .secondary-btn {
       width: 100%; border: none; border-radius: 10px; cursor: pointer; font: inherit; font-weight: 700; padding: 12px 16px; transition: transform 0.12s ease, opacity 0.12s ease;
@@ -51,15 +114,69 @@
     .primary-btn { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; }
     .primary-btn:hover { transform: translateY(-1px); }
     .secondary-btn { margin-top: 8px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.10); }
+    .password-rules {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: -4px;
+    }
+
+    .password-rules span {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.72);
+      font-size: 0.75rem;
+      transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+    }
+
+    .password-rules span.valid {
+      background: rgba(34,197,94,0.16);
+      border-color: rgba(34,197,94,0.45);
+      color: #bbf7d0;
+    }
+
+    .password-rules span.invalid {
+      background: rgba(239,68,68,0.12);
+      border-color: rgba(239,68,68,0.32);
+      color: #fecaca;
+    }
+
     .login-note { margin-top: 18px; min-height: 1.5em; font-size: 0.82rem; text-align: center; color: rgba(255,255,255,0.45); }
     .login-note.error { color: #fca5a5; }
     .login-note.info { color: rgba(255,255,255,0.72); }
     .login-footer { margin-top: 24px; text-align: center; font-size: 0.75rem; color: rgba(255,255,255,0.2); }
     .login-footer a { color: rgba(255,255,255,0.45); text-decoration: none; }
+
+    @media (max-width: 860px) {
+      .login-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .login-visual {
+        padding: 36px 28px;
+      }
+    }
   </style>
 </head>
 <body class="login-page">
   <main class="login-shell">
+    <section class="login-visual">
+      <div class="login-visual-inner">
+        <img src="Sitelogo.svg" alt="AGNI AI" class="login-logo" />
+        <h2>Secure your personal workspace.</h2>
+        <p>Set up your account once and keep every conversation, preference, and setting organized in one intuitive place.</p>
+        <div class="login-badges">
+          <span class="login-badge">Account setup</span>
+          <span class="login-badge">Private history</span>
+          <span class="login-badge">Fast access</span>
+        </div>
+      </div>
+    </section>
+
     <div class="login-card">
       <img src="Sitelogo.svg" alt="AGNI AI" class="login-logo" />
       <h1>Create your account</h1>
@@ -78,6 +195,13 @@
           <label for="password">Password</label>
           <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required />
         </div>
+
+        <div class="password-rules" aria-label="Password tips">
+          <span class="password-rule" data-rule="length">8+ characters</span>
+          <span class="password-rule" data-rule="number">Mix letters & numbers</span>
+          <span class="password-rule" data-rule="case">Use upper + lower case</span>
+        </div>
+
         <button class="primary-btn" type="submit">Register</button>
       </form>
 
@@ -94,11 +218,40 @@
     const registerForm = document.getElementById('register-form');
     const note = document.getElementById('register-note');
     const backToLogin = document.getElementById('back-to-login');
+    const passwordInput = document.getElementById('password');
+    const passwordRules = Array.from(document.querySelectorAll('.password-rule'));
 
     function setNote(message, type = '') {
       note.textContent = message;
       note.className = `login-note ${type}`.trim();
     }
+
+    function updatePasswordRules() {
+      const value = passwordInput.value;
+      const hasLength = value.length >= 8;
+      const hasNumber = /\d/.test(value);
+      const hasLower = /[a-z]/.test(value);
+      const hasUpper = /[A-Z]/.test(value);
+      const hasMixed = hasNumber && hasLower && hasUpper;
+      const isPasswordValid = hasLength && hasMixed;
+
+      passwordRules.forEach((rule) => {
+        const ruleName = rule.dataset.rule;
+        const isValid =
+          ruleName === 'length' ? hasLength :
+          ruleName === 'number' ? hasMixed :
+          hasLower && hasUpper;
+
+        rule.classList.toggle('valid', isValid);
+        rule.classList.toggle('invalid', !isValid && value.length > 0);
+      });
+
+      passwordInput.classList.toggle('password-valid', isPasswordValid);
+      passwordInput.classList.toggle('password-invalid', !isPasswordValid && value.length > 0);
+    }
+
+    passwordInput.addEventListener('input', updatePasswordRules);
+    updatePasswordRules();
 
     registerForm.addEventListener('submit', async (event) => {
       event.preventDefault();
