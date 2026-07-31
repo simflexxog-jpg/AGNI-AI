@@ -3,293 +3,771 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AGNI AI — Register</title>
-  <link rel="stylesheet" href="style.css?v=11" />
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <title>AGNI AI — Create account</title>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body.login-page {
+
+    :root {
+      --accent:     #6366f1;
+      --accent-2:   #8b5cf6;
+      --success:    #22c55e;
+      --error:      #ef4444;
+      --surface:    rgba(8,13,29,0.95);
+      --border:     rgba(255,255,255,0.10);
+      --text:       #f8fafc;
+      --text-muted: rgba(255,255,255,0.45);
+      --input-bg:   rgba(255,255,255,0.05);
+      --transition: 0.18s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    body {
       min-height: 100dvh;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: center;
       padding: 24px;
-      overflow-y: auto;
       background: #0a0a0f;
-      font-family: 'Geist', system-ui, sans-serif;
+      font-family: 'Geist', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
-    body.login-page::before {
+    body::before {
       content: '';
       position: fixed;
       inset: 0;
       background:
         radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99,102,241,0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(168,85,247,0.10) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(239,68,68,0.06) 0%, transparent 60%);
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(168,85,247,0.10) 0%, transparent 60%);
       pointer-events: none;
     }
-    .login-shell {
+
+    /* ── Shell ─────────────────────────────────────────────────── */
+    .shell {
       position: relative;
       z-index: 1;
       width: min(980px, 100%);
       display: grid;
       grid-template-columns: 1.08fr 0.92fr;
-      overflow: hidden;
       border-radius: 28px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      background: rgba(255,255,255,0.03);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 32px 64px rgba(0,0,0,0.45);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 32px 80px rgba(0,0,0,0.5);
+      animation: rise 0.45s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(20px) scale(0.98); }
+      to   { opacity: 1; transform: none; }
     }
 
-    .login-visual {
+    /* ── Visual ────────────────────────────────────────────────── */
+    .visual {
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 52px;
       background:
-        radial-gradient(circle at top left, rgba(99,102,241,0.30), transparent 25%),
-        linear-gradient(135deg, rgba(17,24,39,0.98), rgba(24,24,41,0.96));
+        radial-gradient(circle at top left, rgba(99,102,241,0.28), transparent 30%),
+        linear-gradient(135deg, rgba(17,24,39,0.99), rgba(24,24,41,0.97));
     }
-
-    .login-visual-inner {
-      max-width: 360px;
-    }
-
-    .login-visual .login-logo {
-      margin: 0 0 22px;
-      width: 78px;
-      height: 78px;
-    }
-
-    .login-visual h2 {
-      font-size: clamp(1.8rem, 3.3vw, 2.65rem);
+    .visual-inner { max-width: 340px; }
+    .visual .logo { width: 72px; height: 72px; margin-bottom: 24px; display: block; }
+    .visual h2 {
+      font-size: clamp(1.75rem, 3vw, 2.5rem);
+      font-weight: 800;
       line-height: 1.05;
-      margin-bottom: 12px;
-      color: #f8fafc;
       letter-spacing: -0.04em;
+      color: var(--text);
+      margin-bottom: 14px;
     }
-
-    .login-visual p {
-      color: rgba(226,232,240,0.78);
-      line-height: 1.7;
-      font-size: 0.98rem;
-      margin-bottom: 20px;
-    }
-
-    .login-badges {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .login-badge {
-      padding: 8px 12px;
+    .visual p { color: rgba(226,232,240,0.72); line-height: 1.7; font-size: 0.95rem; margin-bottom: 24px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; }
+    .badge {
+      padding: 6px 12px;
       border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.11);
       background: rgba(255,255,255,0.06);
-      color: rgba(255,255,255,0.86);
-      font-size: 0.82rem;
+      color: rgba(255,255,255,0.80);
+      font-size: 0.78rem;
+      font-weight: 500;
     }
 
-    .login-card {
-      padding: 42px 34px 36px;
-      background: rgba(8, 13, 29, 0.92);
+    /* ── Card ──────────────────────────────────────────────────── */
+    .card {
+      padding: 44px 38px 36px;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
     }
-    .login-logo { display: block; width: 56px; height: 56px; margin: 0 auto 24px; filter: drop-shadow(0 0 20px rgba(239,68,68,0.4)); }
-    .login-card h1 { font-size: 1.6rem; color: #f8fafc; text-align: center; margin-bottom: 8px; font-weight: 700; }
-    .login-card > p { font-size: 0.9rem; color: rgba(255,255,255,0.45); text-align: center; line-height: 1.55; margin-bottom: 26px; }
-    .form-grid { display: grid; gap: 14px; }
-    .field { display: grid; gap: 6px; }
-    label { color: rgba(255,255,255,0.82); font-size: 0.82rem; }
-    input { width: 100%; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: #f8fafc; padding: 12px 14px; font: inherit; transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease; }
-    input:focus { outline: 2px solid rgba(99,102,241,0.6); border-color: transparent; }
-    input.password-valid { border-color: rgba(34,197,94,0.75); box-shadow: 0 0 0 3px rgba(34,197,94,0.14); }
-    input.password-invalid { border-color: rgba(239,68,68,0.72); box-shadow: 0 0 0 3px rgba(239,68,68,0.14); }
-    .primary-btn,
-    .secondary-btn {
-      width: 100%; border: none; border-radius: 10px; cursor: pointer; font: inherit; font-weight: 700; padding: 12px 16px; transition: transform 0.12s ease, opacity 0.12s ease;
+    .card .logo { width: 48px; height: 48px; display: block; margin: 0 auto 24px; filter: drop-shadow(0 0 18px rgba(239,68,68,0.35)); }
+    .card h1 { font-size: 1.5rem; font-weight: 700; color: var(--text); text-align: center; letter-spacing: -0.025em; margin-bottom: 8px; }
+    .card > .subtitle { font-size: 0.875rem; color: var(--text-muted); text-align: center; line-height: 1.6; margin-bottom: 26px; }
+
+    /* ── Form ──────────────────────────────────────────────────── */
+    .form { display: grid; gap: 14px; }
+
+    .field { display: grid; gap: 5px; }
+    .field label { color: rgba(255,255,255,0.85); font-size: 0.8rem; font-weight: 500; }
+
+    .input-wrap { position: relative; display: flex; align-items: center; }
+    .input-wrap input {
+      width: 100%;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      padding: 11px 40px 11px 13px;
+      font: inherit;
+      font-size: 0.925rem;
+      transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+      -webkit-appearance: none;
     }
-    .primary-btn { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; }
-    .primary-btn:hover { transform: translateY(-1px); }
-    .secondary-btn { margin-top: 8px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.10); }
-    .password-rules {
+    .input-wrap input::placeholder { color: rgba(255,255,255,0.22); }
+    .input-wrap input:focus {
+      outline: none;
+      border-color: rgba(99,102,241,0.65);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.14);
+      background: rgba(255,255,255,0.07);
+    }
+    .input-wrap input.valid {
+      border-color: rgba(34,197,94,0.55);
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.09);
+    }
+    .input-wrap input.invalid {
+      border-color: rgba(239,68,68,0.58);
+      box-shadow: 0 0 0 3px rgba(239,68,68,0.10);
+    }
+
+    /* checkmark / x icon in input */
+    .input-status {
+      position: absolute;
+      right: 11px;
+      pointer-events: none;
+      display: flex;
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+    .input-wrap input.valid  ~ .input-status { opacity: 1; color: var(--success); }
+    .input-wrap input.invalid ~ .input-status { opacity: 1; color: var(--error); }
+
+    .toggle-pw {
+      position: absolute;
+      right: 34px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: rgba(255,255,255,0.35);
+      display: flex;
+      transition: color var(--transition);
+      line-height: 0;
+    }
+    .toggle-pw:hover { color: rgba(255,255,255,0.70); }
+    .toggle-pw:focus-visible { outline: 2px solid var(--accent); border-radius: 4px; }
+
+    /* For confirm-pw which has both toggle + status */
+    .input-wrap.has-toggle input { padding-right: 64px; }
+
+    .field-error {
+      font-size: 0.74rem;
+      color: #fc8181;
+      min-height: 1em;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      line-height: 1.4;
+    }
+    .field-error:empty { display: none; }
+
+    /* ── Password strength meter ───────────────────────────────── */
+    .strength-wrap { display: grid; gap: 8px; margin-top: -2px; }
+    .strength-bars {
+      display: flex;
+      gap: 5px;
+    }
+    .strength-bar {
+      height: 4px;
+      flex: 1;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.09);
+      transition: background 0.3s ease;
+    }
+    .strength-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      color: rgba(255,255,255,0.30);
+      transition: color var(--transition);
+    }
+    .strength-rules {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: -4px;
+      gap: 6px;
     }
-
-    .password-rules span {
+    .rule {
       display: inline-flex;
       align-items: center;
-      padding: 6px 10px;
+      gap: 4px;
+      padding: 4px 9px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.10);
-      color: rgba(255,255,255,0.72);
-      font-size: 0.75rem;
-      transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+      border: 1px solid rgba(255,255,255,0.09);
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.50);
+      font-size: 0.72rem;
+      transition: all 0.2s ease;
     }
-
-    .password-rules span.valid {
-      background: rgba(34,197,94,0.16);
-      border-color: rgba(34,197,94,0.45);
+    .rule.pass {
+      background: rgba(34,197,94,0.14);
+      border-color: rgba(34,197,94,0.38);
       color: #bbf7d0;
     }
-
-    .password-rules span.invalid {
-      background: rgba(239,68,68,0.12);
-      border-color: rgba(239,68,68,0.32);
+    .rule.fail {
+      background: rgba(239,68,68,0.10);
+      border-color: rgba(239,68,68,0.28);
       color: #fecaca;
     }
+    .rule-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
 
-    .login-note { margin-top: 18px; min-height: 1.5em; font-size: 0.82rem; text-align: center; color: rgba(255,255,255,0.45); }
-    .login-note.error { color: #fca5a5; }
-    .login-note.info { color: rgba(255,255,255,0.72); }
-    .login-footer { margin-top: 24px; text-align: center; font-size: 0.75rem; color: rgba(255,255,255,0.2); }
-    .login-footer a { color: rgba(255,255,255,0.45); text-decoration: none; }
+    /* ── Buttons ───────────────────────────────────────────────── */
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity var(--transition), transform var(--transition);
+      position: relative;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .btn-primary::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0); transition: background var(--transition); }
+    .btn-primary:hover::before { background: rgba(255,255,255,0.07); }
+    .btn-primary:active { transform: scale(0.99); }
+    .btn-primary:disabled { opacity: 0.50; cursor: not-allowed; transform: none; }
+    .btn-primary:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
 
-    @media (max-width: 860px) {
-      .login-shell {
-        grid-template-columns: 1fr;
-      }
+    .btn-spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.28);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      flex-shrink: 0;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-      .login-visual {
-        padding: 36px 28px;
-      }
+    .btn-secondary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 11px 16px;
+      background: rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.80);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 8px;
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background var(--transition), border-color var(--transition);
+      margin-top: 8px;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.11); border-color: rgba(255,255,255,0.18); }
+    .btn-secondary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ── Status ────────────────────────────────────────────────── */
+    #status {
+      margin-top: 14px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      text-align: center;
+      display: none;
+    }
+    #status.error   { display: block; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.28); color: #fca5a5; }
+    #status.info    { display: block; background: rgba(99,102,241,0.10); border: 1px solid rgba(99,102,241,0.22); color: rgba(165,180,252,0.95); }
+    #status.success { display: block; background: rgba(34,197,94,0.10); border: 1px solid rgba(34,197,94,0.25); color: #86efac; }
+
+    /* ── Terms note ────────────────────────────────────────────── */
+    .terms-note {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.25);
+      text-align: center;
+      line-height: 1.6;
+      margin-top: 4px;
+    }
+    .terms-note a { color: rgba(255,255,255,0.40); text-decoration: none; }
+    .terms-note a:hover { color: rgba(255,255,255,0.65); }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    .footer { margin-top: 20px; text-align: center; font-size: 0.72rem; color: rgba(255,255,255,0.18); line-height: 1.7; }
+    .footer a { color: rgba(255,255,255,0.32); text-decoration: none; }
+    .footer a:hover { color: rgba(255,255,255,0.55); }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 760px) {
+      body { padding: 16px; }
+      .shell { grid-template-columns: 1fr; }
+      .visual { padding: 36px 28px; }
+      .visual h2 { font-size: 1.6rem; }
+      .card { padding: 36px 22px 28px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, .btn-spinner { animation: none !important; transition: none !important; }
     }
   </style>
 </head>
-<body class="login-page">
-  <main class="login-shell">
-    <section class="login-visual">
-      <div class="login-visual-inner">
-        <img src="Sitelogo.svg" alt="AGNI AI" class="login-logo" />
+<body>
+  <main class="shell" role="main">
+
+    <!-- Visual panel -->
+    <section class="visual" aria-hidden="true">
+      <div class="visual-inner">
+        <img src="Sitelogo.svg" alt="" class="logo" />
         <h2>Secure your personal workspace.</h2>
-        <p>Set up your account once and keep every conversation, preference, and setting organized in one intuitive place.</p>
-        <div class="login-badges">
-          <span class="login-badge">Account setup</span>
-          <span class="login-badge">Private history</span>
-          <span class="login-badge">Fast access</span>
+        <p>Set up your account once and keep every conversation, preference, and setting in one place.</p>
+        <div class="badges">
+          <span class="badge">Account setup</span>
+          <span class="badge">Private history</span>
+          <span class="badge">Fast access</span>
         </div>
       </div>
     </section>
 
-    <div class="login-card">
-      <img src="Sitelogo.svg" alt="AGNI AI" class="login-logo" />
+    <!-- Card -->
+    <div class="card">
+      <img src="Sitelogo.svg" alt="AGNI AI" class="logo" />
       <h1>Create your account</h1>
-      <p>Register with email and password to secure your personal workspace.</p>
+      <p class="subtitle">A strong password keeps your workspace secure.</p>
 
-      <form id="register-form" class="form-grid">
+      <form id="register-form" class="form" novalidate aria-label="Create account">
+
+        <!-- Full name -->
         <div class="field">
           <label for="name">Full name</label>
-          <input id="name" name="name" type="text" autocomplete="name" required />
+          <div class="input-wrap">
+            <input id="name" name="name" type="text" autocomplete="name" placeholder="Jane Smith" required aria-required="true" aria-describedby="name-error" />
+            <span class="input-status" aria-hidden="true">
+              <svg id="name-ok" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg id="name-x"  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </span>
+          </div>
+          <span class="field-error" id="name-error" role="alert" aria-live="polite"></span>
         </div>
+
+        <!-- Email -->
         <div class="field">
           <label for="email">Email address</label>
-          <input id="email" name="email" type="email" autocomplete="email" required />
+          <div class="input-wrap">
+            <input id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required aria-required="true" aria-describedby="email-error" />
+            <span class="input-status" aria-hidden="true">
+              <svg id="email-ok" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg id="email-x"  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </span>
+          </div>
+          <span class="field-error" id="email-error" role="alert" aria-live="polite"></span>
         </div>
+
+        <!-- Password -->
         <div class="field">
           <label for="password">Password</label>
-          <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required />
+          <div class="input-wrap">
+            <input id="password" name="password" type="password" autocomplete="new-password" placeholder="Create a strong password" required aria-required="true" aria-describedby="password-error pw-strength-label" />
+            <button type="button" class="toggle-pw" id="toggle-pw1" aria-label="Show password" aria-pressed="false">
+              <svg id="eye1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="eye-off1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+            <span class="input-status" aria-hidden="true">
+              <svg id="pw-ok" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+          </div>
+          <span class="field-error" id="password-error" role="alert" aria-live="polite"></span>
+
+          <!-- Strength meter -->
+          <div class="strength-wrap" id="strength-section" aria-label="Password strength">
+            <div class="strength-bars" aria-hidden="true">
+              <div class="strength-bar" id="bar1"></div>
+              <div class="strength-bar" id="bar2"></div>
+              <div class="strength-bar" id="bar3"></div>
+              <div class="strength-bar" id="bar4"></div>
+            </div>
+            <div class="strength-label" id="pw-strength-label" aria-live="polite"></div>
+            <div class="strength-rules" id="pw-rules" aria-label="Password requirements" role="list">
+              <span class="rule" data-rule="length" role="listitem"><span class="rule-dot"></span>8+ characters</span>
+              <span class="rule" data-rule="upper"  role="listitem"><span class="rule-dot"></span>Uppercase</span>
+              <span class="rule" data-rule="lower"  role="listitem"><span class="rule-dot"></span>Lowercase</span>
+              <span class="rule" data-rule="number" role="listitem"><span class="rule-dot"></span>Number</span>
+              <span class="rule" data-rule="special" role="listitem"><span class="rule-dot"></span>Symbol</span>
+            </div>
+          </div>
         </div>
 
-        <div class="password-rules" aria-label="Password tips">
-          <span class="password-rule" data-rule="length">8+ characters</span>
-          <span class="password-rule" data-rule="number">Mix letters & numbers</span>
-          <span class="password-rule" data-rule="case">Use upper + lower case</span>
+        <!-- Confirm password -->
+        <div class="field">
+          <label for="confirm-password">Confirm password</label>
+          <div class="input-wrap has-toggle">
+            <input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" placeholder="Repeat your password" required aria-required="true" aria-describedby="confirm-error" />
+            <button type="button" class="toggle-pw" id="toggle-pw2" aria-label="Show confirm password" aria-pressed="false">
+              <svg id="eye2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="eye-off2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+            <span class="input-status" aria-hidden="true">
+              <svg id="confirm-ok" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg id="confirm-x"  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </span>
+          </div>
+          <span class="field-error" id="confirm-error" role="alert" aria-live="polite"></span>
         </div>
 
-        <button class="primary-btn" type="submit">Register</button>
+        <!-- Submit -->
+        <button type="submit" class="btn-primary" id="submit-btn">
+          <span class="btn-spinner" id="submit-spinner" aria-hidden="true"></span>
+          <span id="submit-label">Create account</span>
+        </button>
+
+        <p class="terms-note">
+          By creating an account you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
+        </p>
       </form>
 
-      <button class="secondary-btn" type="button" id="back-to-login">Back to login</button>
-      <p id="register-note" class="login-note">Use a password with at least 8 characters.</p>
+      <!-- Status -->
+      <div id="status" role="alert" aria-live="assertive"></div>
 
-      <div class="login-footer">
+      <!-- Back to login -->
+      <a href="/login" class="btn-secondary">Back to sign in</a>
+
+      <div class="footer">
         Already have an account? <a href="/login">Sign in</a>
+        &nbsp;·&nbsp; Built by <a href="https://agnib-portfolio.onrender.com/" target="_blank" rel="noopener noreferrer">Agni</a>
       </div>
     </div>
   </main>
 
   <script>
-    const registerForm = document.getElementById('register-form');
-    const note = document.getElementById('register-note');
-    const backToLogin = document.getElementById('back-to-login');
-    const passwordInput = document.getElementById('password');
-    const passwordRules = Array.from(document.querySelectorAll('.password-rule'));
+    'use strict';
 
-    function setNote(message, type = '') {
-      note.textContent = message;
-      note.className = `login-note ${type}`.trim();
-    }
+    // ── DOM refs ──────────────────────────────────────────────────
+    const form         = document.getElementById('register-form');
+    const nameEl       = document.getElementById('name');
+    const emailEl      = document.getElementById('email');
+    const passwordEl   = document.getElementById('password');
+    const confirmEl    = document.getElementById('confirm-password');
+    const submitBtn    = document.getElementById('submit-btn');
+    const submitSpinner = document.getElementById('submit-spinner');
+    const submitLabel  = document.getElementById('submit-label');
+    const statusEl     = document.getElementById('status');
 
-    function updatePasswordRules() {
-      const value = passwordInput.value;
-      const hasLength = value.length >= 8;
-      const hasNumber = /\d/.test(value);
-      const hasLower = /[a-z]/.test(value);
-      const hasUpper = /[A-Z]/.test(value);
-      const hasMixed = hasNumber && hasLower && hasUpper;
-      const isPasswordValid = hasLength && hasMixed;
+    // Strength meter
+    const bars        = [1,2,3,4].map(i => document.getElementById('bar'+i));
+    const strengthLbl = document.getElementById('pw-strength-label');
+    const rules       = Array.from(document.querySelectorAll('.rule'));
 
-      passwordRules.forEach((rule) => {
-        const ruleName = rule.dataset.rule;
-        const isValid =
-          ruleName === 'length' ? hasLength :
-          ruleName === 'number' ? hasMixed :
-          hasLower && hasUpper;
+    // ── Helpers ───────────────────────────────────────────────────
+    const isValidEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
 
-        rule.classList.toggle('valid', isValid);
-        rule.classList.toggle('invalid', !isValid && value.length > 0);
-      });
+    function setFieldState(inputEl, errorId, okId, xId, valid, msg) {
+      const errEl = document.getElementById(errorId);
+      const okEl  = okId ? document.getElementById(okId) : null;
+      const xEl   = xId  ? document.getElementById(xId)  : null;
 
-      passwordInput.classList.toggle('password-valid', isPasswordValid);
-      passwordInput.classList.toggle('password-invalid', !isPasswordValid && value.length > 0);
-    }
-
-    passwordInput.addEventListener('input', updatePasswordRules);
-    updatePasswordRules();
-
-    registerForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const formData = new FormData(registerForm);
-      const payload = {
-        name: String(formData.get('name') || '').trim(),
-        email: String(formData.get('email') || '').trim(),
-        password: String(formData.get('password') || '')
-      };
-
-      if (!payload.name || !payload.email || payload.password.length < 8) {
-        setNote('Please enter a valid name, email, and a password with at least 8 characters.', 'error');
-        return;
+      if (msg) {
+        if (errEl) errEl.textContent = msg;
+        inputEl.classList.add('invalid');
+        inputEl.classList.remove('valid');
+        inputEl.setAttribute('aria-invalid', 'true');
+        if (okEl) okEl.style.display = 'none';
+        if (xEl)  xEl.style.display  = '';
+      } else if (valid) {
+        if (errEl) errEl.textContent = '';
+        inputEl.classList.add('valid');
+        inputEl.classList.remove('invalid');
+        inputEl.setAttribute('aria-invalid', 'false');
+        if (okEl) okEl.style.display = '';
+        if (xEl)  xEl.style.display  = 'none';
+      } else {
+        // neutral (untouched)
+        if (errEl) errEl.textContent = '';
+        inputEl.classList.remove('valid','invalid');
+        inputEl.removeAttribute('aria-invalid');
+        if (okEl) okEl.style.display = 'none';
+        if (xEl)  xEl.style.display  = 'none';
       }
+    }
 
-      setNote('Creating your account…', 'info');
+    function clearField(inputEl, errorId, okId, xId) {
+      setFieldState(inputEl, errorId, okId, xId, false, '');
+    }
 
-      try {
-        const response = await fetch('/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload)
-        });
+    function setStatus(msg, type = '') {
+      statusEl.textContent = msg;
+      statusEl.className = type;
+    }
 
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(data.error || 'Registration failed.');
+    function setLoading(loading) {
+      submitBtn.disabled = loading;
+      submitSpinner.style.display = loading ? '' : 'none';
+      submitLabel.textContent = loading ? 'Creating account…' : 'Create account';
+      submitBtn.setAttribute('aria-busy', loading ? 'true' : 'false');
+    }
+
+    // ── Toggle show/hide password ─────────────────────────────────
+    function makeToggle(btnId, inputEl, eyeId, eyeOffId) {
+      const btn = document.getElementById(btnId);
+      btn.addEventListener('click', () => {
+        const show = inputEl.type === 'password';
+        inputEl.type = show ? 'text' : 'password';
+        document.getElementById(eyeId).style.display    = show ? 'none' : '';
+        document.getElementById(eyeOffId).style.display = show ? '' : 'none';
+        btn.setAttribute('aria-pressed', String(show));
+        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      });
+    }
+    makeToggle('toggle-pw1', passwordEl, 'eye1', 'eye-off1');
+    makeToggle('toggle-pw2', confirmEl,  'eye2', 'eye-off2');
+
+    // ── Password strength engine ──────────────────────────────────
+    const STRENGTH_MAP = [
+      { label: '',         color: 'rgba(255,255,255,0.09)' },
+      { label: 'Weak',     color: '#ef4444' },
+      { label: 'Fair',     color: '#f59e0b' },
+      { label: 'Good',     color: '#6366f1' },
+      { label: 'Strong',   color: '#22c55e' },
+    ];
+
+    function scorePassword(pw) {
+      const checks = {
+        length:  pw.length >= 8,
+        upper:   /[A-Z]/.test(pw),
+        lower:   /[a-z]/.test(pw),
+        number:  /\d/.test(pw),
+        special: /[^A-Za-z0-9]/.test(pw),
+      };
+      // Bonus for length
+      let score = 0;
+      if (checks.length)  score++;
+      if (checks.upper)   score++;
+      if (checks.lower)   score++;
+      if (checks.number)  score++;
+      if (checks.special) score++;
+      // Clamp to 4 levels
+      const level = pw.length === 0 ? 0 : Math.max(1, Math.min(4, Math.round(score * 4 / 5)));
+      return { level, checks };
+    }
+
+    function updateStrength(pw) {
+      const { level, checks } = scorePassword(pw);
+      const { label, color }  = STRENGTH_MAP[level];
+
+      bars.forEach((bar, i) => {
+        bar.style.background = i < level ? color : 'rgba(255,255,255,0.09)';
+      });
+      strengthLbl.textContent = label;
+      strengthLbl.style.color = level === 0 ? 'rgba(255,255,255,0.28)' : color;
+
+      rules.forEach(rule => {
+        const key = rule.dataset.rule;
+        if (pw.length === 0) {
+          rule.classList.remove('pass','fail');
+        } else {
+          rule.classList.toggle('pass', !!checks[key]);
+          rule.classList.toggle('fail', !checks[key]);
         }
+      });
+    }
 
-        window.location.assign(data.redirect || '/');
-      } catch (error) {
-        setNote(error.message || 'Registration failed. Please try again.', 'error');
+    // ── Real-time validation ──────────────────────────────────────
+
+    // Name
+    nameEl.addEventListener('blur', () => {
+      const v = nameEl.value.trim();
+      if (!v) {
+        setFieldState(nameEl, 'name-error', 'name-ok', 'name-x', false, 'Full name is required.');
+      } else if (v.length < 2) {
+        setFieldState(nameEl, 'name-error', 'name-ok', 'name-x', false, 'Enter your full name.');
+      } else {
+        setFieldState(nameEl, 'name-error', 'name-ok', 'name-x', true, '');
+      }
+    });
+    nameEl.addEventListener('input', () => {
+      if (nameEl.classList.contains('invalid') && nameEl.value.trim().length >= 2) {
+        setFieldState(nameEl, 'name-error', 'name-ok', 'name-x', true, '');
       }
     });
 
-    backToLogin.addEventListener('click', () => {
-      window.location.assign('/login');
+    // Email
+    emailEl.addEventListener('blur', () => {
+      const v = emailEl.value.trim();
+      if (!v) {
+        setFieldState(emailEl, 'email-error', 'email-ok', 'email-x', false, 'Email address is required.');
+      } else if (!isValidEmail(v)) {
+        setFieldState(emailEl, 'email-error', 'email-ok', 'email-x', false, 'Enter a valid email address.');
+      } else {
+        setFieldState(emailEl, 'email-error', 'email-ok', 'email-x', true, '');
+      }
+    });
+    emailEl.addEventListener('input', () => {
+      if (emailEl.classList.contains('invalid') && isValidEmail(emailEl.value)) {
+        setFieldState(emailEl, 'email-error', 'email-ok', 'email-x', true, '');
+      }
+    });
+
+    // Password — live strength
+    passwordEl.addEventListener('input', () => {
+      const pw = passwordEl.value;
+      updateStrength(pw);
+
+      const { level } = scorePassword(pw);
+      if (pw.length === 0) {
+        clearField(passwordEl, 'password-error', 'pw-ok', null);
+      } else if (level >= 2) {
+        setFieldState(passwordEl, 'password-error', 'pw-ok', null, true, '');
+      } else {
+        setFieldState(passwordEl, 'password-error', 'pw-ok', null, false, '');
+        passwordEl.classList.remove('valid','invalid'); // don't go red while typing
+      }
+
+      // Re-validate confirm if it has a value
+      if (confirmEl.value) validateConfirm();
+    });
+
+    passwordEl.addEventListener('blur', () => {
+      const pw = passwordEl.value;
+      if (!pw) {
+        setFieldState(passwordEl, 'password-error', 'pw-ok', null, false, 'Password is required.');
+      } else if (pw.length < 8) {
+        setFieldState(passwordEl, 'password-error', 'pw-ok', null, false, 'Password must be at least 8 characters.');
+      } else {
+        const { level } = scorePassword(pw);
+        if (level < 2) {
+          setFieldState(passwordEl, 'password-error', 'pw-ok', null, false, 'Password is too simple. Add numbers or symbols.');
+        } else {
+          setFieldState(passwordEl, 'password-error', 'pw-ok', null, true, '');
+        }
+      }
+    });
+
+    // Confirm password
+    function validateConfirm() {
+      const match = confirmEl.value === passwordEl.value;
+      if (!confirmEl.value) {
+        clearField(confirmEl, 'confirm-error', 'confirm-ok', 'confirm-x');
+        return false;
+      }
+      if (match) {
+        setFieldState(confirmEl, 'confirm-error', 'confirm-ok', 'confirm-x', true, '');
+        return true;
+      } else {
+        setFieldState(confirmEl, 'confirm-error', 'confirm-ok', 'confirm-x', false, 'Passwords don\'t match.');
+        return false;
+      }
+    }
+
+    confirmEl.addEventListener('input', validateConfirm);
+    confirmEl.addEventListener('blur', () => {
+      if (confirmEl.value && !validateConfirm()) {
+        // error already set
+      } else if (!confirmEl.value) {
+        setFieldState(confirmEl, 'confirm-error', 'confirm-ok', 'confirm-x', false, 'Please confirm your password.');
+      }
+    });
+
+    // ── Submit ────────────────────────────────────────────────────
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      setStatus('', '');
+
+      const name     = nameEl.value.trim();
+      const email    = emailEl.value.trim();
+      const password = passwordEl.value;
+      const confirm  = confirmEl.value;
+
+      // Final validation pass
+      let errors = [];
+
+      if (!name || name.length < 2) {
+        setFieldState(nameEl, 'name-error', 'name-ok', 'name-x', false, 'Full name is required.');
+        errors.push(nameEl);
+      }
+      if (!email || !isValidEmail(email)) {
+        setFieldState(emailEl, 'email-error', 'email-ok', 'email-x', false, 'Enter a valid email address.');
+        errors.push(emailEl);
+      }
+      if (!password || password.length < 8) {
+        setFieldState(passwordEl, 'password-error', 'pw-ok', null, false, 'Password must be at least 8 characters.');
+        errors.push(passwordEl);
+      } else {
+        const { level } = scorePassword(password);
+        if (level < 2) {
+          setFieldState(passwordEl, 'password-error', 'pw-ok', null, false, 'Please choose a stronger password.');
+          errors.push(passwordEl);
+        }
+      }
+      if (!confirm) {
+        setFieldState(confirmEl, 'confirm-error', 'confirm-ok', 'confirm-x', false, 'Please confirm your password.');
+        errors.push(confirmEl);
+      } else if (confirm !== password) {
+        setFieldState(confirmEl, 'confirm-error', 'confirm-ok', 'confirm-x', false, 'Passwords don\'t match.');
+        errors.push(confirmEl);
+      }
+
+      if (errors.length) {
+        errors[0].focus();
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const res = await fetch('/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ name, email, password })
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.status === 409) {
+          // Email already registered
+          setFieldState(emailEl, 'email-error', 'email-ok', 'email-x', false, 'An account with this email already exists.');
+          emailEl.focus();
+          setLoading(false);
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Registration failed. Please try again.');
+        }
+
+        // Success
+        setStatus('Account created! Taking you to your workspace…', 'success');
+        window.location.assign(data.redirect || '/');
+
+      } catch (err) {
+        setStatus(err.message || 'Something went wrong. Please try again.', 'error');
+        setLoading(false);
+      }
     });
   </script>
 </body>
