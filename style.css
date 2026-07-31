@@ -9,6 +9,8 @@ html { scroll-behavior: smooth; }
 
 /* ── Design tokens (dark default) ── */
 :root {
+    --ui-font-size: 15px;
+
     /* Palette */
     --blue-50:  #eff6ff;
     --blue-400: #60a5fa;
@@ -96,14 +98,14 @@ html[data-theme="light"] {
 }
 
 /* ── Typography classes ── */
-:root.font-small  { font-size: 13px; }
-:root.font-normal { font-size: 15px; }
-:root.font-large  { font-size: 17px; }
+html.font-small  { --ui-font-size: 13px; }
+html.font-normal { --ui-font-size: 15px; }
+html.font-large  { --ui-font-size: 17px; }
 
 /* ── Base body ── */
 body {
     font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-    font-size: 15px;
+    font-size: var(--ui-font-size, 15px);
     line-height: 1.6;
     color: var(--text-primary);
     background-color: var(--bg-base);
