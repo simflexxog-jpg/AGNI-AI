@@ -1,7 +1,6 @@
 const chatBox = document.getElementById('chat-box');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
-const cancelBtn = document.getElementById('cancel-btn');
 const newChatBtn = document.getElementById('new-chat-btn');
 const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
 const sidebar = document.getElementById('sidebar');
@@ -602,6 +601,12 @@ function handleKeyboardShortcuts(event) {
     }
 
     if (event.key === 'Escape') {
+        if (pendingRequest) {
+            event.preventDefault();
+            cancelCurrentRequest();
+            return;
+        }
+
         // Close settings if open, otherwise blur search/input
         if (sidebarSettings && !sidebarSettings.hidden) {
             toggleSidebarSettings(false);
@@ -1392,12 +1397,21 @@ async function startGeminiLiveSession() {
 // ---------------------------------------------------------------------------
 
 function setComposerBusy(isBusy) {
-    sendBtn.disabled = isBusy;
+    const icon = sendBtn.querySelector('.material-symbols-outlined');
     const sendLabel = sendBtn.querySelector('.send-text');
-    if (sendLabel) sendLabel.textContent = isBusy ? 'Sending…' : 'Send';
+
+    sendBtn.disabled = false;
     sendBtn.classList.toggle('busy', isBusy);
-    sendBtn.hidden = isBusy;
-    cancelBtn.hidden = !isBusy;
+    sendBtn.classList.toggle('cancel-mode', isBusy);
+    sendBtn.setAttribute('aria-label', isBusy ? 'Cancel current chat' : 'Send message');
+
+    if (icon) {
+        icon.textContent = isBusy ? 'close' : 'send';
+    }
+    if (sendLabel) {
+        sendLabel.textContent = isBusy ? 'Cancel' : 'Send';
+    }
+
     userInput.disabled = isBusy;
 }
 
@@ -1917,7 +1931,7 @@ async function fetchAIResponse(userText, attachmentsSnapshot, historyForRequest)
 }
 
 function handleSend() {
-    if (sendBtn.disabled) return;
+    if (sendBtn.classList.contains('cancel-mode') || pendingRequest) return;
 
     const text = userInput.value.trim();
     if (text === '' && attachments.length === 0) return;
@@ -2055,8 +2069,13 @@ modelSelect.addEventListener('change', updateStatusPill);
 thinkingToggle.addEventListener('click', toggleThinking);
 imageInput.addEventListener('change', handleAttachmentSelection);
 fileInput.addEventListener('change', handleAttachmentSelection);
-sendBtn.addEventListener('click', handleSend);
-cancelBtn.addEventListener('click', cancelCurrentRequest);
+sendBtn.addEventListener('click', () => {
+    if (sendBtn.classList.contains('cancel-mode')) {
+        cancelCurrentRequest();
+        return;
+    }
+    handleSend();
+});
 voiceInputBtn.addEventListener('click', startVoiceInput);
 autoSubmitToggleBtn.addEventListener('click', toggleAutoSubmit);
 if (liveVoiceBtn) {
