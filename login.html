@@ -79,7 +79,64 @@
       color: rgba(255,255,255,0.45);
       text-align: center;
       line-height: 1.55;
-      margin-bottom: 36px;
+      margin-bottom: 26px;
+    }
+
+    .login-form {
+      display: grid;
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      color: rgba(255,255,255,0.82);
+      font-size: 0.82rem;
+    }
+
+    .field input {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      color: #f8fafc;
+      padding: 12px 14px;
+      font: inherit;
+    }
+
+    .field input:focus {
+      outline: 2px solid rgba(99,102,241,0.6);
+      border-color: transparent;
+    }
+
+    .submit-btn,
+    .secondary-link {
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 12px 16px;
+    }
+
+    .submit-btn {
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      color: #fff;
+    }
+
+    .secondary-link {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.9);
+      border: 1px solid rgba(255,255,255,0.10);
+      text-align: center;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     /* ── Google sign-in button ─────────────────────────────────── */
@@ -194,6 +251,20 @@
       <h1>Sign in to AGNI AI</h1>
       <p>Your personal AI workspace. Sign in to access your conversation history and settings.</p>
 
+      <form id="email-login-form" class="login-form">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="email" required />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <button class="submit-btn" type="submit">Sign in</button>
+      </form>
+
+      <div class="login-divider"><span>or</span></div>
+
       <button id="google-signin-btn" type="button">
         <!-- Google logo -->
         <svg class="btn-google-icon" width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -206,6 +277,8 @@
         <span class="btn-spinner"></span>
         <span class="btn-label">Continue with Google</span>
       </button>
+
+      <a class="secondary-link" href="/register">Create account</a>
 
       <p id="login-note">Your workspace is private and stored securely.</p>
 
@@ -235,6 +308,7 @@
 
     const btn  = document.getElementById('google-signin-btn');
     const note = document.getElementById('login-note');
+    const emailLoginForm = document.getElementById('email-login-form');
 
     function setNote(msg, type = '') {
       note.textContent = msg;
@@ -294,6 +368,40 @@
       // Full-page redirect — no popup, no iframe
       window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
     }
+
+    emailLoginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(emailLoginForm);
+      const payload = {
+        email: String(formData.get('email') || '').trim(),
+        password: String(formData.get('password') || '')
+      };
+
+      if (!payload.email || !payload.password) {
+        setNote('Enter both your email and password to sign in.', 'error');
+        return;
+      }
+
+      setNote('Signing in…', 'info');
+
+      try {
+        const response = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || 'Sign-in failed.');
+        }
+
+        window.location.assign(data.redirect || '/');
+      } catch (error) {
+        setNote(error.message || 'Sign-in failed. Please try again.', 'error');
+      }
+    });
 
     btn.addEventListener('click', startGoogleLogin);
 

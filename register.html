@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AGNI AI — Register</title>
+  <link rel="stylesheet" href="style.css?v=11" />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body.login-page {
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0a0a0f;
+      font-family: 'Geist', system-ui, sans-serif;
+    }
+    body.login-page::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99,102,241,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(168,85,247,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(239,68,68,0.06) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .login-shell { position: relative; z-index: 1; width: 100%; max-width: 460px; padding: 24px; }
+    .login-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 42px 34px 36px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 32px 64px rgba(0,0,0,0.4);
+    }
+    .login-logo { display: block; width: 56px; height: 56px; margin: 0 auto 24px; filter: drop-shadow(0 0 20px rgba(239,68,68,0.4)); }
+    .login-card h1 { font-size: 1.6rem; color: #f8fafc; text-align: center; margin-bottom: 8px; font-weight: 700; }
+    .login-card > p { font-size: 0.9rem; color: rgba(255,255,255,0.45); text-align: center; line-height: 1.55; margin-bottom: 26px; }
+    .form-grid { display: grid; gap: 14px; }
+    .field { display: grid; gap: 6px; }
+    label { color: rgba(255,255,255,0.82); font-size: 0.82rem; }
+    input { width: 100%; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: #f8fafc; padding: 12px 14px; font: inherit; }
+    input:focus { outline: 2px solid rgba(99,102,241,0.6); border-color: transparent; }
+    .primary-btn,
+    .secondary-btn {
+      width: 100%; border: none; border-radius: 10px; cursor: pointer; font: inherit; font-weight: 700; padding: 12px 16px; transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+    .primary-btn { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; }
+    .primary-btn:hover { transform: translateY(-1px); }
+    .secondary-btn { margin-top: 8px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.10); }
+    .login-note { margin-top: 18px; min-height: 1.5em; font-size: 0.82rem; text-align: center; color: rgba(255,255,255,0.45); }
+    .login-note.error { color: #fca5a5; }
+    .login-note.info { color: rgba(255,255,255,0.72); }
+    .login-footer { margin-top: 24px; text-align: center; font-size: 0.75rem; color: rgba(255,255,255,0.2); }
+    .login-footer a { color: rgba(255,255,255,0.45); text-decoration: none; }
+  </style>
+</head>
+<body class="login-page">
+  <main class="login-shell">
+    <div class="login-card">
+      <img src="Sitelogo.svg" alt="AGNI AI" class="login-logo" />
+      <h1>Create your account</h1>
+      <p>Register with email and password to secure your personal workspace.</p>
+
+      <form id="register-form" class="form-grid">
+        <div class="field">
+          <label for="name">Full name</label>
+          <input id="name" name="name" type="text" autocomplete="name" required />
+        </div>
+        <div class="field">
+          <label for="email">Email address</label>
+          <input id="email" name="email" type="email" autocomplete="email" required />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required />
+        </div>
+        <button class="primary-btn" type="submit">Register</button>
+      </form>
+
+      <button class="secondary-btn" type="button" id="back-to-login">Back to login</button>
+      <p id="register-note" class="login-note">Use a password with at least 8 characters.</p>
+
+      <div class="login-footer">
+        Already have an account? <a href="/login">Sign in</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const registerForm = document.getElementById('register-form');
+    const note = document.getElementById('register-note');
+    const backToLogin = document.getElementById('back-to-login');
+
+    function setNote(message, type = '') {
+      note.textContent = message;
+      note.className = `login-note ${type}`.trim();
+    }
+
+    registerForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(registerForm);
+      const payload = {
+        name: String(formData.get('name') || '').trim(),
+        email: String(formData.get('email') || '').trim(),
+        password: String(formData.get('password') || '')
+      };
+
+      if (!payload.name || !payload.email || payload.password.length < 8) {
+        setNote('Please enter a valid name, email, and a password with at least 8 characters.', 'error');
+        return;
+      }
+
+      setNote('Creating your account…', 'info');
+
+      try {
+        const response = await fetch('/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || 'Registration failed.');
+        }
+
+        window.location.assign(data.redirect || '/');
+      } catch (error) {
+        setNote(error.message || 'Registration failed. Please try again.', 'error');
+      }
+    });
+
+    backToLogin.addEventListener('click', () => {
+      window.location.assign('/login');
+    });
+  </script>
+</body>
+</html>

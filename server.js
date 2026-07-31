@@ -10,7 +10,6 @@ const session = require('express-session');
 const helmet = require('helmet');
 const cors = require('cors');
 const csrf = require('csurf');
-const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
 const { OAuth2Client } = require('google-auth-library');
 const { WebSocketServer, WebSocket: NodeWebSocket } = require('ws');
@@ -129,8 +128,33 @@ function sanitizeTextInput(value, { maxLength = 4000, allowEmpty = false } = {})
   return maxLength && cleaned.length > maxLength ? cleaned.slice(0, maxLength) : cleaned;
 }
 
+function normalizeEmailForAuth(email) {
+  return sanitizeTextInput(email || '', { maxLength: 200 }).toLowerCase();
+}
+
+function buildLocalUserId(email) {
+  const normalizedEmail = normalizeEmailForAuth(email);
+  return normalizedEmail ? `local:${normalizedEmail}` : '';
+}
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  return { hash, salt };
+}
+
+function verifyPassword(password, salt, hash) {
+  if (!password || !salt || !hash) {
+    return false;
+  }
+
+  const candidateHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  return crypto.timingSafeEqual(Buffer.from(candidateHash, 'hex'), Buffer.from(hash, 'hex'));
+}
+
 function isAuthenticated(req, res, next) {
-  if (req.session?.user && req.session.user.googleId) {
+  const hasAuthenticatedUser = Boolean(req.session?.user && (req.session.user.googleId || req.session.user.email));
+  if (hasAuthenticatedUser) {
     return next();
   }
 
@@ -307,7 +331,7 @@ function setCorsHeaders(req, res, next) {
 }
 
 function getUserId(req) {
-  return req.session?.user?.googleId || null;
+  return req.session?.user?.googleId || req.session?.user?.email || null;
 }
 
 function sendJson(req, res, statusCode, payload) {
@@ -410,9 +434,21 @@ async function connectToDatabase() {
           name TEXT,
           email TEXT,
           avatar TEXT,
+          provider TEXT DEFAULT 'google',
+          password_hash TEXT,
+          password_salt TEXT,
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
+
+        ALTER TABLE IF EXISTS users
+          ADD COLUMN IF NOT EXISTS provider TEXT DEFAULT 'google';
+
+        ALTER TABLE IF EXISTS users
+          ADD COLUMN IF NOT EXISTS password_hash TEXT;
+
+        ALTER TABLE IF EXISTS users
+          ADD COLUMN IF NOT EXISTS password_salt TEXT;
 
         CREATE TABLE IF NOT EXISTS conversations (
           id TEXT PRIMARY KEY,
@@ -456,8 +492,31 @@ function normalizeUser(doc) {
     googleId: sanitizeTextInput(doc.googleId, { maxLength: 200 }),
     name: sanitizeTextInput(doc.name, { maxLength: 200 }),
     email: sanitizeTextInput(doc.email, { maxLength: 200 }),
-    avatar: sanitizeTextInput(doc.avatar, { maxLength: 500 })
+    avatar: sanitizeTextInput(doc.avatar, { maxLength: 500 }),
+    provider: sanitizeTextInput(doc.provider || 'google', { maxLength: 50 })
   };
+}
+
+async function getUserByEmail(email) {
+  const normalizedEmail = normalizeEmailForAuth(email);
+  if (!normalizedEmail) return null;
+
+  const pool = await connectToDatabase();
+  if (!pool) {
+    for (const user of inMemoryUsers.values()) {
+      if (normalizeEmailForAuth(user.email) === normalizedEmail) {
+        return normalizeUser(user);
+      }
+    }
+    return null;
+  }
+
+  const { rows } = await pool.query(
+    'SELECT google_id AS "googleId", name, email, avatar, provider, password_hash AS "passwordHash", password_salt AS "passwordSalt" FROM users WHERE email = $1 LIMIT 1',
+    [normalizedEmail]
+  );
+
+  return rows[0] ? normalizeUser(rows[0]) : null;
 }
 
 async function getUserByGoogleId(googleId) {
@@ -478,11 +537,15 @@ async function getUserByGoogleId(googleId) {
 async function upsertUser(user) {
   if (!user || !user.googleId) return null;
   const safeGoogleId = sanitizeTextInput(user.googleId, { maxLength: 200 });
+  const normalizedEmail = normalizeEmailForAuth(user.email);
   const doc = {
     googleId: safeGoogleId,
     name: sanitizeTextInput(user.name || '', { maxLength: 200 }),
-    email: sanitizeTextInput(user.email || '', { maxLength: 200 }),
+    email: normalizedEmail,
     avatar: sanitizeTextInput(user.avatar || '', { maxLength: 500 }),
+    provider: sanitizeTextInput(user.provider || 'google', { maxLength: 50 }),
+    passwordHash: sanitizeTextInput(user.passwordHash || '', { maxLength: 500 }),
+    passwordSalt: sanitizeTextInput(user.passwordSalt || '', { maxLength: 500 }),
     updatedAt: new Date().toISOString()
   };
 
@@ -498,18 +561,81 @@ async function upsertUser(user) {
   }
 
   const { rows } = await pool.query(
-    `INSERT INTO users (google_id, name, email, avatar, updated_at)
-     VALUES ($1, $2, $3, $4, NOW())
+    `INSERT INTO users (google_id, name, email, avatar, provider, password_hash, password_salt, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
      ON CONFLICT (google_id) DO UPDATE SET
        name = EXCLUDED.name,
        email = EXCLUDED.email,
        avatar = EXCLUDED.avatar,
+       provider = EXCLUDED.provider,
+       password_hash = EXCLUDED.password_hash,
+       password_salt = EXCLUDED.password_salt,
        updated_at = NOW()
-     RETURNING google_id AS "googleId", name, email, avatar`,
-    [safeGoogleId, doc.name, doc.email, doc.avatar]
+     RETURNING google_id AS "googleId", name, email, avatar, provider`,
+    [safeGoogleId, doc.name, doc.email, doc.avatar, doc.provider, doc.passwordHash, doc.passwordSalt]
   );
 
   return rows[0] ? normalizeUser(rows[0]) : null;
+}
+
+async function registerLocalUser({ name, email, password }) {
+  const normalizedEmail = normalizeEmailForAuth(email);
+  const safeName = sanitizeTextInput(name || '', { maxLength: 200 });
+
+  if (!normalizedEmail || !safeName || !password || password.length < 8) {
+    throw new Error('Enter a valid name, email, and password with at least 8 characters.');
+  }
+
+  const existingUser = await getUserByEmail(normalizedEmail);
+  if (existingUser) {
+    throw new Error('An account with that email already exists.');
+  }
+
+  const { hash, salt } = hashPassword(password);
+  const user = {
+    googleId: buildLocalUserId(normalizedEmail),
+    name: safeName,
+    email: normalizedEmail,
+    avatar: '',
+    provider: 'local',
+    passwordHash: hash,
+    passwordSalt: salt
+  };
+
+  return upsertUser(user);
+}
+
+async function loginLocalUser(email, password) {
+  const normalizedEmail = normalizeEmailForAuth(email);
+  if (!normalizedEmail || !password) {
+    return null;
+  }
+
+  const pool = await connectToDatabase();
+  if (!pool) {
+    for (const user of inMemoryUsers.values()) {
+      if (normalizeEmailForAuth(user.email) !== normalizedEmail) {
+        continue;
+      }
+      if (user.provider !== 'local' || !verifyPassword(password, user.passwordSalt, user.passwordHash)) {
+        return null;
+      }
+      return normalizeUser(user);
+    }
+    return null;
+  }
+
+  const { rows } = await pool.query(
+    'SELECT google_id AS "googleId", name, email, avatar, provider, password_hash AS "passwordHash", password_salt AS "passwordSalt" FROM users WHERE email = $1 AND provider = $2 LIMIT 1',
+    [normalizedEmail, 'local']
+  );
+
+  const row = rows[0];
+  if (!row || !verifyPassword(password, row.passwordSalt, row.passwordHash)) {
+    return null;
+  }
+
+  return normalizeUser(row);
 }
 
 async function listConversations(userId) {
@@ -1141,6 +1267,7 @@ const sessionOptions = {
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
+  store: new session.MemoryStore(),
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -1151,17 +1278,7 @@ const sessionOptions = {
   }
 };
 
-if (process.env.DATABASE_URL && process.env.NODE_ENV === 'production') {
-  sessionOptions.store = new pgSession({
-    conString: process.env.DATABASE_URL,
-    tableName: 'session',
-    ssl: { rejectUnauthorized: false },
-    createTableIfMissing: true
-  });
-  console.log('Using PostgreSQL session store');
-} else {
-  console.warn('SESSION WARNING: Using in-memory session store. Sessions will be lost on restart.');
-}
+console.warn('SESSION WARNING: Using in-memory session store. Sessions will be lost on restart.');
 
 const corsOptions = {
   origin(origin, callback) {
@@ -1200,6 +1317,8 @@ app.use((req, res, next) => {
     || req.path === '/api/google-client-id'
     || req.path === '/auth/google/callback'
     || req.path === '/auth/google/redirect'
+    || req.path === '/auth/login'
+    || req.path === '/auth/register'
     || req.path === '/auth/logout';
 
   if (exemptPath) {
@@ -1212,10 +1331,17 @@ app.use((req, res, next) => {
 // ---- Routes -----------------------------------------------------------------
 
 app.get('/login', (req, res) => {
-  if (req.session?.user?.googleId) {
+  if (req.session?.user?.googleId || req.session?.user?.email) {
     return res.redirect('/');
   }
   res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+app.get('/register', (req, res) => {
+  if (req.session?.user?.googleId || req.session?.user?.email) {
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(__dirname, 'register.html'));
 });
 
 app.get('/auth/google', (req, res) => {
@@ -1294,6 +1420,62 @@ app.get('/auth/google/callback', async (req, res) => {
     }
     res.redirect('/');
   });
+});
+
+app.post('/auth/login', async (req, res) => {
+  const body = req.body || {};
+  const email = normalizeEmailForAuth(body.email);
+  const password = typeof body.password === 'string' ? body.password : '';
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
+
+  try {
+    const user = await loginLocalUser(email, password);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    req.session.user = user;
+    req.session.save(err => {
+      if (err) {
+        console.warn('Session save failed:', err?.message);
+        return res.status(500).json({ error: 'Session save failed.' });
+      }
+      res.json({ ok: true, user, redirect: '/' });
+    });
+  } catch (error) {
+    console.error('Local login failed:', error?.message);
+    res.status(500).json({ error: error?.message || 'Login failed.' });
+  }
+});
+
+app.post('/auth/register', async (req, res) => {
+  const body = req.body || {};
+  const name = sanitizeTextInput(body.name, { maxLength: 200 });
+  const email = normalizeEmailForAuth(body.email);
+  const password = typeof body.password === 'string' ? body.password : '';
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Name, email, and password are required.' });
+  }
+
+  try {
+    const user = await registerLocalUser({ name, email, password });
+    req.session.user = user;
+    req.session.save(err => {
+      if (err) {
+        console.warn('Session save failed:', err?.message);
+        return res.status(500).json({ error: 'Session save failed.' });
+      }
+      res.json({ ok: true, user, redirect: '/' });
+    });
+  } catch (error) {
+    console.error('Local register failed:', error?.message);
+    const statusCode = error?.message?.includes('already exists') ? 409 : 400;
+    res.status(statusCode).json({ error: error?.message || 'Registration failed.' });
+  }
 });
 
 app.get('/api/google-client-id', (req, res) => {
@@ -1529,7 +1711,7 @@ app.use(async (req, res, next) => {
 });
 
 app.get('/', (req, res) => {
-  if (!req.session?.user?.googleId) {
+  if (!req.session?.user?.googleId && !req.session?.user?.email) {
     return res.redirect('/login');
   }
   res.sendFile(path.join(__dirname, 'index.html'));
