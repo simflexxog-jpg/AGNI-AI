@@ -30,9 +30,9 @@
                     <h2 class="brand-name">AGNI AI</h2>
                 </div>
             </div>
-            <button id="new-chat-btn" class="new-chat-btn" type="button" aria-label="Start new chat">
+            <button id="new-chat-btn" class="new-chat-btn" type="button" data-i18n-attr="aria-label" aria-label="Start new chat">
                 <span class="material-symbols-outlined" aria-hidden="true">add</span>
-                <span>New chat</span>
+                <span data-i18n="newChat">New chat</span>
             </button>
         </div>
 
@@ -42,7 +42,7 @@
             <!-- Model controls -->
             <div class="control-card" role="group" aria-label="Model settings">
                 <div class="control-group">
-                    <label class="control-label" for="provider-select">Provider</label>
+                    <label class="control-label" for="provider-select" data-i18n="provider">Provider</label>
                     <div class="select-wrap">
                         <select id="provider-select" class="control-select">
                             <option value="gemini">Google Gemini</option>
@@ -54,7 +54,7 @@
                 </div>
                 <div class="control-divider"></div>
                 <div class="control-group">
-                    <label class="control-label" for="model-select">Model</label>
+                    <label class="control-label" for="model-select" data-i18n="model">Model</label>
                     <div class="select-wrap">
                         <select id="model-select" class="control-select"></select>
                         <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
@@ -64,7 +64,7 @@
                 <div class="control-toggle-row">
                     <div class="toggle-info">
                         <span class="material-symbols-outlined toggle-icon" aria-hidden="true">psychology</span>
-                        <span class="control-label">Deep thinking</span>
+                        <span class="control-label" data-i18n="deepThinking">Deep thinking</span>
                     </div>
                     <button id="thinking-toggle" class="toggle-switch" type="button" role="switch" aria-checked="false" aria-label="Toggle deep thinking mode">
                         <span class="toggle-knob"></span>
@@ -75,12 +75,12 @@
             <!-- Chat history search -->
             <div class="search-block">
                 <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
-                <input type="search" id="history-search" class="search-input" placeholder="Search conversations…" autocomplete="off" aria-label="Search chat history">
+                <input type="search" id="history-search" class="search-input" data-i18n="searchConversations" data-i18n-attr="placeholder" placeholder="Search conversations…" autocomplete="off" aria-label="Search chat history">
             </div>
 
             <!-- History section -->
             <div class="history-section">
-                <p class="history-label">Recent</p>
+                <p class="history-label" data-i18n="recent">Recent</p>
                 <div class="history-list" id="history-list" role="list" aria-label="Chat history">
                     <div class="history-item active" role="listitem">
                         <span class="material-symbols-outlined history-icon" aria-hidden="true">chat</span>
@@ -98,40 +98,48 @@
         <div class="sidebar-footer">
             <button id="open-settings-btn" class="footer-btn" type="button" aria-expanded="false" aria-controls="sidebar-settings">
                 <span class="material-symbols-outlined" aria-hidden="true">tune</span>
-                <span>Preferences</span>
+                <span data-i18n="preferences">Preferences</span>
             </button>
 
             <!-- Settings panel -->
             <div class="settings-panel" id="sidebar-settings" hidden role="dialog" aria-label="UI preferences">
                 <div class="settings-panel-header">
-                    <h3 class="settings-title">Preferences</h3>
-                    <button id="close-settings-btn" class="icon-btn sm" aria-label="Close preferences">
+                    <h3 class="settings-title" data-i18n="preferences">Preferences</h3>
+                    <button id="close-settings-btn" class="icon-btn sm" data-i18n="closePreferences" data-i18n-attr="aria-label" aria-label="Close preferences">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
 
                 <div class="settings-block">
-                    <p class="settings-block-label">Font size</p>
+                    <p class="settings-block-label" data-i18n="fontSize">Font size</p>
                     <div class="settings-options">
-                        <button type="button" data-font="small" class="settings-opt font-opt">Small</button>
-                        <button type="button" data-font="normal" class="settings-opt font-opt active">Normal</button>
-                        <button type="button" data-font="large" class="settings-opt font-opt">Large</button>
+                        <button type="button" data-font="small" class="settings-opt font-opt" data-i18n="small">Small</button>
+                        <button type="button" data-font="normal" class="settings-opt font-opt active" data-i18n="normal">Normal</button>
+                        <button type="button" data-font="large" class="settings-opt font-opt" data-i18n="large">Large</button>
                     </div>
                 </div>
 
                 <div class="settings-block">
-                    <p class="settings-block-label">Density</p>
+                    <p class="settings-block-label" data-i18n="density">Density</p>
                     <div class="settings-options">
-                        <button type="button" data-density="comfortable" class="settings-opt density-opt active">Comfortable</button>
-                        <button type="button" data-density="compact" class="settings-opt density-opt">Compact</button>
+                        <button type="button" data-density="comfortable" class="settings-opt density-opt active" data-i18n="comfortable">Comfortable</button>
+                        <button type="button" data-density="compact" class="settings-opt density-opt" data-i18n="compact">Compact</button>
                     </div>
                 </div>
 
                 <div class="settings-block">
-                    <p class="settings-block-label">Appearance</p>
+                    <p class="settings-block-label" data-i18n="language">Language</p>
+                    <div class="settings-options">
+                        <button type="button" data-language="en" class="settings-opt language-opt active">English</button>
+                        <button type="button" data-language="es" class="settings-opt language-opt">Español</button>
+                    </div>
+                </div>
+
+                <div class="settings-block">
+                    <p class="settings-block-label" data-i18n="appearance">Appearance</p>
                     <div class="theme-toggle-row">
                         <span class="material-symbols-outlined theme-icon" aria-hidden="true">dark_mode</span>
-                        <button id="theme-toggle-btn" class="toggle-switch" type="button" role="switch" aria-checked="false" aria-label="Toggle light/dark mode">
+                        <button id="theme-toggle-btn" class="toggle-switch" type="button" role="switch" aria-checked="false" data-i18n="toggleTheme" data-i18n-attr="aria-label" aria-label="Toggle light/dark mode">
                             <span class="toggle-knob"></span>
                         </button>
                         <span class="material-symbols-outlined theme-icon" aria-hidden="true">light_mode</span>
@@ -139,31 +147,31 @@
                 </div>
 
                 <div class="settings-block">
-                    <p class="settings-block-label">Text-to-speech</p>
+                    <p class="settings-block-label" data-i18n="tts">Text-to-speech</p>
                     <div class="tts-row">
-                        <span class="settings-block-sublabel">Enable TTS</span>
-                        <button id="tts-toggle-btn" class="toggle-switch sm" type="button" role="switch" aria-checked="false" aria-label="Toggle text-to-speech">
+                        <span class="settings-block-sublabel" data-i18n="enableTts">Enable TTS</span>
+                        <button id="tts-toggle-btn" class="toggle-switch sm" type="button" role="switch" aria-checked="false" data-i18n="toggleTts" data-i18n-attr="aria-label" aria-label="Toggle text-to-speech">
                             <span class="toggle-knob"></span>
                         </button>
                     </div>
                     <div class="voice-controls-panel" id="voice-controls-panel">
                         <div class="voice-row">
-                            <label class="voice-label" for="tts-voice-select">Voice</label>
+                            <label class="voice-label" for="tts-voice-select" data-i18n="voice">Voice</label>
                             <select id="tts-voice-select" class="voice-select"></select>
                         </div>
                         <div class="voice-row">
-                            <label class="voice-label" for="tts-rate">Speed <span id="tts-rate-value">1.0×</span></label>
+                            <label class="voice-label" for="tts-rate"><span data-i18n="speed">Speed</span> <span id="tts-rate-value">1.0×</span></label>
                             <input type="range" id="tts-rate" min="0.5" max="2" step="0.1" value="1" class="voice-range">
                         </div>
                         <div class="voice-row">
-                            <label class="voice-label" for="tts-pitch">Pitch <span id="tts-pitch-value">1.0</span></label>
+                            <label class="voice-label" for="tts-pitch"><span data-i18n="pitch">Pitch</span> <span id="tts-pitch-value">1.0</span></label>
                             <input type="range" id="tts-pitch" min="0.5" max="2" step="0.1" value="1" class="voice-range">
                         </div>
                     </div>
                 </div>
 
                 <div class="settings-footer">
-                    <button id="reset-settings-btn" class="btn ghost sm">Reset defaults</button>
+                    <button id="reset-settings-btn" class="btn ghost sm" data-i18n="resetDefaults">Reset defaults</button>
                 </div>
             </div>
         </div>

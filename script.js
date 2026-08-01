@@ -28,6 +28,7 @@ const importInput = document.getElementById('import-input');
 const compactViewToggle = document.getElementById('compact-view-toggle');
 const compactViewToggleBtn = document.getElementById('compact-view-toggle-btn');
 const voiceInputBtn = document.getElementById('voice-input-btn');
+const languageOpts = Array.from(document.getElementsByClassName('language-opt'));
 const autoSubmitToggleBtn = document.getElementById('auto-submit-toggle-btn');
 const liveVoiceBtn = document.getElementById('live-voice-btn');
 const liveVoiceModal = document.getElementById('live-voice-modal');
@@ -49,8 +50,66 @@ const THEME_KEY = 'agni-ai-theme-v1';
 const COMPACT_KEY = 'agni-ai-compact-mode-v1';
 const UI_FONT_KEY = 'agni-ai-ui-font-v1';
 const UI_DENSITY_KEY = 'agni-ai-ui-density-v1';
+const UI_LANGUAGE_KEY = 'agni-ai-ui-language-v1';
 const TTS_KEY = 'agni-ai-tts-enabled-v1';
 const DEFAULT_WELCOME_TEXT = 'Hello! I’m your AI assistant. Ask me anything and I’ll help.';
+
+const UI_TRANSLATIONS = {
+    en: {
+        preferences: 'Preferences',
+        newChat: 'New chat',
+        provider: 'Provider',
+        model: 'Model',
+        deepThinking: 'Deep thinking',
+        searchConversations: 'Search conversations…',
+        recent: 'Recent',
+        fontSize: 'Font size',
+        small: 'Small',
+        normal: 'Normal',
+        large: 'Large',
+        density: 'Density',
+        comfortable: 'Comfortable',
+        compact: 'Compact',
+        language: 'Language',
+        appearance: 'Appearance',
+        tts: 'Text-to-speech',
+        enableTts: 'Enable TTS',
+        voice: 'Voice',
+        speed: 'Speed',
+        pitch: 'Pitch',
+        resetDefaults: 'Reset defaults',
+        closePreferences: 'Close preferences',
+        toggleTheme: 'Toggle light/dark mode',
+        toggleTts: 'Toggle text-to-speech',
+    },
+    es: {
+        preferences: 'Preferencias',
+        newChat: 'Nuevo chat',
+        provider: 'Proveedor',
+        model: 'Modelo',
+        deepThinking: 'Pensamiento profundo',
+        searchConversations: 'Buscar conversaciones…',
+        recent: 'Reciente',
+        fontSize: 'Tamaño de fuente',
+        small: 'Pequeña',
+        normal: 'Normal',
+        large: 'Grande',
+        density: 'Densidad',
+        comfortable: 'Cómoda',
+        compact: 'Compacta',
+        language: 'Idioma',
+        appearance: 'Apariencia',
+        tts: 'Texto a voz',
+        enableTts: 'Activar TTS',
+        voice: 'Voz',
+        speed: 'Velocidad',
+        pitch: 'Tono',
+        resetDefaults: 'Restablecer valores',
+        closePreferences: 'Cerrar preferencias',
+        toggleTheme: 'Alternar modo claro/oscuro',
+        toggleTts: 'Alternar texto a voz',
+    },
+};
 const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024; // 8MB per file
 
 let attachments = [];
@@ -133,32 +192,79 @@ function updateDensitySelection(density, save = true) {
     }
 }
 
+function updateLanguageSelection(language, save = true) {
+    if (!language) return;
+    const resolvedLanguage = language === 'es' ? 'es' : 'en';
+    document.documentElement.lang = resolvedLanguage;
+    document.documentElement.dataset.lang = resolvedLanguage;
+    languageOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.language === resolvedLanguage));
+    if (save) {
+        localStorage.setItem(UI_LANGUAGE_KEY, resolvedLanguage);
+    }
+    updateTranslations();
+}
+
+function updateTranslations() {
+    const language = localStorage.getItem(UI_LANGUAGE_KEY) || 'en';
+    const dictionary = UI_TRANSLATIONS[language] || UI_TRANSLATIONS.en;
+
+    document.querySelectorAll('[data-i18n]').forEach((node) => {
+        const key = node.dataset.i18n;
+        if (dictionary[key]) {
+            node.textContent = dictionary[key];
+        }
+    });
+
+    document.querySelectorAll('[data-i18n-attr]').forEach((node) => {
+        const key = node.dataset.i18nAttr;
+        const translationKey = node.dataset.i18n;
+        if (key === 'placeholder' && dictionary[translationKey]) {
+            node.setAttribute('placeholder', dictionary[translationKey]);
+        }
+        if (key === 'aria-label' && dictionary[translationKey]) {
+            node.setAttribute('aria-label', dictionary[translationKey]);
+        }
+    });
+}
+
+function applyLanguage(language) {
+    const resolvedLanguage = language === 'es' ? 'es' : 'en';
+    updateLanguageSelection(resolvedLanguage, false);
+}
+
 function loadUISettings() {
     const font = localStorage.getItem(UI_FONT_KEY) || 'normal';
     const density = localStorage.getItem(UI_DENSITY_KEY) || 'comfortable';
+    const language = localStorage.getItem(UI_LANGUAGE_KEY) || 'en';
     applyFontSize(font);
     updateDensitySelection(density, false);
+    applyLanguage(language);
     fontOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.font === font));
     densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === density));
+    languageOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.language === language));
 }
 
-function saveUISettings(font, density) {
+function saveUISettings(font, density, language) {
     if (font) localStorage.setItem(UI_FONT_KEY, font);
     if (density) localStorage.setItem(UI_DENSITY_KEY, density);
+    if (language) localStorage.setItem(UI_LANGUAGE_KEY, language);
 }
 
 function resetUISettings() {
     localStorage.removeItem(UI_FONT_KEY);
     localStorage.removeItem(UI_DENSITY_KEY);
+    localStorage.removeItem(UI_LANGUAGE_KEY);
     localStorage.removeItem(THEME_KEY);
     localStorage.removeItem(TTS_KEY);
     applyFontSize('normal');
     updateDensitySelection('comfortable', false);
+    applyLanguage('en');
     applyTheme('dark');
     ttsEnabled = false;
     updateTTSButton();
     fontOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.font === 'normal'));
     densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === 'comfortable'));
+    languageOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.language === 'en'));
     if (compactViewToggle) compactViewToggle.checked = false;
     updateCompactMode();
 }
@@ -2171,6 +2277,12 @@ densityOpts.forEach(btn => btn.addEventListener('click', (e) => {
     const d = e.currentTarget.dataset.density;
     updateDensitySelection(d, true);
     saveUISettings(null, d);
+}));
+
+languageOpts.forEach(btn => btn.addEventListener('click', (e) => {
+    const lang = e.currentTarget.dataset.language;
+    updateLanguageSelection(lang, true);
+    saveUISettings(null, null, lang);
 }));
 
 // ---------------------------------------------------------------------------
