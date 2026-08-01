@@ -105,7 +105,7 @@
             <div class="settings-panel" id="sidebar-settings" hidden role="dialog" aria-label="UI preferences">
                 <div class="settings-panel-header">
                     <h3 class="settings-title" data-i18n="preferences">Preferences</h3>
-                    <button id="close-settings-btn" class="icon-btn sm" data-i18n="closePreferences" data-i18n-attr="aria-label" aria-label="Close preferences">
+                    <button id="close-settings-btn" class="icon-btn sm" data-i18n-key="closePreferences" data-i18n-attr="aria-label" aria-label="Close preferences">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
@@ -129,9 +129,19 @@
 
                 <div class="settings-block">
                     <p class="settings-block-label" data-i18n="language">Language</p>
-                    <div class="settings-options">
-                        <button type="button" data-language="en" class="settings-opt language-opt active">English</button>
-                        <button type="button" data-language="es" class="settings-opt language-opt">Español</button>
+                    <div class="select-wrap">
+                        <select id="ui-language-select" class="control-select" aria-label="Language selector">
+                            <option value="en">English</option>
+                            <option value="hi">हिन्दी</option>
+                            <option value="bn">বাংলা</option>
+                            <option value="fr">Français</option>
+                            <option value="ja">日本語</option>
+                            <option value="ko">한국어</option>
+                            <option value="zh">中文</option>
+                            <option value="de">Deutsch</option>
+                            <option value="ru">Русский</option>
+                        </select>
+                        <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
                     </div>
                 </div>
 
@@ -139,7 +149,7 @@
                     <p class="settings-block-label" data-i18n="appearance">Appearance</p>
                     <div class="theme-toggle-row">
                         <span class="material-symbols-outlined theme-icon" aria-hidden="true">dark_mode</span>
-                        <button id="theme-toggle-btn" class="toggle-switch" type="button" role="switch" aria-checked="false" data-i18n="toggleTheme" data-i18n-attr="aria-label" aria-label="Toggle light/dark mode">
+                        <button id="theme-toggle-btn" class="toggle-switch" type="button" role="switch" aria-checked="false" data-i18n-key="toggleTheme" data-i18n-attr="aria-label" aria-label="Toggle light/dark mode">
                             <span class="toggle-knob"></span>
                         </button>
                         <span class="material-symbols-outlined theme-icon" aria-hidden="true">light_mode</span>
@@ -150,7 +160,7 @@
                     <p class="settings-block-label" data-i18n="tts">Text-to-speech</p>
                     <div class="tts-row">
                         <span class="settings-block-sublabel" data-i18n="enableTts">Enable TTS</span>
-                        <button id="tts-toggle-btn" class="toggle-switch sm" type="button" role="switch" aria-checked="false" data-i18n="toggleTts" data-i18n-attr="aria-label" aria-label="Toggle text-to-speech">
+                        <button id="tts-toggle-btn" class="toggle-switch sm" type="button" role="switch" aria-checked="false" data-i18n-key="toggleTts" data-i18n-attr="aria-label" aria-label="Toggle text-to-speech">
                             <span class="toggle-knob"></span>
                         </button>
                     </div>
@@ -183,12 +193,12 @@
         <!-- Top bar -->
         <header class="chat-header" role="banner">
             <div class="header-left">
-                <button id="toggle-sidebar-btn" class="icon-btn" aria-label="Toggle sidebar" aria-controls="sidebar">
+                <button id="toggle-sidebar-btn" class="icon-btn" data-i18n-key="toggleSidebar" data-i18n-attr="aria-label" aria-label="Toggle sidebar" aria-controls="sidebar">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
                 <div class="header-title-block">
                     <h1 class="header-title">AGNI AI</h1>
-                    <span class="header-subtitle">AI assistant</span>
+                    <span class="header-subtitle" data-i18n="aiAssistant">AI assistant</span>
                 </div>
             </div>
 
@@ -200,10 +210,7 @@
                 </div>
 
                 <!-- Live voice -->
-                <button id="live-voice-btn" class="live-voice-btn" type="button">
-                    <span class="material-symbols-outlined" aria-hidden="true">graphic_eq</span>
-                    Live Voice
-                </button>
+                <button id="live-voice-btn" class="live-voice-btn" type="button" data-i18n="liveVoice">Live Voice</button>
 
                 <!-- Status pill -->
                 <div class="status-pill" id="status-pill" aria-live="polite">
@@ -213,29 +220,29 @@
 
                 <!-- Action menu -->
                 <div class="action-menu" role="navigation" aria-label="More actions">
-                    <button id="action-menu-btn" class="icon-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="More actions">
+                    <button id="action-menu-btn" class="icon-btn" type="button" aria-haspopup="true" aria-expanded="false" data-i18n-key="moreActions" data-i18n-attr="aria-label" aria-label="More actions">
                         <span class="material-symbols-outlined">more_vert</span>
                     </button>
                     <div class="action-dropdown" id="action-menu-dropdown" hidden role="menu" aria-label="Chat actions">
                         <button type="button" id="export-btn" class="dropdown-item" role="menuitem">
-                            <span class="material-symbols-outlined" aria-hidden="true">download</span>Export chat
+                            <span class="material-symbols-outlined" aria-hidden="true">download</span><span data-i18n="exportChat">Export chat</span>
                         </button>
                         <button type="button" id="import-btn" class="dropdown-item" role="menuitem">
-                            <span class="material-symbols-outlined" aria-hidden="true">upload</span>Import chat
+                            <span class="material-symbols-outlined" aria-hidden="true">upload</span><span data-i18n="importChat">Import chat</span>
                         </button>
                         <div class="dropdown-divider"></div>
                         <button type="button" id="clear-chat-btn" class="dropdown-item" role="menuitem">
-                            <span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span>Clear chat
+                            <span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span><span data-i18n="clearChat">Clear chat</span>
                         </button>
                         <button type="button" id="compact-view-toggle-btn" class="dropdown-item" role="menuitem">
-                            <span class="material-symbols-outlined" aria-hidden="true">density_small</span>Compact view
+                            <span class="material-symbols-outlined" aria-hidden="true">density_small</span><span data-i18n="compactView">Compact view</span>
                         </button>
                         <div class="dropdown-divider"></div>
                         <button type="button" id="logout-btn" class="dropdown-item" role="menuitem">
-                            <span class="material-symbols-outlined" aria-hidden="true">logout</span>Sign out
+                            <span class="material-symbols-outlined" aria-hidden="true">logout</span><span data-i18n="signOut">Sign out</span>
                         </button>
                         <button type="button" id="about-dev-btn" class="dropdown-item" role="menuitem">
-                            <span class="material-symbols-outlined" aria-hidden="true">info</span>About developer
+                            <span class="material-symbols-outlined" aria-hidden="true">info</span><span data-i18n="aboutDeveloper">About developer</span>
                         </button>
                     </div>
                 </div>
@@ -252,8 +259,8 @@
                 <div class="welcome-icon" aria-hidden="true">
                     <span class="material-symbols-outlined">auto_awesome</span>
                 </div>
-                <h2 class="welcome-heading">How can I help you today?</h2>
-                <p class="welcome-sub">Ask anything, upload files, or start a conversation.</p>
+                <h2 class="welcome-heading" data-i18n="welcomeHeading">How can I help you today?</h2>
+                <p class="welcome-sub" data-i18n="welcomeSub">Ask anything, upload files, or start a conversation.</p>
             </div>
             <div class="message bot-message" role="article" aria-label="Assistant message">
                 <div class="message-avatar" aria-hidden="true">
@@ -262,11 +269,11 @@
                 <div class="message-body">
                     <div class="message-content">Hello! I'm your AI assistant. Ask me anything and I'll help.</div>
                     <div class="message-actions">
-                        <button class="msg-action-btn" aria-label="Copy message">
-                            <span class="material-symbols-outlined">content_copy</span>Copy
+                        <button class="msg-action-btn" data-i18n="copyMessage" data-i18n-attr="aria-label" aria-label="Copy message">
+                            <span class="material-symbols-outlined">content_copy</span><span data-i18n="copyMessage">Copy</span>
                         </button>
-                        <button class="msg-action-btn speak-msg-btn" aria-label="Read aloud">
-                            <span class="material-symbols-outlined">volume_up</span>Read
+                        <button class="msg-action-btn speak-msg-btn" data-i18n="readMessage" data-i18n-attr="aria-label" aria-label="Read aloud">
+                            <span class="material-symbols-outlined">volume_up</span><span data-i18n="readMessage">Read</span>
                         </button>
                     </div>
                 </div>
@@ -277,19 +284,19 @@
         <div class="prompt-suggestions" id="suggestion-prompt-bar" aria-label="Suggested prompts">
             <button type="button" class="suggestion-chip">
                 <span class="material-symbols-outlined" aria-hidden="true">format_list_bulleted</span>
-                Summarize in bullets
+                <span data-i18n="summarizeBullets">Summarize in bullets</span>
             </button>
             <button type="button" class="suggestion-chip">
                 <span class="material-symbols-outlined" aria-hidden="true">mail</span>
-                Draft a polished email
+                <span data-i18n="draftEmail">Draft a polished email</span>
             </button>
             <button type="button" class="suggestion-chip">
                 <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
-                Plan a new project
+                <span data-i18n="planProject">Plan a new project</span>
             </button>
             <button type="button" class="suggestion-chip">
                 <span class="material-symbols-outlined" aria-hidden="true">school</span>
-                Explain a concept
+                <span data-i18n="explainConcept">Explain a concept</span>
             </button>
         </div>
 
@@ -305,6 +312,8 @@
                     <textarea
                         id="user-input"
                         class="composer-textarea"
+                        data-i18n="messageInput"
+                        data-i18n-attr="placeholder"
                         placeholder="Ask anything, add files, or share images…"
                         autocomplete="off"
                         rows="1"
@@ -316,31 +325,31 @@
                 <!-- Toolbar row -->
                 <div class="composer-toolbar">
                     <div class="toolbar-left">
-                        <label class="icon-btn sm" title="Attach image" aria-label="Attach image">
+                        <label class="icon-btn sm" title="Attach image" data-i18n="attachImage" data-i18n-attr="title" aria-label="Attach image">
                             <input type="file" id="image-input" accept="image/*" hidden>
                             <span class="material-symbols-outlined">image</span>
                         </label>
-                        <label class="icon-btn sm" title="Attach file" aria-label="Attach file">
+                        <label class="icon-btn sm" title="Attach file" data-i18n="attachFile" data-i18n-attr="title" aria-label="Attach file">
                             <input type="file" id="file-input" hidden>
                             <span class="material-symbols-outlined">attach_file</span>
                         </label>
-                        <button id="voice-input-btn" class="icon-btn sm voice-btn" type="button" title="Voice input" aria-label="Start voice input">
+                        <button id="voice-input-btn" class="icon-btn sm voice-btn" type="button" title="Voice input" data-i18n="voiceInput" data-i18n-attr="title" aria-label="Start voice input">
                             <span class="material-symbols-outlined">mic</span>
                         </button>
                         <button id="auto-submit-toggle-btn" class="pill-toggle" type="button" aria-pressed="false">
                             <span class="material-symbols-outlined" aria-hidden="true">schedule_send</span>
-                            Auto-send
+                            <span data-i18n="autoSend">Auto-send</span>
                         </button>
                     </div>
                     <div class="toolbar-right">
-                        <button id="send-btn" type="button" class="send-btn" aria-label="Send message">
+                        <button id="send-btn" type="button" class="send-btn" data-i18n="sendMessage" data-i18n-attr="aria-label" aria-label="Send message">
                             <span class="material-symbols-outlined" aria-hidden="true">send</span>
-                            <span class="send-label">Send</span>
+                            <span class="send-label" data-i18n="send">Send</span>
                         </button>
                     </div>
                 </div>
             </div>
-            <p class="composer-hint">AGNI AI can make mistakes. Check important info.</p>
+            <p class="composer-hint" data-i18n="composerHint">AGNI AI can make mistakes. Check important info.</p>
         </div>
 
     </main>
@@ -349,41 +358,41 @@
 <!-- ═══ ABOUT MODAL ═══ -->
 <div class="modal-backdrop" id="about-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="about-title">
     <div class="about-modal">
-        <button class="modal-close-btn icon-btn sm" id="about-close-btn" aria-label="Close">
+        <button class="modal-close-btn icon-btn sm" id="about-close-btn" data-i18n="close" data-i18n-attr="aria-label" aria-label="Close">
             <span class="material-symbols-outlined">close</span>
         </button>
         <div class="about-header">
             <img src="Sitelogo.png" alt="Developer avatar" class="about-avatar" onerror="this.style.display='none'">
             <div>
-                <h2 id="about-title" class="about-name">About the Developer</h2>
-                <p class="about-role">Front-end Engineer · AGNI AI</p>
+                <h2 id="about-title" class="about-name" data-i18n="aboutDeveloperTitle">About the Developer</h2>
+                <p class="about-role" data-i18n="aboutRole">Front-end Engineer · AGNI AI</p>
             </div>
         </div>
-        <p class="about-bio">Hi, I'm Agni — a creative web developer building modern AI experiences with clean UI, fast interactions, and polished design.</p>
+        <p class="about-bio" data-i18n="aboutBio">Hi, I'm Agni — a creative web developer building modern AI experiences with clean UI, fast interactions, and polished design.</p>
         <div class="about-grid">
             <div class="about-item">
-                <span class="about-item-label">Role</span>
-                <span class="about-item-value">Front-end Engineer</span>
+                <span class="about-item-label" data-i18n="role">Role</span>
+                <span class="about-item-value" data-i18n="roleValue">Front-end Engineer</span>
             </div>
             <div class="about-item">
-                <span class="about-item-label">Skills</span>
-                <span class="about-item-value">JavaScript, HTML, CSS, UX, AI tools</span>
+                <span class="about-item-label" data-i18n="skills">Skills</span>
+                <span class="about-item-value" data-i18n="skillsValue">JavaScript, HTML, CSS, UX, AI tools</span>
             </div>
             <div class="about-item">
-                <span class="about-item-label">Experience</span>
-                <span class="about-item-value">Dashboards, chat interfaces, responsive portals</span>
+                <span class="about-item-label" data-i18n="experience">Experience</span>
+                <span class="about-item-value" data-i18n="experienceValue">Dashboards, chat interfaces, responsive portals</span>
             </div>
             <div class="about-item">
-                <span class="about-item-label">Passion</span>
-                <span class="about-item-value">Turning ideas into polished AI experiences</span>
+                <span class="about-item-label" data-i18n="passion">Passion</span>
+                <span class="about-item-value" data-i18n="passionValue">Turning ideas into polished AI experiences</span>
             </div>
         </div>
         <div class="about-links">
             <a href="https://agnib-portfolio.onrender.com/" class="btn ghost sm" target="_blank" rel="noopener">
-                <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>Portfolio
+                <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span><span data-i18n="portfolio">Portfolio</span>
             </a>
             <a href="mailto:agnibsikder016@gmail.com" class="btn ghost sm">
-                <span class="material-symbols-outlined" aria-hidden="true">mail</span>Contact
+                <span class="material-symbols-outlined" aria-hidden="true">mail</span><span data-i18n="contact">Contact</span>
             </a>
         </div>
     </div>
@@ -393,18 +402,18 @@
 <div id="live-voice-modal" hidden role="dialog" aria-modal="true" aria-labelledby="live-status-text">
     <div class="live-voice-panel">
         <div id="live-orb" class="live-orb" aria-hidden="true"></div>
-        <p id="live-status-text" class="live-status">Connecting…</p>
-        <p id="live-transcript" class="live-transcript">Tap the orb to begin speaking with Gemini Live.</p>
+        <p id="live-status-text" class="live-status" data-i18n="connecting">Connecting…</p>
+        <p id="live-transcript" class="live-transcript" data-i18n="liveTranscript">Tap the orb to begin speaking with Gemini Live.</p>
         <div class="live-controls">
-            <select id="live-voice-select" class="control-select sm" aria-label="Select Gemini voice">
+            <select id="live-voice-select" class="control-select sm" data-i18n="selectGeminiVoice" data-i18n-attr="aria-label" aria-label="Select Gemini voice">
                 <option value="Aoede">Aoede</option>
                 <option value="Charon">Charon</option>
                 <option value="Fenrir">Fenrir</option>
                 <option value="Kore">Kore</option>
                 <option value="Puck">Puck</option>
             </select>
-            <button id="live-retry-btn" type="button" class="btn ghost sm">Retry</button>
-            <button id="live-end-call-btn" type="button" class="btn danger sm">End call</button>
+            <button id="live-retry-btn" type="button" class="btn ghost sm" data-i18n="retry">Retry</button>
+            <button id="live-end-call-btn" type="button" class="btn danger sm" data-i18n="endCall">End call</button>
         </div>
     </div>
 </div>

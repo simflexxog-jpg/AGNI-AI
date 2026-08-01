@@ -28,7 +28,7 @@ const importInput = document.getElementById('import-input');
 const compactViewToggle = document.getElementById('compact-view-toggle');
 const compactViewToggleBtn = document.getElementById('compact-view-toggle-btn');
 const voiceInputBtn = document.getElementById('voice-input-btn');
-const languageOpts = Array.from(document.getElementsByClassName('language-opt'));
+const languageSelect = document.getElementById('ui-language-select');
 const autoSubmitToggleBtn = document.getElementById('auto-submit-toggle-btn');
 const liveVoiceBtn = document.getElementById('live-voice-btn');
 const liveVoiceModal = document.getElementById('live-voice-modal');
@@ -81,33 +81,357 @@ const UI_TRANSLATIONS = {
         closePreferences: 'Close preferences',
         toggleTheme: 'Toggle light/dark mode',
         toggleTts: 'Toggle text-to-speech',
+        toggleSidebar: 'Toggle sidebar',
+        aiAssistant: 'AI assistant',
+        liveVoice: 'Live Voice',
+        moreActions: 'More actions',
+        exportChat: 'Export chat',
+        importChat: 'Import chat',
+        clearChat: 'Clear chat',
+        compactView: 'Compact view',
+        signOut: 'Sign out',
+        aboutDeveloper: 'About developer',
+        welcomeHeading: 'How can I help you today?',
+        welcomeSub: 'Ask anything, upload files, or start a conversation.',
+        copyMessage: 'Copy',
+        readMessage: 'Read',
+        summarizeBullets: 'Summarize in bullets',
+        draftEmail: 'Draft a polished email',
+        planProject: 'Plan a new project',
+        explainConcept: 'Explain a concept',
+        messageInput: 'Ask anything, add files, or share images…',
+        attachImage: 'Attach image',
+        attachFile: 'Attach file',
+        voiceInput: 'Voice input',
+        autoSend: 'Auto-send',
+        sendMessage: 'Send message',
+        send: 'Send',
+        composerHint: 'AGNI AI can make mistakes. Check important info.',
+        close: 'Close',
+        aboutDeveloperTitle: 'About the Developer',
+        aboutRole: 'Front-end Engineer · AGNI AI',
+        aboutBio: "Hi, I'm Agni — a creative web developer building modern AI experiences with clean UI, fast interactions, and polished design.",
+        role: 'Role',
+        roleValue: 'Front-end Engineer',
+        skills: 'Skills',
+        skillsValue: 'JavaScript, HTML, CSS, UX, AI tools',
+        experience: 'Experience',
+        experienceValue: 'Dashboards, chat interfaces, responsive portals',
+        passion: 'Passion',
+        passionValue: 'Turning ideas into polished AI experiences',
+        portfolio: 'Portfolio',
+        contact: 'Contact',
+        connecting: 'Connecting…',
+        liveTranscript: 'Tap the orb to begin speaking with Gemini Live.',
+        selectGeminiVoice: 'Select Gemini voice',
+        retry: 'Retry',
+        endCall: 'End call',
     },
-    es: {
-        preferences: 'Preferencias',
-        newChat: 'Nuevo chat',
-        provider: 'Proveedor',
-        model: 'Modelo',
-        deepThinking: 'Pensamiento profundo',
-        searchConversations: 'Buscar conversaciones…',
-        recent: 'Reciente',
-        fontSize: 'Tamaño de fuente',
-        small: 'Pequeña',
+    hi: {
+        preferences: 'प्राथमिकताएँ',
+        newChat: 'नया चैट',
+        provider: 'प्रदाता',
+        model: 'मॉडल',
+        deepThinking: 'गहरा सोच',
+        searchConversations: 'चैट खोजें…',
+        recent: 'हालिया',
+        fontSize: 'फ़ॉन्ट आकार',
+        small: 'छोटा',
+        normal: 'सामान्य',
+        large: 'बड़ा',
+        density: 'घनत्व',
+        comfortable: 'आरामदायक',
+        compact: 'कॉम्पैक्ट',
+        language: 'भाषा',
+        appearance: 'देखावट',
+        tts: 'टेक्स्ट-टू-स्पीच',
+        enableTts: 'TTS चालू करें',
+        voice: 'आवाज़',
+        speed: 'गति',
+        pitch: 'पिच',
+        resetDefaults: 'डिफ़ॉल्ट पुनर्स्थापित करें',
+        closePreferences: 'प्राथमिकताएँ बंद करें',
+        toggleTheme: 'लाइट/डार्क मोड टॉगल करें',
+        toggleTts: 'टेक्स्ट-टू-स्पीच टॉगल करें',
+        toggleSidebar: 'साइडबार टॉगल करें',
+        aiAssistant: 'एआई सहायक',
+        liveVoice: 'लाइव वॉइस',
+        moreActions: 'अधिक क्रियाएँ',
+        exportChat: 'चैट निर्यात करें',
+        importChat: 'चैट आयात करें',
+        clearChat: 'चैट साफ़ करें',
+        compactView: 'कॉम्पैक्ट दृश्य',
+        signOut: 'साइन आउट',
+        aboutDeveloper: 'डेवलपर के बारे में',
+        welcomeHeading: 'आज मैं आपकी कैसे मदद कर सकता हूँ?',
+        welcomeSub: 'कुछ भी पूछें, फ़ाइल अपलोड करें, या चैट शुरू करें।',
+        copyMessage: 'कॉपी',
+        readMessage: 'पढ़ें',
+        summarizeBullets: 'बुलेट में सारांश दें',
+        draftEmail: 'एक शानदार ईमेल तैयार करें',
+        planProject: 'नया प्रोजेक्ट बनाएं',
+        explainConcept: 'किसी अवधारणा को समझाएँ',
+        messageInput: 'कुछ भी पूछें, फ़ाइल या चित्र जोड़ें…',
+        attachImage: 'चित्र जोड़ें',
+        attachFile: 'फ़ाइल जोड़ें',
+        voiceInput: 'वॉइस इनपुट',
+        autoSend: 'ऑटो-सेंड',
+        sendMessage: 'संदेश भेजें',
+        send: 'भेजें',
+        composerHint: 'AGNI AI गलतियाँ कर सकता है। महत्वपूर्ण जानकारी की जाँच करें।',
+        close: 'बंद करें',
+        aboutDeveloperTitle: 'डेवलपर के बारे में',
+        aboutRole: 'फ्रंट-एंड इंजीनियर · AGNI AI',
+        aboutBio: 'नमस्ते, मैं अग्नि हूँ — एक रचनात्मक वेब डेवलपर जो साफ़ UI, तेज़ इंटरैक्शन और शुद्ध डिज़ाइन के साथ आधुनिक AI अनुभव बनाता हूँ।',
+        role: 'भूमिका',
+        roleValue: 'फ्रंट-एंड इंजीनियर',
+        skills: 'कौशल',
+        skillsValue: 'JavaScript, HTML, CSS, UX, AI टूल्स',
+        experience: 'अनुभव',
+        experienceValue: 'डैशबोर्ड, चैट इंटरफ़ेस, रिस्पॉन्सिव पोर्टल',
+        passion: 'रुचि',
+        passionValue: 'आधुनिक AI अनुभवों में विचारों को परिष्कृत रूप देना',
+        portfolio: 'पोर्टफोलियो',
+        contact: 'संपर्क करें',
+        connecting: 'कनेक्ट हो रहा है…',
+        liveTranscript: 'Gemini Live के साथ बोलने के लिए ओर्ब पर टैप करें।',
+        selectGeminiVoice: 'Gemini आवाज चुनें',
+        retry: 'पुनः प्रयास',
+        endCall: 'कॉल समाप्त करें',
+    },
+    bn: {
+        preferences: 'পছন্দসমূহ',
+        newChat: 'নতুন চ্যাট',
+        provider: 'প্রদানকারী',
+        model: 'মডেল',
+        deepThinking: 'গভীর চিন্তা',
+        searchConversations: 'চ্যাট খুঁজুন…',
+        recent: 'সাম্প্রতিক',
+        fontSize: 'ফন্ট সাইজ',
+        small: 'ছোট',
+        normal: 'স্বাভাবিক',
+        large: 'বড়',
+        density: 'ঘনত্ব',
+        comfortable: 'আরামদায়ক',
+        compact: 'কমপ্যাক্ট',
+        language: 'ভাষা',
+        appearance: 'চেহারা',
+        tts: 'টেক্সট-টু-স্পীচ',
+        enableTts: 'TTS চালু করুন',
+        voice: 'কণ্ঠস্বর',
+        speed: 'গতি',
+        pitch: 'পিচ',
+        resetDefaults: 'ডিফল্ট রিসেট করুন',
+        closePreferences: 'পছন্দসমূহ বন্ধ করুন',
+        toggleTheme: 'হালকা/ডার্ক মোড টগল করুন',
+        toggleTts: 'টেক্সট-টু-স্পীচ টগল করুন',
+        toggleSidebar: 'সাইডবার টগল করুন',
+        aiAssistant: 'এআই সহকারী',
+        liveVoice: 'লাইভ ভয়েস',
+        moreActions: 'আরও কার্যক্রম',
+        exportChat: 'চ্যাট এক্সপোর্ট করুন',
+        importChat: 'চ্যাট ইমপোর্ট করুন',
+        clearChat: 'চ্যাট পরিষ্কার করুন',
+        compactView: 'কমপ্যাক্ট ভিউ',
+        signOut: 'সাইন আউট',
+        aboutDeveloper: 'ডেভেলপার সম্পর্কে',
+        welcomeHeading: 'আজ আমি কীভাবে সাহায্য করতে পারি?',
+        welcomeSub: 'কিছুই জিজ্ঞেস করুন, ফাইল আপলোড করুন, বা চ্যাট শুরু করুন।',
+        copyMessage: 'কপি',
+        readMessage: 'পড়ুন',
+        summarizeBullets: 'বুলেট আকারে সারাংশ দিন',
+        draftEmail: 'একটি পরিপাটি ইমেল লিখুন',
+        planProject: 'নতুন প্রকল্প পরিকল্পনা করুন',
+        explainConcept: 'কোনো ধারণা ব্যাখ্যা করুন',
+        messageInput: 'কিছুই জিজ্ঞেস করুন, ফাইল বা ছবি যোগ করুন…',
+        attachImage: 'ছবি সংযুক্ত করুন',
+        attachFile: 'ফাইল সংযুক্ত করুন',
+        voiceInput: 'ভয়েস ইনপুট',
+        autoSend: 'অটো-সেন্ড',
+        sendMessage: 'বার্তা পাঠান',
+        send: 'পাঠান',
+        composerHint: 'AGNI AI ভুল করতে পারে। গুরুত্বপূর্ণ তথ্য যাচাই করুন।',
+        close: 'বন্ধ',
+        aboutDeveloperTitle: 'ডেভেলপার সম্পর্কে',
+        aboutRole: 'ফ্রন্ট-এন্ড ইঞ্জিনিয়ার · AGNI AI',
+        aboutBio: 'হাই, আমি অগ্নি — একটি সৃজনশীল ওয়েব ডেভেলপার, যারা পরিষ্কার UI, দ্রুত ইন্টারঅ্যাকশন এবং পরিপাটি ডিজাইনের সাথে আধুনিক AI অভিজ্ঞতা তৈরি করি।',
+        role: 'ভূমিকা',
+        roleValue: 'ফ্রন্ট-এন্ড ইঞ্জিনিয়ার',
+        skills: 'দক্ষতা',
+        skillsValue: 'JavaScript, HTML, CSS, UX, AI টুলস',
+        experience: 'অভিজ্ঞতা',
+        experienceValue: 'ড্যাশবোর্ড, চ্যাট ইন্টারফেস, রেসপনসিভ পোর্টাল',
+        passion: 'আগ্রহ',
+        passionValue: 'ধারণাকে শুদ্ধ AI অভিজ্ঞতায় রূপান্তর করা',
+        portfolio: 'পোর্টফোলিও',
+        contact: 'যোগাযোগ',
+        connecting: 'সংযোগ হচ্ছে…',
+        liveTranscript: 'Gemini Live এর সাথে কথা বলতে ওর্বে ট্যাপ করুন।',
+        selectGeminiVoice: 'Gemini কণ্ঠ বেছে নিন',
+        retry: 'পুনরায় চেষ্টা করুন',
+        endCall: 'কথা বন্ধ করুন',
+    },
+    fr: {
+        preferences: 'Préférences',
+        newChat: 'Nouveau chat',
+        provider: 'Fournisseur',
+        model: 'Modèle',
+        deepThinking: 'Réflexion approfondie',
+        searchConversations: 'Rechercher des conversations…',
+        recent: 'Récent',
+        fontSize: 'Taille de police',
+        small: 'Petit',
         normal: 'Normal',
-        large: 'Grande',
-        density: 'Densidad',
-        comfortable: 'Cómoda',
-        compact: 'Compacta',
-        language: 'Idioma',
-        appearance: 'Apariencia',
-        tts: 'Texto a voz',
-        enableTts: 'Activar TTS',
-        voice: 'Voz',
-        speed: 'Velocidad',
-        pitch: 'Tono',
-        resetDefaults: 'Restablecer valores',
-        closePreferences: 'Cerrar preferencias',
-        toggleTheme: 'Alternar modo claro/oscuro',
-        toggleTts: 'Alternar texto a voz',
+        large: 'Grand',
+        density: 'Densité',
+        comfortable: 'Confortable',
+        compact: 'Compact',
+        language: 'Langue',
+        appearance: 'Apparence',
+        tts: 'Synthèse vocale',
+        enableTts: 'Activer TTS',
+        voice: 'Voix',
+        speed: 'Vitesse',
+        pitch: 'Hauteur',
+        resetDefaults: 'Réinitialiser',
+        closePreferences: 'Fermer les préférences',
+        toggleTheme: 'Basculer le mode clair/sombre',
+        toggleTts: 'Basculer la synthèse vocale',
+    },
+    ja: {
+        preferences: '設定',
+        newChat: '新しいチャット',
+        provider: 'プロバイダー',
+        model: 'モデル',
+        deepThinking: '深い思考',
+        searchConversations: '会話を検索…',
+        recent: '最近',
+        fontSize: 'フォントサイズ',
+        small: '小',
+        normal: '通常',
+        large: '大',
+        density: '密度',
+        comfortable: '快適',
+        compact: 'コンパクト',
+        language: '言語',
+        appearance: '外観',
+        tts: 'テキスト読み上げ',
+        enableTts: 'TTS を有効化',
+        voice: '音声',
+        speed: '速度',
+        pitch: '音高',
+        resetDefaults: 'デフォルトに戻す',
+        closePreferences: '設定を閉じる',
+        toggleTheme: 'ライト/ダークモード切替',
+        toggleTts: 'テキスト読み上げ切替',
+    },
+    ko: {
+        preferences: '환경설정',
+        newChat: '새 채팅',
+        provider: '제공자',
+        model: '모델',
+        deepThinking: '심층 사고',
+        searchConversations: '대화 검색…',
+        recent: '최근',
+        fontSize: '글꼴 크기',
+        small: '작게',
+        normal: '보통',
+        large: '크게',
+        density: '밀도',
+        comfortable: '편안함',
+        compact: '컴팩트',
+        language: '언어',
+        appearance: '모양',
+        tts: '텍스트 음성 변환',
+        enableTts: 'TTS 사용',
+        voice: '음성',
+        speed: '속도',
+        pitch: '피치',
+        resetDefaults: '기본값 복원',
+        closePreferences: '환경설정 닫기',
+        toggleTheme: '라이트/다크 모드 전환',
+        toggleTts: '텍스트 음성 변환 전환',
+    },
+    zh: {
+        preferences: '首选项',
+        newChat: '新聊天',
+        provider: '提供商',
+        model: '模型',
+        deepThinking: '深度思考',
+        searchConversations: '搜索对话…',
+        recent: '最近',
+        fontSize: '字号',
+        small: '小',
+        normal: '正常',
+        large: '大',
+        density: '密度',
+        comfortable: '舒适',
+        compact: '紧凑',
+        language: '语言',
+        appearance: '外观',
+        tts: '文字转语音',
+        enableTts: '启用 TTS',
+        voice: '语音',
+        speed: '速度',
+        pitch: '音高',
+        resetDefaults: '重置默认值',
+        closePreferences: '关闭首选项',
+        toggleTheme: '切换浅色/深色模式',
+        toggleTts: '切换文字转语音',
+    },
+    de: {
+        preferences: 'Einstellungen',
+        newChat: 'Neuer Chat',
+        provider: 'Anbieter',
+        model: 'Modell',
+        deepThinking: 'Tiefe Überlegung',
+        searchConversations: 'Unterhaltungen suchen…',
+        recent: 'Kürzlich',
+        fontSize: 'Schriftgröße',
+        small: 'Klein',
+        normal: 'Normal',
+        large: 'Groß',
+        density: 'Dichte',
+        comfortable: 'Komfortabel',
+        compact: 'Kompakt',
+        language: 'Sprache',
+        appearance: 'Aussehen',
+        tts: 'Text-to-Speech',
+        enableTts: 'TTS aktivieren',
+        voice: 'Stimme',
+        speed: 'Geschwindigkeit',
+        pitch: 'Tonhöhe',
+        resetDefaults: 'Standardwerte zurücksetzen',
+        closePreferences: 'Einstellungen schließen',
+        toggleTheme: 'Hell/Dunkel-Modus umschalten',
+        toggleTts: 'Text-to-Speech umschalten',
+    },
+    ru: {
+        preferences: 'Настройки',
+        newChat: 'Новый чат',
+        provider: 'Поставщик',
+        model: 'Модель',
+        deepThinking: 'Глубокий анализ',
+        searchConversations: 'Поиск бесед…',
+        recent: 'Недавние',
+        fontSize: 'Размер шрифта',
+        small: 'Малый',
+        normal: 'Обычный',
+        large: 'Крупный',
+        density: 'Плотность',
+        comfortable: 'Комфортно',
+        compact: 'Компакт',
+        language: 'Язык',
+        appearance: 'Внешний вид',
+        tts: 'Текст в речь',
+        enableTts: 'Включить TTS',
+        voice: 'Голос',
+        speed: 'Скорость',
+        pitch: 'Высота',
+        resetDefaults: 'Сбросить настройки',
+        closePreferences: 'Закрыть настройки',
+        toggleTheme: 'Переключить светлую/тёмную тему',
+        toggleTts: 'Переключить текст в речь',
     },
 };
 const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024; // 8MB per file
@@ -194,10 +518,12 @@ function updateDensitySelection(density, save = true) {
 
 function updateLanguageSelection(language, save = true) {
     if (!language) return;
-    const resolvedLanguage = language === 'es' ? 'es' : 'en';
+    const resolvedLanguage = ['en', 'hi', 'bn', 'fr', 'ja', 'ko', 'zh', 'de', 'ru'].includes(language) ? language : 'en';
     document.documentElement.lang = resolvedLanguage;
     document.documentElement.dataset.lang = resolvedLanguage;
-    languageOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.language === resolvedLanguage));
+    if (languageSelect) {
+        languageSelect.value = resolvedLanguage;
+    }
     if (save) {
         localStorage.setItem(UI_LANGUAGE_KEY, resolvedLanguage);
     }
@@ -215,20 +541,33 @@ function updateTranslations() {
         }
     });
 
+    document.querySelectorAll('[data-i18n-key]').forEach((node) => {
+        const key = node.dataset.i18nKey;
+        if (dictionary[key]) {
+            node.setAttribute('aria-label', dictionary[key]);
+            if (node.dataset.i18nAttr === 'title') {
+                node.setAttribute('title', dictionary[key]);
+            }
+        }
+    });
+
     document.querySelectorAll('[data-i18n-attr]').forEach((node) => {
         const key = node.dataset.i18nAttr;
-        const translationKey = node.dataset.i18n;
+        const translationKey = node.dataset.i18n ?? node.dataset.i18nKey;
         if (key === 'placeholder' && dictionary[translationKey]) {
             node.setAttribute('placeholder', dictionary[translationKey]);
         }
         if (key === 'aria-label' && dictionary[translationKey]) {
             node.setAttribute('aria-label', dictionary[translationKey]);
         }
+        if (key === 'title' && dictionary[translationKey]) {
+            node.setAttribute('title', dictionary[translationKey]);
+        }
     });
 }
 
 function applyLanguage(language) {
-    const resolvedLanguage = language === 'es' ? 'es' : 'en';
+    const resolvedLanguage = ['en', 'hi', 'bn', 'fr', 'ja', 'ko', 'zh', 'de', 'ru'].includes(language) ? language : 'en';
     updateLanguageSelection(resolvedLanguage, false);
 }
 
@@ -241,7 +580,9 @@ function loadUISettings() {
     applyLanguage(language);
     fontOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.font === font));
     densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === density));
-    languageOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.language === language));
+    if (languageSelect) {
+        languageSelect.value = language;
+    }
 }
 
 function saveUISettings(font, density, language) {
@@ -264,7 +605,9 @@ function resetUISettings() {
     updateTTSButton();
     fontOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.font === 'normal'));
     densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === 'comfortable'));
-    languageOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.language === 'en'));
+    if (languageSelect) {
+        languageSelect.value = 'en';
+    }
     if (compactViewToggle) compactViewToggle.checked = false;
     updateCompactMode();
 }
@@ -2279,11 +2622,13 @@ densityOpts.forEach(btn => btn.addEventListener('click', (e) => {
     saveUISettings(null, d);
 }));
 
-languageOpts.forEach(btn => btn.addEventListener('click', (e) => {
-    const lang = e.currentTarget.dataset.language;
-    updateLanguageSelection(lang, true);
-    saveUISettings(null, null, lang);
-}));
+if (languageSelect) {
+    languageSelect.addEventListener('change', (e) => {
+        const lang = e.currentTarget.value;
+        updateLanguageSelection(lang, true);
+        saveUISettings(null, null, lang);
+    });
+}
 
 // ---------------------------------------------------------------------------
 // Init
