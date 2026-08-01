@@ -57,8 +57,8 @@
       border: 1px solid var(--border);
       overflow: hidden;
       background: rgba(255,255,255,0.03);
-      backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
       box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 32px 80px rgba(0,0,0,0.5);
       animation: rise 0.45s cubic-bezier(0.16,1,0.3,1) both;
     }
@@ -168,6 +168,7 @@
       line-height: 1.5;
       transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
       -webkit-appearance: none;
+      appearance: none;
     }
     .input-wrap input::placeholder { color: rgba(255,255,255,0.22); }
     .input-wrap input:focus {
@@ -234,6 +235,7 @@
       font-size: 0.82rem;
       color: rgba(255,255,255,0.60);
       cursor: pointer;
+      -webkit-user-select: none;
       user-select: none;
     }
 

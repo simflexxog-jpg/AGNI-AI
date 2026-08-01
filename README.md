@@ -1,98 +1,113 @@
 AGNI AI — Final Year Project
 
-Comprehensive Documentation (Render-hosted)
+Comprehensive Project Documentation
 
 Table of Contents
-1. Project Overview
-2. System Architecture
-3. Technology Stack
-4. Project Structure
-5. Features
-6. UI Design
-7. `server.js` — Backend Details
-8. `script.js` — Frontend Behavior
-9. `index.html` — Markup and Accessibility
-10. `style.css` — Styling and Responsive Rules
-11. Database Design
-12. AI Provider Integration (Groq, OpenAI, Gemini)
-13. WebSocket Communication
-14. Render Deployment (step-by-step)
-15. Environment Variables (Render dashboard details)
-16. API Endpoints (reference + samples)
-17. Security Considerations
-18. Testing and Validation
-19. Limitations & Future Work
-20. Conclusion & References
+1. Executive Summary
+2. Project Overview
+3. System Architecture
+4. Technology Stack
+5. Project Structure
+6. Features
+7. UI Design
+8. Backend Details
+9. Frontend Behavior
+10. Database Design
+11. AI Provider Integration
+12. WebSocket Communication
+13. Deployment Guide
+14. Environment Variables
+15. API Endpoints
+16. Security Considerations
+17. Testing and Validation
+18. Limitations & Future Work
+19. Conclusion & References
 
 ---
 
-1. Project Overview
+1. Executive Summary
+
+AGNI AI is a full-stack conversational assistant web app that combines a polished chat interface with multi-provider AI routing, Google authentication, live voice interaction, chat persistence, and resilient fallback behavior.
+
+At a glance:
+- Frontend: HTML, CSS, JavaScript
+- Backend: Node.js + Express
+- Real-time chat: WebSocket with HTTP streaming fallback
+- Voice: browser microphone capture, Groq Whisper transcription, and Gemini Live support
+- Auth: Google login plus local email/password support
+- Storage: PostgreSQL when configured, in-memory fallback when not
+
+This project is designed to showcase a modern AI assistant workflow with practical UX details, deployment readiness, and graceful degradation when external services are unavailable.
+
+---
+
+2. Project Overview
 
 Purpose
-- AGNI AI is a web-based conversational assistant designed to provide a lightweight, extensible chat UI that integrates multiple generative AI providers. It supports Google OAuth for user authentication, persistence of per-user conversation history, voice input with server-side transcription, and optional client TTS.
+- AGNI AI provides a lightweight, extensible AI workspace for chat, file sharing, voice input, and multi-model assistance.
+- It supports secure authentication, persistent per-user chat history, and a highly responsive user experience.
 
 Goals
-- Provide a polished UI for human-AI interaction.
-- Demonstrate secure authentication and per-user persistence.
-- Implement an end-to-end voice-assisted flow (record -> transcribe -> send -> speak response).
-- Deploy to Render with production-ready environment configuration.
+- Deliver a clean and polished chat UI with strong usability details.
+- Demonstrate secure access, conversation persistence, and AI provider abstraction.
+- Implement voice-first interaction from recording to transcription to assistant response.
+- Provide robust fallback behavior when provider or browser features are unavailable.
 
 Intended audience
-- Project evaluators, maintainers, and developers who will run, test, extend, or deploy AGNI AI.
+- Project evaluators, developers, and maintainers who need to understand, test, extend, or deploy the application.
 
 Deliverables
-- Frontend: single-page app (HTML/CSS/JS).
-- Backend: Node/Express server with REST endpoints and WebSocket streaming.
-- Documentation, sample configuration, and Render deployment guide.
+- Frontend: single-page app built with HTML/CSS/JavaScript
+- Backend: Express server with REST and WebSocket routes
+- Documentation and deployment support for Render-hosted deployment
 
 ---
 
-2. System Architecture
+3. System Architecture
 
 Overview
-- Client (browser) — renders UI, handles microphone, records audio, shows chat history, connects to WebSocket for streaming responses.
-- Server (Node/Express) — handles auth, session storage, conversation persistence, proxies requests to AI providers, handles transcription endpoint.
-- Data Store — Postgres (recommended) or in-memory fallback for development.
-- Third-party APIs — Groq Whisper (transcription), OpenAI/Groq/Gemini (LLM responses), Google Identity Services (GSI for sign-in).
+- Client layer: browser app rendered from `index.html`, controlled by `script.js`, and responsible for chat UI, voice capture, transcript handling, and local settings.
+- Server layer: `server.js` handles authentication, session management, chat orchestration, provider calls, transcription, and WebSocket live voice routing.
+- Data layer: PostgreSQL is the recommended persistence layer, with in-memory fallback for development and local testing.
+- External integrations: Google OAuth, Groq Whisper, Gemini Live, and the selected LLM APIs via OpenAI, Groq, or Gemini.
 
-Sequence flows
-- Login flow: Browser -> Google GSI -> POST /auth/google/callback -> server validates token -> saves user in DB/session -> client redirected to `/`.
-- Chat flow (WebSocket): Client opens WS -> send `chat` messages -> server sends SSE/WS streaming events with partial and final tokens.
-- Voice flow: Client records and uploads to `/api/transcribe` -> server forwards to Groq -> receives transcript -> client auto-submits or populates composer.
-
-Component diagram (textual)
-- Browser: UI, script.js, voice recorder -> Server: server.js (auth, API, WS) -> External: Groq/OpenAI/Gemini
+Primary flows
+- Login flow: browser receives Google credentials -> server verifies the token -> session is created -> user lands on the main chat workspace.
+- Chat flow: user message is sent to the server -> provider response is streamed back -> UI renders partial output in real time.
+- Voice flow: browser microphone captures audio -> `/api/transcribe` submits it to Groq -> transcript is inserted into the composer or auto-submitted.
+- Live voice flow: browser opens a live WebSocket -> server proxies the Gemini Live connection -> audio and response text are exchanged in real time.
 
 ---
 
-3. Technology Stack
+4. Technology Stack
 
-- Node.js (>=18): server runtime
-- Express: HTTP framework
-- ws: WebSocket server
-- pg / connect-pg-simple: Postgres client and session store
-- busboy: multipart parsing for audio uploads
-- Google Identity Services (GSI): OAuth sign-in
-- Browser APIs: MediaRecorder, SpeechRecognition (fallback), Web Speech API (TTS)
-- Deployment: Render (host service)
+- Node.js 18+: runtime and server hosting
+- Express: HTTP routing and middleware
+- WebSocket server (`ws`): streaming chat and live voice relay
+- PostgreSQL + `pg`: persistent user and conversation storage
+- `busboy`: multipart audio parsing for transcription
+- Google Identity Services: OAuth-driven sign-in
+- Browser APIs: `MediaRecorder`, `SpeechRecognition`, and `speechSynthesis`
+- Render: deployment platform
 
 Why these choices
-- Minimal dependencies for portability and clear educational value.
-- Render simplifies deployment and environment management for student projects.
+- Minimal dependency footprint keeps the app simple to understand and extend.
+- Render makes deployment and environment configuration straightforward for student or portfolio projects.
 
 ---
 
-4. Project Structure
+5. Project Structure
 
 Root layout (key files)
-- `index.html` — main SPA
+- `index.html` — main chat interface
 - `login.html` — sign-in page
-- `script.js` — main frontend logic
-- `style.css` — styles (desktop & responsive rules)
-- `server.js` — Express server and route handlers
-- `package.json` — dependencies and start script
-- `data/` — local data storage (for dev)
-- `DOCUMENTATION*.md` — project documentation
+- `register.html` — account creation page
+- `script.js` — client-side logic for chat, voice, settings, and persistent state
+- `style.css` — layout and theme styling
+- `server.js` — server routes, auth, provider integration, and live voice proxy
+- `package.json` — runtime dependencies and start command
+- `data/` — local development data and stored conversation fallback
+- `README.md` — project documentation
 
 Conventions
 - Conversations stored per-user with `id`, `title`, `messages` array (each message: `{role, content}`)
@@ -100,16 +115,40 @@ Conventions
 
 ---
 
-5. Features
+6. Features
 
-- Google OAuth sign-in (GSI) with session-based auth
-- Persistent conversation storage (Postgres with JSONB messages)
-- Streaming responses via WebSocket (primary) and HTTP fallback
-- Voice input with MediaRecorder and server-side Groq Whisper transcription
-- Client-side TTS via `speechSynthesis` (auto-enabled by default)
-- Suggestions and quick-prompt chips
-- Responsive UI suitable for desktop and mobile (mobile-friendly composer)
-- Export/import conversations and session persistence
+Core assistant features
+- Google OAuth sign-in with session-based authentication and local account registration support
+- Per-user conversation persistence with PostgreSQL when configured, and in-memory fallback for local development
+- Multi-provider chat routing across Gemini, Groq, and OpenAI models
+- Streaming chat responses over WebSocket with HTTP SSE fallback for reliability
+- Rich composer with attachments, image support, conversation history, and quick suggestion chips
+- Voice input using browser microphone capture, with server-side Groq Whisper transcription
+- Live Gemini voice mode using a dedicated WebSocket proxy and selectable voice profiles
+- Client-side TTS via the browser speech engine, controlled through preferences and persisted locally
+- Export/import of chat history as JSON
+- Search fallback using DuckDuckGo when the upstream AI provider is unavailable
+- Optional project-aware context retrieval (RAG) that scans workspace text files and injects relevant context into prompts
+- Local email/password authentication flow, including registration, login, password hashing, and session persistence
+- Password-strength validation and account creation checks on the registration page
+- Login rate-limit indicator and friendly status feedback for failed or cancelled sign-in attempts
+- Request cancellation support so the Send button turns into a Cancel button during an active chat request
+- Automatic WebSocket reconnection and connection-state updates in the UI status pill
+
+Small but important product features
+- Auto-send toggle for voice transcripts
+- Silence detection to stop long recordings automatically
+- Browser speech recognition fallback when MediaRecorder is unavailable
+- Deep thinking toggle to alter temperature and response style per request
+- Compact and comfortable layout modes for UI density personalization
+- Font size, theme, and TTS controls stored in browser local storage
+- Searchable conversation sidebar with delete actions and smart title generation
+- Copy, regenerate, and read-aloud controls on chat messages
+- Keyboard shortcuts for sidebar, theme, export/import, search, new chat, and settings
+- About developer modal and responsive action menu for polished UX
+- Show/hide password toggle on the login page
+- Composer feedback notices for actions such as voice capture, import, clear chat, and error states
+- Debug endpoints for session inspection and cookie troubleshooting during deployment and testing
 
 ---
 
@@ -128,9 +167,22 @@ Key screens
 Responsive behavior
 - Sidebar collapses on small screens; composer fixed to bottom with stacked controls and larger buttons.
 
-Accessibility
-- Keyboard shortcuts for new chat, toggling settings
-- Use semantic buttons and proper `aria-*` attributes for menus
+Accessibility and UX details
+- Keyboard shortcuts are provided for new chat, search, theme, exports/imports, sidebar toggle, and settings
+- ARIA labels, role attributes, dialog semantics, and live regions are used across the interface
+- The composer and sidebar are optimized for mobile layouts with a sliding sidebar and sticky bottom composer
+- Lightweight feedback notices make actions like voice capture, import, export, and clearing chats feel responsive
+
+Keyboard shortcuts implemented
+- `Ctrl/Cmd + Alt + B` — Toggle sidebar
+- `Ctrl/Cmd + Alt + T` — Toggle theme
+- `Ctrl/Cmd + Alt + E` — Export conversations
+- `Ctrl/Cmd + Alt + I` — Import conversations
+- `Ctrl/Cmd + Alt + J` — Focus message input
+- `Ctrl/Cmd + K` — Focus chat history search
+- `Ctrl/Cmd + Alt + N` — Start a new chat
+- `Ctrl/Cmd + ,` — Toggle settings
+- `Escape` — Cancel request or close settings
 
 ---
 
