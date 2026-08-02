@@ -2459,6 +2459,15 @@ newChatBtn.addEventListener('click', async () => {
 
 function setSidebarOpen(isOpen) {
     const isMobile = window.innerWidth <= 900;
+    const wasOpen = isMobile
+        ? sidebar.classList.contains('mobile-open')
+        : !sidebar.classList.contains('collapsed');
+
+    if (isOpen && !wasOpen) {
+        // Add opening class to trigger stagger animation, then remove after animation completes
+        sidebar.classList.add('sidebar-opening');
+        setTimeout(() => sidebar.classList.remove('sidebar-opening'), 600);
+    }
 
     if (isMobile) {
         sidebar.classList.toggle('mobile-open', isOpen);

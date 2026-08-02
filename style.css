@@ -1,4 +1,6 @@
-
+/* ═══════════════════════════════════════════════════════════════
+   AGNI AI — Enterprise Design System v13
+   ═══════════════════════════════════════════════════════════════ */
 
 /* ── Reset & base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -155,8 +157,8 @@ html[data-theme="dark"] body {
     z-index: 40;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1),
-                backdrop-filter 0.32s ease;
+    transition: opacity 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+                backdrop-filter 0.38s ease;
 }
 .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
 .sidebar-overlay[hidden] { display: none; }
@@ -176,11 +178,10 @@ html[data-theme="dark"] body {
     overflow: hidden;
     position: relative;
     z-index: 10;
-    transition: width 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-                transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-                opacity 0.3s ease,
-                box-shadow 0.42s cubic-bezier(0.16, 1, 0.3, 1);
-    will-change: transform, width;
+    transition: width 0.44s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.44s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: width, opacity;
 }
 
 html[data-theme="dark"] .sidebar {
@@ -195,24 +196,19 @@ html[data-theme="dark"] .sidebar {
     pointer-events: none;
 }
 
-.sidebar:not(.collapsed) {
-    opacity: 1;
-    pointer-events: auto;
+/* ── Content stagger — only on opening, not on every page load ── */
+.sidebar.sidebar-opening .sidebar-header {
+    animation: sidebar-content-in 0.38s cubic-bezier(0.16, 1, 0.3, 1) 0.06s both;
 }
-
-/* ── Sidebar enter/exit content stagger ── */
-.sidebar:not(.collapsed) .sidebar-header,
-.sidebar:not(.collapsed) .sidebar-body,
-.sidebar:not(.collapsed) .sidebar-footer {
-    animation: sidebar-content-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+.sidebar.sidebar-opening .sidebar-body {
+    animation: sidebar-content-in 0.38s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
 }
-
-.sidebar:not(.collapsed) .sidebar-header { animation-delay: 0.04s; }
-.sidebar:not(.collapsed) .sidebar-body   { animation-delay: 0.08s; }
-.sidebar:not(.collapsed) .sidebar-footer { animation-delay: 0.11s; }
+.sidebar.sidebar-opening .sidebar-footer {
+    animation: sidebar-content-in 0.38s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both;
+}
 
 @keyframes sidebar-content-in {
-    from { opacity: 0; transform: translateX(-10px); }
+    from { opacity: 0; transform: translateX(-12px); }
     to   { opacity: 1; transform: translateX(0); }
 }
 
@@ -1838,16 +1834,15 @@ html[data-theme="dark"] .live-voice-panel {
         left: 0;
         bottom: 0;
         width: var(--sidebar-w);
-        transform: translateX(-100%) scale(0.96);
+        transform: translateX(-100%) scale(0.95);
         transform-origin: left center;
         z-index: 50;
-        box-shadow: var(--shadow-xl);
         border-radius: 0 var(--r-xl) var(--r-xl) 0;
         opacity: 0;
-        transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-                    opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-                    border-radius 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-                    box-shadow 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: transform 0.44s cubic-bezier(0.16, 1, 0.3, 1),
+                    opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                    box-shadow 0.44s cubic-bezier(0.16, 1, 0.3, 1),
+                    border-radius 0.44s cubic-bezier(0.16, 1, 0.3, 1);
         will-change: transform, opacity;
     }
 
@@ -1861,8 +1856,16 @@ html[data-theme="dark"] .live-voice-panel {
             24px 0 80px rgba(0,0,0,0.25);
     }
 
-    .sidebar.collapsed { transform: translateX(-100%) scale(0.96); opacity: 0; }
-    .sidebar.collapsed.mobile-open { transform: translateX(0) scale(1); opacity: 1; }
+    .sidebar.collapsed {
+        transform: translateX(-100%) scale(0.95);
+        opacity: 0;
+        width: var(--sidebar-w);
+    }
+
+    .sidebar.collapsed.mobile-open {
+        transform: translateX(0) scale(1);
+        opacity: 1;
+    }
 
     .chat-header { padding: 0 14px; }
     .chat-messages { padding: 18px 14px; }
