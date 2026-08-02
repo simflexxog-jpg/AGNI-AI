@@ -1,6 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════
-   AGNI AI — Enterprise Design System v13
-   ═══════════════════════════════════════════════════════════════ */
+
 
 /* ── Reset & base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -157,7 +155,8 @@ html[data-theme="dark"] body {
     z-index: 40;
     opacity: 0;
     pointer-events: none;
-    transition: opacity var(--t-base);
+    transition: opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                backdrop-filter 0.32s ease;
 }
 .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
 .sidebar-overlay[hidden] { display: none; }
@@ -177,7 +176,11 @@ html[data-theme="dark"] body {
     overflow: hidden;
     position: relative;
     z-index: 10;
-    transition: width var(--t-smooth), transform var(--t-smooth);
+    transition: width 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.3s ease,
+                box-shadow 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, width;
 }
 
 html[data-theme="dark"] .sidebar {
@@ -188,6 +191,29 @@ html[data-theme="dark"] .sidebar {
 .sidebar.collapsed {
     width: 0;
     overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sidebar:not(.collapsed) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ── Sidebar enter/exit content stagger ── */
+.sidebar:not(.collapsed) .sidebar-header,
+.sidebar:not(.collapsed) .sidebar-body,
+.sidebar:not(.collapsed) .sidebar-footer {
+    animation: sidebar-content-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.sidebar:not(.collapsed) .sidebar-header { animation-delay: 0.04s; }
+.sidebar:not(.collapsed) .sidebar-body   { animation-delay: 0.08s; }
+.sidebar:not(.collapsed) .sidebar-footer { animation-delay: 0.11s; }
+
+@keyframes sidebar-content-in {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
 }
 
 /* ── Sidebar header ── */
@@ -1812,15 +1838,31 @@ html[data-theme="dark"] .live-voice-panel {
         left: 0;
         bottom: 0;
         width: var(--sidebar-w);
-        transform: translateX(-100%);
+        transform: translateX(-100%) scale(0.96);
+        transform-origin: left center;
         z-index: 50;
         box-shadow: var(--shadow-xl);
         border-radius: 0 var(--r-xl) var(--r-xl) 0;
+        opacity: 0;
+        transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+                    opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                    border-radius 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+                    box-shadow 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+        will-change: transform, opacity;
     }
 
-    .sidebar.mobile-open { transform: translateX(0); }
-    .sidebar.collapsed { transform: translateX(-100%); }
-    .sidebar.collapsed.mobile-open { transform: translateX(0); }
+    .sidebar.mobile-open {
+        transform: translateX(0) scale(1);
+        opacity: 1;
+        pointer-events: auto;
+        box-shadow:
+            0 0 0 0.5px rgba(255,255,255,0.06),
+            4px 0 40px rgba(0,0,0,0.55),
+            24px 0 80px rgba(0,0,0,0.25);
+    }
+
+    .sidebar.collapsed { transform: translateX(-100%) scale(0.96); opacity: 0; }
+    .sidebar.collapsed.mobile-open { transform: translateX(0) scale(1); opacity: 1; }
 
     .chat-header { padding: 0 14px; }
     .chat-messages { padding: 18px 14px; }
