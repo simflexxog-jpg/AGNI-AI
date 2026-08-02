@@ -7,6 +7,7 @@ const path = require('path');
 const zlib = require('zlib');
 const express = require('express');
 const session = require('express-session');
+const PgSessionStore = require('connect-pg-simple')(session);
 const helmet = require('helmet');
 const cors = require('cors');
 const csrf = require('csurf');
@@ -1263,11 +1264,24 @@ if (!sessionSecret) {
   process.exit(1);
 }
 
+const sessionDatabaseUrl = process.env.DATABASE_URL;
+const sessionStore = sessionDatabaseUrl
+  ? new PgSessionStore({
+      pool: new Pool({
+        connectionString: sessionDatabaseUrl,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+        max: 5
+      }),
+      tableName: 'session',
+      createTableIfMissing: true
+    })
+  : new session.MemoryStore();
+
 const sessionOptions = {
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
-  store: new session.MemoryStore(),
+  store: sessionStore,
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -1278,7 +1292,11 @@ const sessionOptions = {
   }
 };
 
-console.warn('SESSION WARNING: Using in-memory session store. Sessions will be lost on restart.');
+if (sessionDatabaseUrl) {
+  console.log('Using PostgreSQL session store.');
+} else {
+  console.warn('SESSION WARNING: Using in-memory session store. Sessions will be lost on restart.');
+}
 
 const corsOptions = {
   origin(origin, callback) {
