@@ -536,9 +536,14 @@ function updateTranslations() {
 
     document.querySelectorAll('[data-i18n]').forEach((node) => {
         const key = node.dataset.i18n;
-        if (dictionary[key]) {
-            node.textContent = dictionary[key];
+        if (!dictionary[key]) return;
+
+        const tagName = node.tagName?.toLowerCase();
+        if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
+            return;
         }
+
+        node.textContent = dictionary[key];
     });
 
     document.querySelectorAll('[data-i18n-key]').forEach((node) => {
