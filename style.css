@@ -1871,31 +1871,47 @@ html[data-theme="dark"] .live-voice-panel {
     }
 
     .status-pill,
-    .live-voice-btn,
     .user-name { display: none; }
 
-    .header-title-block { display: none; }
+    .header-title-block {
+        display: flex;
+        min-width: 0;
+    }
+    .header-subtitle { display: none; }
     .chat-header { height: 56px; padding: 0 10px; gap: 10px; }
     .header-left { gap: 8px; }
     .header-right { gap: 6px; }
 
     .send-label { display: none; }
-    .send-btn { width: 42px; height: 42px; padding: 0; border-radius: 50%; }
+    .send-btn {
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
     .send-btn .material-symbols-outlined { font-size: 17px; }
 
     .icon-btn { width: 40px; height: 40px; }
     .icon-btn.sm { width: 36px; height: 36px; }
     .composer-toolbar {
-        flex-wrap: wrap;
-        align-items: stretch;
-        row-gap: 10px;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 8px;
     }
     .toolbar-left,
     .toolbar-right {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 6px;
     }
-    .toolbar-right { margin-left: auto; }
+    .toolbar-left {
+        flex: 1;
+        min-width: 0;
+    }
+    .toolbar-right {
+        margin-left: auto;
+        flex-shrink: 0;
+    }
 
     .prompt-suggestions {
         overflow-x: auto;
@@ -1915,6 +1931,33 @@ html[data-theme="dark"] .live-voice-panel {
     }
 
     .about-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 420px) {
+    .chat-header {
+        padding: 0 8px;
+        gap: 8px;
+    }
+
+    .header-title {
+        font-size: 14px;
+    }
+
+    .live-voice-btn {
+        padding: 7px 10px;
+    }
+
+    .live-voice-btn span:last-child {
+        display: none;
+    }
+
+    .pill-toggle {
+        padding: 5px 8px;
+    }
+
+    .pill-toggle span:last-child {
+        display: none;
+    }
 }
 
 /* ═══════════════════════════════════════════════════════════════
