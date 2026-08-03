@@ -1816,6 +1816,10 @@ html[data-theme="dark"] .live-voice-panel {
 @media (max-width: 900px) {
     :root { --sidebar-w: min(84vw, 280px); }
 
+    .app-shell {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
     .sidebar {
         position: fixed;
         top: 0;
@@ -1862,18 +1866,53 @@ html[data-theme="dark"] .live-voice-panel {
 }
 
 @media (max-width: 600px) {
+    .app-shell {
+        min-height: 100dvh;
+    }
+
     .status-pill,
     .live-voice-btn,
     .user-name { display: none; }
 
     .header-title-block { display: none; }
+    .chat-header { height: 56px; padding: 0 10px; gap: 10px; }
+    .header-left { gap: 8px; }
+    .header-right { gap: 6px; }
 
     .send-label { display: none; }
-    .send-btn { width: 38px; height: 38px; padding: 0; border-radius: 50%; }
+    .send-btn { width: 42px; height: 42px; padding: 0; border-radius: 50%; }
     .send-btn .material-symbols-outlined { font-size: 17px; }
 
-    .prompt-suggestions { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 8px; }
+    .icon-btn { width: 40px; height: 40px; }
+    .icon-btn.sm { width: 36px; height: 36px; }
+    .composer-toolbar {
+        flex-wrap: wrap;
+        align-items: stretch;
+        row-gap: 10px;
+    }
+    .toolbar-left,
+    .toolbar-right {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .toolbar-right { margin-left: auto; }
+
+    .prompt-suggestions {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+    }
     .suggestion-chip { flex-shrink: 0; }
+
+    .message-content { font-size: 15px; }
+    .message-body { max-width: calc(100% - 8px); }
+    .action-dropdown {
+        right: 10px;
+        left: 10px;
+        top: 60px;
+        min-width: auto;
+    }
 
     .about-grid { grid-template-columns: 1fr; }
 }
