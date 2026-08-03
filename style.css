@@ -1,13 +1,11 @@
-/* ═══════════════════════════════════════════════════════════════
-   AGNI AI — Enterprise Design System v13
-   ═══════════════════════════════════════════════════════════════ */
+/* AGNI AI design system styles — versioned for frontend UI consistency. */
 
-/* ── Reset & base ── */
+/* Reset and base layout primitives. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
 html { scroll-behavior: smooth; }
 
-/* ── Design tokens (dark default) ── */
+/* Design tokens: default dark palette and shared UI variables. */
 :root {
     --ui-font-size: 15px;
 
@@ -73,7 +71,7 @@ html { scroll-behavior: smooth; }
     --shadow-xl: 0 24px 72px rgba(0,0,0,0.5);
 }
 
-/* ── Light mode ── */
+/* Theme override rules for the light mode variant. */
 html[data-theme="light"] {
     --bg-base:      #f8fafc;
     --bg-elevated:  #ffffff;
@@ -97,12 +95,12 @@ html[data-theme="light"] {
     --shadow-xl: 0 24px 72px rgba(0,0,0,0.14);
 }
 
-/* ── Typography classes ── */
+/* Font-size utility hooks used by the settings panel. */
 html.font-small  { --ui-font-size: 13px; }
 html.font-normal { --ui-font-size: 15px; }
 html.font-large  { --ui-font-size: 17px; }
 
-/* ── Base body ── */
+/* Core body layout and global typography defaults. */
 body {
     font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
     font-size: var(--ui-font-size, 15px);
@@ -122,7 +120,7 @@ html[data-theme="dark"] body {
         var(--bg-base);
 }
 
-/* ── Material Symbols ── */
+/* Material Symbols rendering defaults for icon alignment and sizing. */
 .material-symbols-outlined {
     font-family: 'Material Symbols Outlined';
     font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
@@ -137,9 +135,7 @@ html[data-theme="dark"] body {
     user-select: none;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   APP SHELL
-   ═══════════════════════════════════════════════════════════════ */
+/* App shell layout for the sidebar and main chat workspace. */
 
 .app-shell {
     display: flex;
@@ -163,9 +159,7 @@ html[data-theme="dark"] body {
 .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
 .sidebar-overlay[hidden] { display: none; }
 
-/* ═══════════════════════════════════════════════════════════════
-   SIDEBAR
-   ═══════════════════════════════════════════════════════════════ */
+/* Sidebar navigation and conversation-history layout. */
 
 .sidebar {
     width: var(--sidebar-w);
@@ -774,9 +768,7 @@ html[data-theme="dark"] .settings-panel {
     height: 3px;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   CHAT PANEL
-   ═══════════════════════════════════════════════════════════════ */
+/* Main chat panel: header, message list, and workspace chrome. */
 
 .chat-panel {
     flex: 1;
@@ -989,9 +981,7 @@ html[data-theme="dark"] .action-dropdown {
     margin: 4px 0;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MESSAGES
-   ═══════════════════════════════════════════════════════════════ */
+/* Message feed styling for assistant and user bubbles. */
 
 .chat-messages {
     flex: 1;
@@ -1307,9 +1297,7 @@ html[data-theme="dark"] .user-message .message-content {
     color: white;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   COMPOSER
-   ═══════════════════════════════════════════════════════════════ */
+/* Composer shell for prompt drafting and send controls. */
 
 .composer-container {
     padding: 0 20px 20px;

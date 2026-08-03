@@ -39,8 +39,8 @@ const liveEndCallBtn = document.getElementById('live-end-call-btn');
 const liveRetryBtn = document.getElementById('live-retry-btn');
 const liveVoiceSelect = document.getElementById('live-voice-select');
 
-// Same-origin relative path: works regardless of host/port, since server.js
-// serves both the static frontend and the /api/chat endpoint.
+// Resolve the chat API from the current origin so the browser can reach the Express endpoint
+// without hard-coding hostnames or ports across environments.
 const API_ENDPOINT = '/api/chat';
 const WS_ENDPOINT = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/live-voice`;
 
@@ -472,7 +472,7 @@ let livePendingAudioSamples = [];
 let liveCurrentVoice = 'Aoede';
 let liveTranscriptBuffer = '';
 
-// Settings panel elements (sidebar)
+// Sidebar preferences controls: layout, theme, language, and speech settings.
 const openSettingsBtn = document.getElementById('open-settings-btn');
 const sidebarSettings = document.getElementById('sidebar-settings');
 const closeSettingsBtn = document.getElementById('close-settings-btn');
@@ -620,9 +620,7 @@ function toggleSidebarSettings(show) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Theme management
-// ---------------------------------------------------------------------------
+// --- Theme management ---
 
 function applyTheme(theme) {
     const html = document.documentElement;
@@ -665,9 +663,7 @@ function updateThemeButton() {
     }
 }
 
-// ---------------------------------------------------------------------------
-// TTS management
-// ---------------------------------------------------------------------------
+// --- TTS management ---
 
 function initTTS() {
     const savedTTS = localStorage.getItem(TTS_KEY) || 'false';
@@ -687,9 +683,7 @@ function updateTTSButton() {
     ttsToggleBtn.setAttribute('aria-checked', String(ttsEnabled));
 }
 
-// ---------------------------------------------------------------------------
-// Export / Import conversations
-// ---------------------------------------------------------------------------
+// --- Export / import conversation data ---
 
 function exportConversations() {
     const dataStr = JSON.stringify(conversations, null, 2);
@@ -710,7 +704,7 @@ function importConversations(file) {
         try {
             const imported = JSON.parse(e.target.result);
             if (Array.isArray(imported) && imported.length > 0) {
-                // Validate imported data structure
+                // Confirm the imported payload matches the local conversation schema.
                 const isValid = imported.every(conv => 
                     conv.id && conv.title !== undefined && Array.isArray(conv.messages)
                 );
@@ -762,9 +756,7 @@ const modelOptions = {
     ]
 };
 
-// ---------------------------------------------------------------------------
-// Conversation persistence
-// ---------------------------------------------------------------------------
+// --- Conversation persistence ---
 
 function createConversation(initialBotText) {
     return {
@@ -809,7 +801,7 @@ async function loadState() {
             }
         }
     } catch (error) {
-        // Fall back to local storage if the server is unavailable.
+        // Fall back to the browser cache when the server-side persistence endpoint is unavailable.
     }
 
     try {
@@ -833,7 +825,7 @@ function saveState() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
         localStorage.setItem(ACTIVE_KEY, activeId);
     } catch (error) {
-        // Storage unavailable or full — fail silently, app still works in-session.
+        // Local storage can fail in private browsing or quota-constrained environments; keep the in-memory session alive.
     }
 }
 
@@ -918,10 +910,10 @@ async function handleLogout() {
             console.warn('Logout request failed with status', res.status);
         }
     } catch (error) {
-        // Network error — still proceed to login page so the user isn't stuck
+        // If the logout request fails on the network, still route the user back to the login flow.
         console.warn('Logout network error:', error);
     }
-    // Always redirect to login regardless of server response
+    // Always redirect to the sign-in page, regardless of the server response.
     window.location.replace('/login');
 }
 
@@ -1002,14 +994,14 @@ function initCompactMode() {
 }
 
 function handleKeyboardShortcuts(event) {
-    // Ignore modifier-only presses
+    // Ignore keypresses that are only modifier state changes.
     if (!event || (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.key.length === 1 && event.key === event.key.toLowerCase())) {
-        // continue to other handling
+        // Continue into the rest of the shortcut resolver.
     }
 
-    // Global shortcuts (Ctrl/Cmd + ...)
+    // Global shortcuts are resolved from Ctrl/Cmd combinations.
     if (event.ctrlKey || event.metaKey) {
-        // Use Alt variants to avoid browser collisions (Ctrl/Cmd + Alt + ...)
+        // Use Alt-modified variants to avoid conflicting with browser-level shortcuts.
         // Toggle sidebar: Ctrl/Cmd + Alt + B
         if (event.altKey && event.key.toLowerCase() === 'b') {
             event.preventDefault();
@@ -1045,22 +1037,22 @@ function handleKeyboardShortcuts(event) {
             return;
         }
     }
-    // Focus search: Ctrl/Cmd+K or Ctrl/Cmd+Alt+K (Alt variant added for browsers)
+    // Focus the history search with either Ctrl/Cmd+K or the Alt-modified variant.
     if ((event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === 'k') && (!event.altKey || event.altKey)) {
-        // allow both Ctrl+K and Ctrl+Alt+K
+        // Allow both Ctrl+K and Ctrl+Alt+K for cross-browser consistency.
         event.preventDefault();
         historySearch.focus();
         return;
     }
 
-    // New chat: use Ctrl/Cmd+Alt+N to avoid browser Ctrl+N (new window)
+    // New chat uses Ctrl/Cmd+Alt+N to avoid the browser's default new-window behavior.
     if ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === 'n') {
         event.preventDefault();
         newChatBtn.click();
         return;
     }
 
-    // Toggle settings with Ctrl/Cmd + , (comma)
+    // Toggle the preferences panel with Ctrl/Cmd + ,.
     if ((event.ctrlKey || event.metaKey) && event.key === ',') {
         event.preventDefault();
         if (sidebarSettings) toggleSidebarSettings(sidebarSettings.hidden);
@@ -1074,7 +1066,7 @@ function handleKeyboardShortcuts(event) {
             return;
         }
 
-        // Close settings if open, otherwise blur search/input
+        // Close the settings drawer when it is open; otherwise release focus from the search and input fields.
         if (sidebarSettings && !sidebarSettings.hidden) {
             toggleSidebarSettings(false);
             return;
@@ -1093,7 +1085,7 @@ const suggestedPrompts = [
 
 function renderSuggestedPrompts() {
     const conv = getActiveConversation();
-    // Show suggestions when the conversation contains no user messages
+    // Show the suggestion bar only when the active conversation has not yet collected any user prompt.
     const hasUserMessage = Array.isArray(conv?.messages) && conv.messages.some(m => m.role === 'user' && (m.content || '').toString().trim() !== '');
     const shouldShow = Array.isArray(conv?.messages) && !hasUserMessage;
 
@@ -1138,9 +1130,7 @@ function renderActiveConversation() {
     renderSuggestedPrompts();
 }
 
-// ---------------------------------------------------------------------------
-// Markdown rendering (lightweight, escapes HTML first)
-// ---------------------------------------------------------------------------
+// --- Lightweight markdown rendering with HTML escaping ---
 
 function escapeHtml(str) {
     return str
@@ -1168,15 +1158,13 @@ function renderMarkdown(raw) {
 function copyToClipboard(text, button) {
     if (!navigator.clipboard) return;
     navigator.clipboard.writeText(text).then(() => {
-        // Add a temporary state class so we do not overwrite inner content (icons)
+        // Toggle a transient state class without replacing the button's inner icon markup.
         button.classList.add('copied');
         setTimeout(() => { button.classList.remove('copied'); }, 1500);
     }).catch(() => {});
 }
 
-// ---------------------------------------------------------------------------
-// Messages
-// ---------------------------------------------------------------------------
+// --- Message rendering and interaction helpers ---
 
 function streamBotMessage(messageDiv, text) {
     const content = messageDiv.querySelector('.message-content');
@@ -1379,9 +1367,7 @@ function showFallbackMessage(message = 'The assistant is temporarily unavailable
     appendMessage(message, 'bot');
 }
 
-// ---------------------------------------------------------------------------
-// Attachments
-// ---------------------------------------------------------------------------
+// --- Attachment handling ---
 
 function renderAttachments() {
     attachmentPreview.innerHTML = '';
@@ -1456,9 +1442,7 @@ function handleAttachmentSelection(event) {
     event.target.value = '';
 }
 
-// ---------------------------------------------------------------------------
-// Provider / model controls
-// ---------------------------------------------------------------------------
+// --- Provider / model control state ---
 
 function populateModels() {
     const provider = providerSelect.value;
@@ -1631,7 +1615,7 @@ function playAudioChunk(base64pcm) {
             source.connect(audioContextToUse.destination);
             source.start();
         } catch (error) {
-            // Ignore playback issues and continue.
+            // Playback failures are non-fatal; continue the interaction flow without blocking the UI.
         }
     };
 
@@ -1880,9 +1864,7 @@ async function startGeminiLiveSession() {
     });
 }
 
-// ---------------------------------------------------------------------------
-// Sending messages
-// ---------------------------------------------------------------------------
+// --- Message send flow ---
 
 function setComposerBusy(isBusy) {
     const icon = sendBtn.querySelector('.material-symbols-outlined');
@@ -2425,8 +2407,8 @@ function handleSend() {
     if (text === '' && attachments.length === 0) return;
 
     const conv = getActiveConversation();
-    // Snapshot the conversation as it stands *before* this new message —
-    // this is what gets sent to the API as prior context.
+    // Capture the conversation state before the new user message is appended so the request
+    // carries the correct prior context to the provider endpoint.
     const historyForRequest = conv.messages.map(m => ({ role: m.role, content: m.content }));
     const attachmentsSnapshot = attachments.slice();
 
@@ -2435,15 +2417,13 @@ function handleSend() {
     attachments = [];
     renderAttachments();
     
-    // Update suggestion bar visibility after message is added
+    // Refresh the suggestion bar visibility after the latest message changes the conversation state.
     renderSuggestedPrompts();
 
     fetchAIResponse(text || 'Please review the attached files.', attachmentsSnapshot, historyForRequest);
 }
 
-// ---------------------------------------------------------------------------
-// Event wiring
-// ---------------------------------------------------------------------------
+// --- Event wiring ---
 
 newChatBtn.addEventListener('click', async () => {
     const conv = createConversation(getWelcomeText());
@@ -2639,9 +2619,7 @@ if (languageSelect) {
     });
 }
 
-// ---------------------------------------------------------------------------
-// Init
-// ---------------------------------------------------------------------------
+// --- Initialization ---
 
 async function initializeApp() {
     initTheme();

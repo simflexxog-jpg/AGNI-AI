@@ -10,15 +10,15 @@
 </head>
 <body>
 
-<!-- Sidebar overlay for mobile -->
+<!-- Mobile drawer overlay used to close the sidebar on smaller screens. -->
 <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
 
 <div class="app-shell">
 
-    <!-- ═══ SIDEBAR ═══ -->
+    <!-- Sidebar shell: navigation, model settings, and recent conversation history. -->
     <aside class="sidebar" id="sidebar" aria-label="Navigation sidebar">
 
-        <!-- Brand + Actions -->
+        <!-- Sidebar header: brand identity and the primary new-chat action. -->
         <div class="sidebar-header">
             <div class="brand-block">
                 <div class="brand-logo-wrap">
@@ -36,10 +36,10 @@
             </button>
         </div>
 
-        <!-- Scrollable body -->
+        <!-- Scrollable sidebar body contains settings, search, and conversation list. -->
         <div class="sidebar-body" id="sidebar-body">
 
-            <!-- Model controls -->
+            <!-- Provider/model selection controls and deep-thinking toggle. -->
             <div class="control-card" role="group" aria-label="Model settings">
                 <div class="control-group">
                     <label class="control-label" for="provider-select" data-i18n="provider">Provider</label>
@@ -72,13 +72,13 @@
                 </div>
             </div>
 
-            <!-- Chat history search -->
+            <!-- Real-time history filter for local conversation lookup. -->
             <div class="search-block">
                 <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
                 <input type="search" id="history-search" class="search-input" data-i18n="searchConversations" data-i18n-attr="placeholder" placeholder="Search conversations…" autocomplete="off" aria-label="Search chat history">
             </div>
 
-            <!-- History section -->
+            <!-- Conversation list container populated from persisted chat metadata. -->
             <div class="history-section">
                 <p class="history-label" data-i18n="recent">Recent</p>
                 <div class="history-list" id="history-list" role="list" aria-label="Chat history">
@@ -94,14 +94,14 @@
 
         </div>
 
-        <!-- Footer / Settings -->
+        <!-- Sidebar footer hosts the preferences action and collapsible settings drawer. -->
         <div class="sidebar-footer">
             <button id="open-settings-btn" class="footer-btn" type="button" aria-expanded="false" aria-controls="sidebar-settings">
                 <span class="material-symbols-outlined" aria-hidden="true">tune</span>
                 <span data-i18n="preferences">Preferences</span>
             </button>
 
-            <!-- Settings panel -->
+            <!-- User preference panel for theme, language, density, and TTS controls. -->
             <div class="settings-panel" id="sidebar-settings" hidden role="dialog" aria-label="UI preferences">
                 <div class="settings-panel-header">
                     <h3 class="settings-title" data-i18n="preferences">Preferences</h3>
@@ -187,10 +187,10 @@
         </div>
     </aside>
 
-    <!-- ═══ MAIN CHAT PANEL ═══ -->
+    <!-- Main chat workspace: header, message stream, suggestions, and composer. -->
     <main class="chat-panel" id="main-panel">
 
-        <!-- Top bar -->
+        <!-- Top-level chat header with sidebar toggle, status, and action controls. -->
         <header class="chat-header" role="banner">
             <div class="header-left">
                 <button id="toggle-sidebar-btn" class="icon-btn" data-i18n-key="toggleSidebar" data-i18n-attr="aria-label" aria-label="Toggle sidebar" aria-controls="sidebar">
@@ -203,25 +203,25 @@
             </div>
 
             <div class="header-right">
-                <!-- User avatar (shown when logged in) -->
+                <!-- Authenticated account badge displayed only after the session is resolved. -->
                 <div class="header-user" id="sidebar-user-info" hidden>
                     <img id="sidebar-user-avatar" class="user-avatar" src="" alt="User avatar">
                     <span class="user-name" id="sidebar-user-name"></span>
                 </div>
 
-                <!-- Live voice -->
+                <!-- Dedicated entry point for streaming Gemini Live voice sessions. -->
                 <button id="live-voice-btn" class="live-voice-btn" type="button">
                     <span class="material-symbols-outlined" aria-hidden="true">graphic_eq</span>
                     <span data-i18n="liveVoice">Live Voice</span>
                 </button>
 
-                <!-- Status pill -->
+                <!-- Connection state indicator showing the active model/provider context. -->
                 <div class="status-pill" id="status-pill" aria-live="polite">
                     <span class="status-dot" aria-hidden="true"></span>
                     Gemini · Flash
                 </div>
 
-                <!-- Action menu -->
+                <!-- Overflow actions for export/import/clear/logout and developer info. -->
                 <div class="action-menu" role="navigation" aria-label="More actions">
                     <button id="action-menu-btn" class="icon-btn" type="button" aria-haspopup="true" aria-expanded="false" data-i18n-key="moreActions" data-i18n-attr="aria-label" aria-label="More actions">
                         <span class="material-symbols-outlined">more_vert</span>
@@ -252,11 +252,11 @@
             </div>
         </header>
 
-        <!-- Hidden file inputs -->
+        <!-- Hidden inputs used by the import/export and compact-view workflows. -->
         <input type="file" id="import-input" accept=".json" hidden>
         <input type="checkbox" id="compact-view-toggle" hidden>
 
-        <!-- Messages -->
+        <!-- Message feed container for assistant and user entries. -->
         <div class="chat-messages" id="chat-box" role="log" aria-label="Chat messages" aria-live="polite">
             <div class="welcome-state" id="welcome-state">
                 <div class="welcome-icon" aria-hidden="true">
@@ -283,7 +283,7 @@
             </div>
         </div>
 
-        <!-- Prompt suggestions -->
+        <!-- Quick prompt chips for shortcut-style conversation starters. -->
         <div class="prompt-suggestions" id="suggestion-prompt-bar" aria-label="Suggested prompts">
             <button type="button" class="suggestion-chip">
                 <span class="material-symbols-outlined" aria-hidden="true">format_list_bulleted</span>
@@ -303,14 +303,14 @@
             </button>
         </div>
 
-        <!-- Composer -->
+        <!-- Input composer for message drafting, file attachments, and voice actions. -->
         <div class="composer-container">
             <div class="composer-box" id="composer-box">
 
-                <!-- Attachment preview -->
+                <!-- Inline attachment preview area for image/file selections. -->
                 <div class="attachment-preview" id="attachment-preview"></div>
 
-                <!-- Text input row -->
+                <!-- Primary textarea row used for the current user prompt. -->
                 <div class="composer-input-row">
                     <textarea
                         id="user-input"
@@ -325,7 +325,7 @@
                     ></textarea>
                 </div>
 
-                <!-- Toolbar row -->
+                <!-- Action toolbar for attachments, voice capture, and submit controls. -->
                 <div class="composer-toolbar">
                     <div class="toolbar-left">
                         <label class="icon-btn sm" data-i18n-key="attachImage" aria-label="Attach image">
@@ -358,7 +358,7 @@
     </main>
 </div>
 
-<!-- ═══ ABOUT MODAL ═══ -->
+<!-- Developer profile modal surfaced from the action menu. -->
 <div class="modal-backdrop" id="about-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="about-title">
     <div class="about-modal">
         <button class="modal-close-btn icon-btn sm" id="about-close-btn" data-i18n="close" data-i18n-attr="aria-label" aria-label="Close">
@@ -401,7 +401,7 @@
     </div>
 </div>
 
-<!-- ═══ LIVE VOICE MODAL ═══ -->
+<!-- Gemini Live call modal housing the streaming voice session UI. -->
 <div id="live-voice-modal" hidden role="dialog" aria-modal="true" aria-labelledby="live-status-text">
     <div class="live-voice-panel">
         <div id="live-orb" class="live-orb" aria-hidden="true"></div>
