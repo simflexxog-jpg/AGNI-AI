@@ -1169,6 +1169,13 @@ function copyToClipboard(text, button) {
     }).catch(() => {});
 }
 
+function editPromptInComposer(text) {
+    userInput.value = text;
+    userInput.focus();
+    userInput.select();
+    showComposerNotice('Prompt loaded. Edit and send when ready.');
+}
+
 // --- Message rendering and interaction helpers ---
 
 function streamBotMessage(messageDiv, text) {
@@ -1318,6 +1325,15 @@ function appendMessage(text, sender, options = {}) {
     copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>Copy';
     copyBtn.addEventListener('click', () => copyToClipboard(text, copyBtn));
     actions.appendChild(copyBtn);
+
+    if (sender === 'user') {
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'msg-action-btn';
+        editBtn.innerHTML = '<span class="material-symbols-outlined">edit</span>Edit';
+        editBtn.addEventListener('click', () => editPromptInComposer(text));
+        actions.appendChild(editBtn);
+    }
 
     if (sender === 'bot') {
         if (animate) {
