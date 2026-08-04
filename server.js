@@ -32,6 +32,7 @@ const port = Number(process.env.PORT) || 3000;
 const host = process.env.HOST || '0.0.0.0';
 
 const SYSTEM_PROMPT = 'You are a polished and helpful AI assistant. Respond clearly, concisely, and with structure when useful.';
+const GROQ_VOICE_SYSTEM_PROMPT = 'You are a helpful, concise voice assistant. Keep responses brief and natural for spoken conversation — avoid markdown, bullet points, headers, or code blocks. Speak in plain natural sentences only.';
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -54,6 +55,10 @@ const DEFAULT_MODELS = {
   groq: 'llama-3.1-8b-instant',
   openai: 'gpt-4o-mini'
 };
+
+const GROQ_VOICE_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_VOICE_MAX_TOKENS = 300;
+const GROQ_VOICE_TEMPERATURE = 0.7;
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
@@ -105,7 +110,6 @@ app.use(helmet({
 const oauthClient = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID || '',
   process.env.GOOGLE_CLIENT_SECRET || '',
-  // redirect_uri is set per-request during the code exchange
 );
 const inMemoryConversations = new Map();
 const inMemoryUsers = new Map();
@@ -939,12 +943,6 @@ function isImageAttachment(item) {
   return Boolean(item.type && item.type.startsWith('image/') && item.previewUrl);
 }
 
-/**
- * Extract readable text from a chat-time attachment (data URL).
- * Supports: plain text, PDF, JSON, CSV, Markdown, and code files.
- * Images are handled natively by the vision-capable AI models.
- * Returns { text, truncated } or null if extraction is not applicable.
- */
 async function extractTextFromChatAttachment(item) {
   if (!item || !item.previewUrl || isImageAttachment(item)) return null;
 
@@ -959,7 +957,6 @@ async function extractTextFromChatAttachment(item) {
   const MAX_TEXT_CHARS = 40000;
 
   try {
-    // Plain text / code / markdown / JSON / CSV
     const isTextualMime = mimeType.startsWith('text/') || [
       'application/json', 'application/xml', 'application/javascript',
       'application/typescript', 'application/x-yaml'
@@ -978,7 +975,6 @@ async function extractTextFromChatAttachment(item) {
       return { text: sanitizeTextInput(text, { maxLength: MAX_TEXT_CHARS }), truncated };
     }
 
-    // PDF
     if (mimeType === 'application/pdf' || ext === '.pdf') {
       const parsed = await pdfParse(buffer);
       let text = parsed?.text || '';
@@ -993,10 +989,6 @@ async function extractTextFromChatAttachment(item) {
   return null;
 }
 
-/**
- * Build an enriched user message by extracting text from non-image attachments
- * and appending it as inline context that the AI can read and reason about.
- */
 async function buildMessageWithAttachments(userMessage, attachments) {
   const nonImageAttachments = attachments.filter(item => !isImageAttachment(item));
   if (!nonImageAttachments.length) return userMessage;
@@ -1008,7 +1000,6 @@ async function buildMessageWithAttachments(userMessage, attachments) {
       const header = `--- Attached file: ${item.name}${result.truncated ? ' (truncated to 40 000 chars)' : ''} ---`;
       sections.push(`${header}\n${result.text.trim()}`);
     } else {
-      // File type cannot be read as text; just mention its name
       sections.push(`--- Attached file: ${item.name} (binary / unsupported format — no text extracted) ---`);
     }
   }
@@ -1315,8 +1306,6 @@ async function handleChat(req, res) {
 
   const history = sanitizeHistory(payload.history);
   const attachments = sanitizeAttachments(payload.attachments);
-  // Extract text from non-image attachments and inline it into the message so
-  // every AI provider (including text-only ones like Groq) can read the files.
   const currentText = await buildMessageWithAttachments(userMessage, attachments);
   const relevantContext = await retrieveRelevantContext(userMessage, getUserId(req));
   const ragUsed = Array.isArray(relevantContext) && relevantContext.length > 0;
@@ -1373,7 +1362,6 @@ async function buildChatPayload(payload) {
 
   const history = sanitizeHistory(payload.history);
   const attachments = sanitizeAttachments(payload.attachments);
-  // Extract text from non-image attachments so all providers can read file contents.
   const currentText = await buildMessageWithAttachments(userMessage, attachments);
 
   const provider = ['gemini', 'groq', 'openai'].includes(String(payload.provider || '').toLowerCase())
@@ -1429,6 +1417,227 @@ async function handleWebSocketChat(ws, payload, abortSignal) {
     ws.send(JSON.stringify({ type: 'done', content: fallbackText, fallback: true }));
   }
 }
+
+// ---- Groq Voice Session Handler --------------------------------------------
+// Handles the full STT → LLM turn for voice sessions over WebSocket.
+// The client sends audio as a single base64 blob then fires 'end-utterance'.
+// The server transcribes with Groq Whisper, queries the LLM, and sends back
+// the reply text for the browser to speak via Web Speech TTS.
+
+async function handleGroqVoiceSession(ws, payload) {
+  const groqKey = process.env.GROQ_API_KEY;
+
+  if (payload.action === 'setup') {
+    // Initialise per-connection state on the ws object
+    ws.groqVoiceActive = true;
+    ws.groqAudioChunks = [];
+    ws.groqVoiceHistory = [];
+
+    if (!groqKey) {
+      ws.send(JSON.stringify({
+        type: 'groq-voice-status',
+        status: 'error',
+        message: 'GROQ_API_KEY is not configured on the server.'
+      }));
+      return;
+    }
+
+    ws.send(JSON.stringify({
+      type: 'groq-voice-status',
+      status: 'ready',
+      message: 'Groq voice ready. Tap mic and speak.'
+    }));
+    return;
+  }
+
+  if (payload.action === 'audio') {
+    // Accumulate base64 audio chunks sent by the client
+    if (!ws.groqAudioChunks) ws.groqAudioChunks = [];
+    if (typeof payload.data === 'string' && payload.data.length > 0) {
+      ws.groqAudioChunks.push(payload.data);
+    }
+    return;
+  }
+
+  if (payload.action === 'end-utterance') {
+    if (!ws.groqAudioChunks || ws.groqAudioChunks.length === 0) {
+      ws.send(JSON.stringify({
+        type: 'groq-voice-status',
+        status: 'ready',
+        message: 'No audio received. Tap mic and speak.'
+      }));
+      return;
+    }
+
+    ws.send(JSON.stringify({
+      type: 'groq-voice-status',
+      status: 'transcribing',
+      message: 'Transcribing your speech…'
+    }));
+
+    try {
+      // Reassemble base64 chunks into a single audio buffer
+      const audioBuffer = Buffer.concat(
+        ws.groqAudioChunks.map(chunk => Buffer.from(chunk, 'base64'))
+      );
+      ws.groqAudioChunks = []; // reset for next utterance
+
+      if (audioBuffer.length < 1000) {
+        ws.send(JSON.stringify({
+          type: 'groq-voice-status',
+          status: 'ready',
+          message: 'Audio too short. Please speak clearly and try again.'
+        }));
+        return;
+      }
+
+      // ---- Step 1: Speech-to-Text via Groq Whisper ----
+      if (!groqKey) throw new Error('Missing GROQ_API_KEY');
+
+      const formData = new FormData();
+      formData.append(
+        'file',
+        new Blob([audioBuffer], { type: 'audio/webm' }),
+        'voice.webm'
+      );
+      formData.append('model', 'whisper-large-v3');
+      formData.append('language', 'en');
+      formData.append('response_format', 'json');
+
+      const sttResponse = await fetch(
+        'https://api.groq.com/openai/v1/audio/transcriptions',
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${groqKey}` },
+          body: formData,
+          signal: withTimeout(UPSTREAM_TIMEOUT_MS)
+        }
+      );
+
+      if (!sttResponse.ok) {
+        const errText = await sttResponse.text().catch(() => 'STT request failed');
+        throw new Error(`Whisper STT error: ${errText}`);
+      }
+
+      const sttData = await sttResponse.json();
+      const transcript = (sttData.text || '').trim();
+
+      if (!transcript) {
+        ws.send(JSON.stringify({
+          type: 'groq-voice-status',
+          status: 'ready',
+          message: 'No speech detected. Please try again.'
+        }));
+        return;
+      }
+
+      // Echo transcript back to UI so it can be displayed
+      ws.send(JSON.stringify({
+        type: 'groq-voice-transcript',
+        role: 'user',
+        text: transcript
+      }));
+
+      ws.send(JSON.stringify({
+        type: 'groq-voice-status',
+        status: 'thinking',
+        message: 'Thinking…'
+      }));
+
+      // ---- Step 2: LLM response via Groq ----
+      if (!ws.groqVoiceHistory) ws.groqVoiceHistory = [];
+      ws.groqVoiceHistory.push({ role: 'user', content: transcript });
+
+      // Keep history within bounds to avoid token overflow
+      if (ws.groqVoiceHistory.length > MAX_HISTORY_MESSAGES) {
+        ws.groqVoiceHistory = ws.groqVoiceHistory.slice(-MAX_HISTORY_MESSAGES);
+      }
+
+      const messages = [
+        { role: 'system', content: GROQ_VOICE_SYSTEM_PROMPT },
+        ...ws.groqVoiceHistory
+      ];
+
+      const llmResponse = await fetch(
+        'https://api.groq.com/openai/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${groqKey}`
+          },
+          body: JSON.stringify({
+            model: GROQ_VOICE_MODEL,
+            messages,
+            temperature: GROQ_VOICE_TEMPERATURE,
+            max_tokens: GROQ_VOICE_MAX_TOKENS
+          }),
+          signal: withTimeout(UPSTREAM_TIMEOUT_MS)
+        }
+      );
+
+      if (!llmResponse.ok) {
+        const errText = await llmResponse.text().catch(() => 'LLM request failed');
+        throw new Error(`Groq LLM error: ${errText}`);
+      }
+
+      const llmData = await llmResponse.json();
+      const replyText = (llmData?.choices?.[0]?.message?.content || '').trim();
+
+      if (!replyText) throw new Error('Groq returned an empty response');
+
+      // Add assistant reply to history for multi-turn context
+      ws.groqVoiceHistory.push({ role: 'assistant', content: replyText });
+
+      // Send transcript of the AI reply for display in the UI
+      ws.send(JSON.stringify({
+        type: 'groq-voice-transcript',
+        role: 'assistant',
+        text: replyText
+      }));
+
+      // Send the reply text for browser TTS to speak aloud
+      ws.send(JSON.stringify({
+        type: 'groq-voice-reply',
+        text: replyText
+      }));
+
+      ws.send(JSON.stringify({
+        type: 'groq-voice-status',
+        status: 'speaking',
+        message: 'Speaking…'
+      }));
+
+    } catch (error) {
+      console.error('Groq voice session error:', error.message);
+      ws.send(JSON.stringify({
+        type: 'groq-voice-status',
+        status: 'error',
+        message: `Voice error: ${error.message}`
+      }));
+    }
+    return;
+  }
+
+  if (payload.action === 'done-speaking') {
+    // Browser TTS finished; tell client it can start listening again
+    ws.send(JSON.stringify({
+      type: 'groq-voice-status',
+      status: 'ready',
+      message: 'Listening… tap mic to speak.'
+    }));
+    return;
+  }
+
+  if (payload.action === 'end') {
+    ws.groqVoiceActive = false;
+    ws.groqAudioChunks = [];
+    ws.groqVoiceHistory = [];
+    return;
+  }
+}
+
+// -----------------------------------------------------------------------------
 
 async function handleConversationPersistence(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -1519,8 +1728,6 @@ const sessionOptions = {
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    // Use 'lax' — frontend and backend share the same domain, so 'none' is unnecessary
-    // and causes cookies to be silently dropped on HTTP, causing white screen after login.
     sameSite: 'lax',
     maxAge: 1000 * 60 * 60 * 24 * 7
   }
@@ -1603,7 +1810,6 @@ app.get('/auth/google', (req, res) => {
 app.get('/auth/google/callback', async (req, res) => {
   const { code, error, state } = req.query;
 
-  // User cancelled or Google returned an error
   if (error || !code) {
     const msg = encodeURIComponent(error || 'access_denied');
     return res.redirect(`/login?error=${msg}`);
@@ -1611,7 +1817,6 @@ app.get('/auth/google/callback', async (req, res) => {
 
   const redirectUri = `${req.protocol}://${req.get('host')}/auth/google/callback`;
 
-  // Create a per-request client with the redirect URI so the code exchange works
   const callbackClient = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID || '',
     process.env.GOOGLE_CLIENT_SECRET || '',
@@ -1749,7 +1954,6 @@ app.get('/api/config', (req, res) => {
 });
 
 app.post('/auth/google/callback', async (req, res) => {
-  // express.json() middleware already parsed the body — read req.body directly.
   const payload = req.body || {};
 
   const idToken = typeof payload.id_token === 'string'
@@ -1798,7 +2002,6 @@ app.post('/auth/google/callback', async (req, res) => {
 });
 
 app.post('/auth/google/redirect', async (req, res) => {
-  // express.json() middleware already parsed the body — read req.body directly.
   const body = req.body || {};
   const idToken = typeof body.credential === 'string'
     ? body.credential
@@ -1848,8 +2051,6 @@ app.post('/auth/google/redirect', async (req, res) => {
 app.post('/auth/logout', (req, res) => {
   req.session.destroy(err => {
     if (err) console.warn('Session destroy failed:', err.message);
-    // Must pass the same cookie options used when the session was created,
-    // otherwise browsers ignore the clearCookie instruction.
     res.clearCookie('connect.sid', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -2086,8 +2287,14 @@ const wss = new WebSocketServer({ server, path: '/api/live-voice' });
 wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'connected' }));
 
+  // Gemini Live state
   let geminiSocket = null;
+  // Chat state
   let activeChatAbortController = null;
+  // Groq Voice state (stored on ws object, initialised per-session)
+  ws.groqVoiceActive = false;
+  ws.groqAudioChunks = [];
+  ws.groqVoiceHistory = [];
 
   const cleanupGeminiSocket = () => {
     if (geminiSocket && geminiSocket.readyState === NodeWebSocket.OPEN) {
@@ -2105,6 +2312,7 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // ---- Cancel in-flight chat ----
     if (payload.type === 'cancel') {
       if (activeChatAbortController && !activeChatAbortController.signal.aborted) {
         activeChatAbortController.abort();
@@ -2113,12 +2321,20 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // ---- Regular text chat ----
     if (payload.type === 'chat') {
       activeChatAbortController = new AbortController();
       await handleWebSocketChat(ws, payload, activeChatAbortController.signal);
       return;
     }
 
+    // ---- Groq Voice Agent ----
+    if (payload.type === 'groq-voice') {
+      await handleGroqVoiceSession(ws, payload);
+      return;
+    }
+
+    // ---- Gemini Live Voice (original) ----
     if (payload.type !== 'live-voice') {
       ws.send(JSON.stringify({ type: 'error', error: 'Unsupported message type.' }));
       return;
@@ -2193,7 +2409,14 @@ wss.on('connection', (ws) => {
     }
   });
 
-  ws.on('close', cleanupGeminiSocket);
+  ws.on('close', () => {
+    cleanupGeminiSocket();
+    // Clean up Groq voice state
+    ws.groqVoiceActive = false;
+    ws.groqAudioChunks = [];
+    ws.groqVoiceHistory = [];
+  });
+
   ws.on('error', cleanupGeminiSocket);
 });
 
