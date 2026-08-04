@@ -38,6 +38,10 @@ const liveTranscript = document.getElementById('live-transcript');
 const liveEndCallBtn = document.getElementById('live-end-call-btn');
 const liveRetryBtn = document.getElementById('live-retry-btn');
 const liveVoiceSelect = document.getElementById('live-voice-select');
+const ragUploadInput = document.getElementById('rag-upload-input');
+const ragUploadBtn = document.getElementById('rag-upload-btn');
+const ragUploadProgress = document.getElementById('rag-upload-progress');
+const ragDocumentsList = document.getElementById('rag-documents-list');
 
 // Resolve the chat API from the current origin so the browser can reach the Express endpoint
 // without hard-coding hostnames or ports across environments.
@@ -55,6 +59,8 @@ const TTS_KEY = 'agni-ai-tts-enabled-v1';
 const DEFAULT_WELCOME_TEXT = 'Hello! I’m your AI assistant. Ask me anything and I’ll help.';
 
 let editingPromptState = null;
+let ragDocuments = [];
+let ragStatusMessage = '';
 
 const UI_TRANSLATIONS = {
     en: {
@@ -953,6 +959,92 @@ function deleteConversation(id) {
 const historySearch = document.getElementById('history-search');
 let historyFilterText = '';
 
+async function refreshRagDocuments() {
+    if (!ragDocumentsList) return;
+
+    try {
+        const response = await fetch('/api/documents', { credentials: 'include' });
+        if (!response.ok) throw new Error('Unable to load documents');
+        const payload = await response.json();
+        ragDocuments = Array.isArray(payload?.documents) ? payload.documents : [];
+    } catch (error) {
+        ragDocuments = [];
+    }
+
+    if (!ragDocuments.length) {
+        ragDocumentsList.innerHTML = '<div class="rag-empty">No documents yet. Upload a PDF or TXT file to enrich replies.</div>';
+        return;
+    }
+
+    ragDocumentsList.innerHTML = ragDocuments.map(doc => `
+        <div class="rag-document-item">
+            <div class="rag-document-meta">
+                <strong>${escapeHtml(doc.filename || 'Untitled document')}</strong>
+                <span>${Number(doc.chunkCount || 0)} chunks</span>
+            </div>
+            <button class="rag-delete-btn" data-doc-id="${escapeHtml(doc.documentId || '')}" type="button">Delete</button>
+        </div>
+    `).join('');
+
+    ragDocumentsList.querySelectorAll('.rag-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const documentId = btn.getAttribute('data-doc-id');
+            if (!documentId) return;
+            try {
+                const response = await fetch(`/api/documents/${encodeURIComponent(documentId)}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                if (!response.ok) throw new Error('Delete failed');
+                await refreshRagDocuments();
+                showComposerNotice('Document removed from your knowledge base.');
+            } catch (error) {
+                showComposerNotice('Unable to delete that document.');
+            }
+        });
+    });
+}
+
+function showRagStatus(message) {
+    if (!ragUploadProgress) return;
+    ragStatusMessage = message || '';
+    ragUploadProgress.textContent = ragStatusMessage;
+    ragUploadProgress.hidden = !ragStatusMessage;
+}
+
+async function uploadRagDocument(file) {
+    if (!file) return;
+    const ext = (file.name || '').split('.').pop()?.toLowerCase();
+    if (!['txt', 'pdf'].includes(ext || '')) {
+        showComposerNotice('Only .txt and .pdf files are supported.');
+        return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        showComposerNotice('Documents must be 10MB or smaller.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    showRagStatus(`Uploading ${file.name}…`);
+
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            credentials: 'include',
+            body: formData
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.error || 'Upload failed');
+        showRagStatus(`Stored ${payload?.documents?.[0]?.filename || file.name} (${payload?.documents?.[0]?.chunkCount || 0} chunks).`);
+        await refreshRagDocuments();
+        showComposerNotice('Document added to your knowledge base.');
+    } catch (error) {
+        showRagStatus(error.message || 'Upload failed.');
+        showComposerNotice('Could not upload the document.');
+    }
+}
+
 function renderHistoryList() {
     const query = historyFilterText.trim().toLowerCase();
     historyList.innerHTML = '';
@@ -1263,17 +1355,23 @@ function createStreamingBotMessage() {
     return { messageDiv, content, cursor };
 }
 
-function updateStreamingBotMessage(messageDiv, partialText) {
+function updateStreamingBotMessage(messageDiv, partialText, { ragContextUsed = false } = {}) {
     const content = messageDiv.querySelector('.message-content');
     if (!content) return;
     content.textContent = partialText;
+    if (ragContextUsed) {
+        messageDiv.dataset.ragContextUsed = 'true';
+    }
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function finalizeStreamingBotMessage(messageDiv, finalText, persist = true) {
     const content = messageDiv.querySelector('.message-content');
     if (!content) return;
-    content.innerHTML = renderMarkdown(finalText);
+    const noticeMarkup = messageDiv.dataset.ragContextUsed === 'true'
+        ? '<div class="rag-context-indicator">Answering from your documents…</div>'
+        : '';
+    content.innerHTML = `${noticeMarkup}${renderMarkdown(finalText)}`;
     messageDiv.classList.remove('is-streaming');
     const cursor = messageDiv.querySelector('.stream-cursor');
     if (cursor) cursor.remove();
@@ -1359,7 +1457,10 @@ function appendMessage(text, sender, options = {}, messageIndex = null) {
             messageDiv.classList.add('is-streaming');
             streamBotMessage(messageDiv, text);
         } else {
-            content.innerHTML = renderMarkdown(text);
+            const noticeMarkup = messageDiv.dataset.ragContextUsed === 'true'
+                ? '<div class="rag-context-indicator">Answering from your documents…</div>'
+                : '';
+            content.innerHTML = `${noticeMarkup}${renderMarkdown(text)}`;
         }
     } else {
         content.textContent = text;
@@ -2244,6 +2345,9 @@ function connectWebSocket() {
                 if (!request) return;
 
                 const botEl = appendMessage(data.content, 'bot', { animate: true });
+                if (data.ragUsed) {
+                    botEl.dataset.ragContextUsed = 'true';
+                }
                 addRegenerateButton(botEl, request.userText, request.attachmentsSnapshot, request.historyForRequest);
                 speakResponse(data.content);
                 setComposerBusy(false);
@@ -2384,7 +2488,7 @@ async function fetchAIResponse(userText, attachmentsSnapshot, historyForRequest)
                 const delta = parsed?.delta;
                 if (typeof delta === 'string') {
                     partialText += delta;
-                    updateStreamingBotMessage(streamMessage.messageDiv, partialText);
+                    updateStreamingBotMessage(streamMessage.messageDiv, partialText, { ragContextUsed: Boolean(parsed?.ragUsed) });
                 } else if (parsed?.error && typeof parsed.error === 'string') {
                     hadError = true;
                     errorText = parsed.error;
@@ -2393,7 +2497,9 @@ async function fetchAIResponse(userText, attachmentsSnapshot, historyForRequest)
                 hadError = true;
                 errorText = parsed?.message || parsed?.error || 'An error occurred while streaming.';
             } else if (eventType === 'done') {
-                // no-op; finalization happens after loop
+                if (parsed?.ragUsed) {
+                    streamMessage.messageDiv.dataset.ragContextUsed = 'true';
+                }
             }
         };
 
@@ -2477,6 +2583,15 @@ function handleSend() {
 }
 
 // --- Event wiring ---
+
+ragUploadBtn?.addEventListener('click', () => ragUploadInput?.click());
+ragUploadInput?.addEventListener('change', async (event) => {
+    const [file] = Array.from(event.target.files || []);
+    if (file) {
+        await uploadRagDocument(file);
+        event.target.value = '';
+    }
+});
 
 newChatBtn.addEventListener('click', async () => {
     const conv = createConversation(getWelcomeText());
@@ -2695,6 +2810,7 @@ async function initializeApp() {
     populateModels();
     renderActiveConversation();
     renderHistoryList();
+    await refreshRagDocuments();
     connectWebSocket();
 }
 

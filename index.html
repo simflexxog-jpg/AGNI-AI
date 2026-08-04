@@ -92,6 +92,19 @@
                 </div>
             </div>
 
+            <div class="control-card" role="group" aria-label="Knowledge base documents">
+                <div class="control-group">
+                    <label class="control-label" for="rag-upload-input">Knowledge base</label>
+                    <input id="rag-upload-input" type="file" accept=".pdf,.txt" hidden>
+                    <button id="rag-upload-btn" class="btn ghost sm" type="button">Upload document</button>
+                    <div id="rag-upload-progress" class="rag-progress" hidden></div>
+                </div>
+                <div class="control-divider"></div>
+                <div class="control-group">
+                    <div id="rag-documents-list" class="rag-documents-list"></div>
+                </div>
+            </div>
+
         </div>
 
         <!-- Sidebar footer hosts the preferences action and collapsible settings drawer. -->

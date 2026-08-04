@@ -15,6 +15,7 @@ const { Pool } = require('pg');
 const { OAuth2Client } = require('google-auth-library');
 const { WebSocketServer, WebSocket: NodeWebSocket } = require('ws');
 const busboy = require('busboy');
+const pdfParse = require('pdf-parse');
 const fetch = global.fetch || require('node-fetch');
 
 process.on('unhandledRejection', (reason, promise) => {
@@ -64,9 +65,12 @@ const MAX_HISTORY_MESSAGES = 20;
 const MAX_HISTORY_MESSAGE_CHARS = 6000;
 const UPSTREAM_TIMEOUT_MS = 30000;
 const isDev = process.env.NODE_ENV !== 'production';
-const RAG_ENABLED = process.env.RAG_ENABLED === 'true';
+const RAG_ENABLED = process.env.RAG_ENABLED !== 'false';
 const RAG_TOP_K = 3;
-const RAG_CHUNK_SIZE = 700;
+const RAG_CHUNK_SIZE_TOKENS = 500;
+const RAG_CHUNK_OVERLAP_TOKENS = 50;
+const RAG_EMBEDDING_MODEL = 'text-embedding-004';
+const RAG_EMBEDDING_DIMENSION = 768;
 const RAG_CACHE_TTL_MS = 1000 * 60 * 5;
 const RAG_SCAN_EXTENSIONS = new Set(['.md', '.txt', '.json']);
 const RAG_EXCLUDED_FILES = new Set(['package-lock.json', 'conversations.json']);
@@ -171,50 +175,30 @@ function tokenize(text) {
   return (text || '').toLowerCase().match(/[a-z0-9]+/g) || [];
 }
 
-function buildChunksFromText(text, sourcePath) {
+function splitTextIntoChunks(text, { chunkSizeTokens = RAG_CHUNK_SIZE_TOKENS, overlapTokens = RAG_CHUNK_OVERLAP_TOKENS } = {}) {
   const normalized = normalizeText(text);
   if (!normalized) return [];
 
-  const sentenceLikeParts = normalized
-    .split(/\n{2,}|(?<=[.!?])\s+/)
-    .map(part => part.trim())
-    .filter(Boolean);
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  if (!tokens.length) return [];
 
   const chunks = [];
-  let current = '';
+  let start = 0;
 
-  for (const part of sentenceLikeParts) {
-    const candidate = current ? `${current} ${part}` : part;
-    if (candidate.length <= RAG_CHUNK_SIZE) {
-      current = candidate;
-      continue;
-    }
-
-    if (current) {
-      chunks.push(current);
-    }
-
-    const words = part.split(/\s+/);
-    let segment = '';
-    for (const word of words) {
-      const next = segment ? `${segment} ${word}` : word;
-      if (next.length <= RAG_CHUNK_SIZE) {
-        segment = next;
-      } else if (segment) {
-        chunks.push(segment);
-        segment = word;
-      } else {
-        segment = word;
-      }
-    }
-
-    current = segment;
+  while (start < tokens.length) {
+    const end = Math.min(tokens.length, start + chunkSizeTokens);
+    const chunkTokens = tokens.slice(start, end);
+    const chunkText = chunkTokens.join(' ').trim();
+    if (chunkText) chunks.push(chunkText);
+    if (end >= tokens.length) break;
+    start += Math.max(1, chunkSizeTokens - overlapTokens);
   }
 
-  if (current) {
-    chunks.push(current);
-  }
+  return chunks;
+}
 
+function buildChunksFromText(text, sourcePath) {
+  const chunks = splitTextIntoChunks(text);
   return chunks
     .map(chunk => ({ text: chunk.trim(), source: sourcePath }))
     .filter(chunk => chunk.text.length >= 40);
@@ -280,20 +264,90 @@ function scoreChunk(query, chunk) {
   return score;
 }
 
-async function retrieveRelevantContext(userMessage, limit = RAG_TOP_K) {
-  if (!RAG_ENABLED) return [];
-  const query = String(userMessage || '').trim();
+async function generateEmbeddingValues(text) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return [];
+
+  const query = sanitizeTextInput(String(text || ''), { maxLength: 12000 }).trim();
   if (!query) return [];
 
-  const index = await buildKnowledgeIndex();
-  if (!index.length) return [];
+  try {
+    const embeddingResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(RAG_EMBEDDING_MODEL)}:embedContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: `models/${RAG_EMBEDDING_MODEL}`,
+          content: { parts: [{ text: query }] },
+          outputDimensionality: RAG_EMBEDDING_DIMENSION
+        }),
+        signal: withTimeout(UPSTREAM_TIMEOUT_MS)
+      }
+    );
 
-  return index
-    .map(chunk => ({ ...chunk, score: scoreChunk(query, chunk) }))
-    .filter(chunk => chunk.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map(({ text, source }) => ({ text, source }));
+    if (!embeddingResponse.ok) {
+      const errorText = await embeddingResponse.text().catch(() => '');
+      throw new Error(errorText || 'Embedding request failed');
+    }
+
+    const embeddingData = await embeddingResponse.json();
+    return Array.isArray(embeddingData?.embedding?.values) ? embeddingData.embedding.values : [];
+  } catch (error) {
+    console.warn('RAG embedding failed:', error.message);
+    return [];
+  }
+}
+
+async function retrieveRelevantContext(userMessage, userId, limit = RAG_TOP_K) {
+  if (!RAG_ENABLED) return [];
+  const query = sanitizeTextInput(String(userMessage || ''), { maxLength: 12000 }).trim();
+  if (!query) return [];
+
+  const pool = await connectToDatabase();
+  if (!pool || !userId) return [];
+
+  const embeddingValues = await generateEmbeddingValues(query);
+  let rows = [];
+
+  if (embeddingValues.length) {
+    const embeddingLiteral = `[${embeddingValues.join(',')}]`;
+    const vectorQuery = await pool.query(
+      `SELECT content, filename, document_id, chunk_index
+       FROM knowledge_chunks
+       WHERE user_id = $1
+       ORDER BY embedding <=> $2::vector
+       LIMIT $3`,
+      [sanitizeTextInput(userId, { maxLength: 200 }), embeddingLiteral, limit]
+    );
+    rows = vectorQuery.rows;
+  }
+
+  if (!rows.length) {
+    const fallbackQuery = await pool.query(
+      `SELECT content, filename, document_id, chunk_index
+       FROM knowledge_chunks
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [sanitizeTextInput(userId, { maxLength: 200 })]
+    );
+
+    rows = fallbackQuery.rows
+      .map(row => ({
+        ...row,
+        score: scoreChunk(query, `${row.filename || ''} ${row.content || ''}`)
+      }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(({ score, ...row }) => row);
+  }
+
+  return rows.map(row => ({
+    text: sanitizeTextInput(row.content || '', { maxLength: 8000 }),
+    source: sanitizeTextInput(row.filename || '', { maxLength: 400 }),
+    documentId: sanitizeTextInput(row.document_id || '', { maxLength: 200 })
+  }));
 }
 
 function buildPromptWithContext(currentText, contextChunks) {
@@ -459,6 +513,22 @@ async function connectToDatabase() {
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
+
+        CREATE EXTENSION IF NOT EXISTS vector;
+
+        CREATE TABLE IF NOT EXISTS knowledge_chunks (
+          id SERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          document_id TEXT NOT NULL,
+          filename TEXT NOT NULL,
+          chunk_index INTEGER,
+          content TEXT,
+          embedding VECTOR(768),
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS knowledge_chunks_embedding_idx
+          ON knowledge_chunks USING ivfflat (embedding vector_cosine_ops);
       `);
 
       pgReady = true;
@@ -713,6 +783,78 @@ async function deleteConversationById(id, userId) {
   }
 
   const { rowCount } = await pool.query('DELETE FROM conversations WHERE id = $1 AND user_id = $2 RETURNING id', [safeId, safeUserId]);
+  return rowCount > 0;
+}
+
+async function extractTextFromUpload(buffer, filename) {
+  const ext = path.extname(filename || '').toLowerCase();
+  if (ext === '.txt') {
+    return buffer.toString('utf8');
+  }
+
+  if (ext === '.pdf') {
+    const parsed = await pdfParse(buffer);
+    return parsed?.text || '';
+  }
+
+  throw new Error('Only .txt and .pdf files are supported.');
+}
+
+async function storeUploadedDocument(userId, documentId, filename, content) {
+  const pool = await connectToDatabase();
+  if (!pool) return 0;
+
+  const chunks = splitTextIntoChunks(content, {
+    chunkSizeTokens: RAG_CHUNK_SIZE_TOKENS,
+    overlapTokens: RAG_CHUNK_OVERLAP_TOKENS
+  });
+
+  let inserted = 0;
+  for (const [index, chunkText] of chunks.entries()) {
+    const embeddingValues = await generateEmbeddingValues(chunkText);
+    const embeddingLiteral = embeddingValues.length ? `[${embeddingValues.join(',')}]` : null;
+
+    await pool.query(
+      `INSERT INTO knowledge_chunks (user_id, document_id, filename, chunk_index, content, embedding)
+       VALUES ($1, $2, $3, $4, $5, $6::vector)`,
+      [sanitizeTextInput(userId, { maxLength: 200 }), sanitizeTextInput(documentId, { maxLength: 200 }), sanitizeTextInput(filename, { maxLength: 400 }), index, sanitizeTextInput(chunkText, { maxLength: 120000 }), embeddingLiteral]
+    );
+    inserted += 1;
+  }
+
+  return inserted;
+}
+
+async function listUserDocuments(userId) {
+  const pool = await connectToDatabase();
+  if (!pool) return [];
+
+  const { rows } = await pool.query(
+    `SELECT document_id, filename, MIN(created_at) AS uploaded_at, COUNT(*) AS chunk_count
+     FROM knowledge_chunks
+     WHERE user_id = $1
+     GROUP BY document_id, filename
+     ORDER BY uploaded_at DESC`,
+    [sanitizeTextInput(userId, { maxLength: 200 })]
+  );
+
+  return rows.map(row => ({
+    documentId: sanitizeTextInput(row.document_id || '', { maxLength: 200 }),
+    filename: sanitizeTextInput(row.filename || '', { maxLength: 400 }),
+    uploadedAt: row.uploaded_at,
+    chunkCount: Number(row.chunk_count || 0)
+  }));
+}
+
+async function deleteUserDocument(userId, documentId) {
+  const pool = await connectToDatabase();
+  if (!pool) return false;
+
+  const { rowCount } = await pool.query(
+    'DELETE FROM knowledge_chunks WHERE document_id = $1 AND user_id = $2',
+    [sanitizeTextInput(documentId, { maxLength: 200 }), sanitizeTextInput(userId, { maxLength: 200 })]
+  );
+
   return rowCount > 0;
 }
 
@@ -1085,7 +1227,8 @@ async function handleChat(req, res) {
   const currentText = nonImageNames.length
     ? `${userMessage}\n\nAttachments: ${nonImageNames.join(', ')}`
     : userMessage;
-  const relevantContext = await retrieveRelevantContext(userMessage);
+  const relevantContext = await retrieveRelevantContext(userMessage, getUserId(req));
+  const ragUsed = Array.isArray(relevantContext) && relevantContext.length > 0;
   const enrichedText = buildPromptWithContext(currentText, relevantContext);
 
   const provider = ['gemini', 'groq', 'openai'].includes(String(payload.provider || '').toLowerCase())
@@ -1104,6 +1247,7 @@ async function handleChat(req, res) {
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
   res.writeHead(200);
+  res.write(`event: status\ndata: ${JSON.stringify({ ragUsed })}\n\n`);
   res.flushHeaders?.();
 
   const abortController = new AbortController();
@@ -1120,13 +1264,13 @@ async function handleChat(req, res) {
         writeSseEvent(res, 'message', { delta });
       }
     );
-    writeSseEvent(res, 'done', { complete: true });
+    writeSseEvent(res, 'done', { complete: true, ragUsed });
   } catch (error) {
     console.error('Chat provider failed, performing search fallback:', error.message);
     const fallbackText = await getSearchFallback(userMessage);
     if (!sentChunks) writeSseEvent(res, 'message', { delta: fallbackText, fallback: true });
     writeSseEvent(res, 'error', { message: error.message || 'Provider request failed.' });
-    writeSseEvent(res, 'done', { complete: true, fallback: !sentChunks });
+    writeSseEvent(res, 'done', { complete: true, fallback: !sentChunks, ragUsed });
   } finally {
     res.end();
   }
@@ -1164,7 +1308,8 @@ async function handleWebSocketChat(ws, payload, abortSignal) {
   }
 
   const { userMessage, history, attachments, currentText, provider, modelName, thinkingEnabled } = chatPayload;
-  const relevantContext = await retrieveRelevantContext(userMessage);
+  const relevantContext = await retrieveRelevantContext(userMessage, null);
+  const ragUsed = Array.isArray(relevantContext) && relevantContext.length > 0;
   const enrichedText = buildPromptWithContext(currentText, relevantContext);
   ws.send(JSON.stringify({ type: 'status', message: 'Thinking…' }));
 
@@ -1183,7 +1328,7 @@ async function handleWebSocketChat(ws, payload, abortSignal) {
       throw new Error('Provider produced no usable text');
     }
 
-    ws.send(JSON.stringify({ type: 'done', content: botText }));
+    ws.send(JSON.stringify({ type: 'done', content: botText, ragUsed }));
   } catch (error) {
     if (abortSignal?.aborted || error?.name === 'AbortError') {
       ws.send(JSON.stringify({ type: 'status', message: 'Chat canceled.' }));
@@ -1653,6 +1798,113 @@ app.get('/debug/check-session', (req, res) => {
 app.get('/api/user', (req, res) => {
   const user = req.session?.user || null;
   res.json({ user });
+});
+
+app.post('/api/upload', async (req, res) => {
+  try {
+    if (!req.session?.user?.googleId && !req.session?.user?.email) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (!req.headers['content-type']?.includes('multipart/form-data')) {
+      return res.status(400).json({ error: 'Expected multipart/form-data upload.' });
+    }
+
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const bb = busboy({ headers: req.headers, limits: { files: 1, fileSize: 10 * 1024 * 1024 } });
+    const files = [];
+
+    bb.on('file', (fieldname, fileStream, info) => {
+      const { filename, mimeType } = info;
+      if (!filename) {
+        fileStream.resume();
+        return;
+      }
+
+      const ext = path.extname(filename || '').toLowerCase();
+      if (!['.txt', '.pdf'].includes(ext)) {
+        fileStream.resume();
+        files.push({ error: 'Only .txt and .pdf files are supported.' });
+        return;
+      }
+
+      const chunks = [];
+      fileStream.on('data', chunk => chunks.push(Buffer.from(chunk)));
+      fileStream.on('end', async () => {
+        const buffer = Buffer.concat(chunks);
+        if (!buffer.length) {
+          files.push({ error: 'No file content found.' });
+          return;
+        }
+
+        try {
+          const text = await extractTextFromUpload(buffer, filename);
+          const documentId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+          const inserted = await storeUploadedDocument(userId, documentId, filename, text);
+          files.push({ ok: true, documentId, filename, chunkCount: inserted });
+        } catch (error) {
+          files.push({ error: error.message || 'File processing failed.' });
+        }
+      });
+    });
+
+    bb.on('error', (error) => {
+      res.status(400).json({ error: error.message || 'Upload failed.' });
+    });
+
+    bb.on('finish', () => {
+      const failed = files.find(item => item.error);
+      if (failed) {
+        res.status(400).json({ error: failed.error });
+        return;
+      }
+
+      const uploaded = files.filter(item => item.ok);
+      if (!uploaded.length) {
+        res.status(400).json({ error: 'No file was received.' });
+        return;
+      }
+
+      res.json({ ok: true, documents: uploaded });
+    });
+
+    req.pipe(bb);
+  } catch (error) {
+    console.error('Upload failed:', error.message);
+    res.status(500).json({ error: error.message || 'Upload failed.' });
+  }
+});
+
+app.get('/api/documents', async (req, res) => {
+  try {
+    if (!req.session?.user?.googleId && !req.session?.user?.email) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const documents = await listUserDocuments(getUserId(req));
+    res.json({ documents });
+  } catch (error) {
+    console.error('List documents failed:', error.message);
+    res.status(500).json({ error: error.message || 'Failed to list documents.' });
+  }
+});
+
+app.delete('/api/documents/:id', async (req, res) => {
+  try {
+    if (!req.session?.user?.googleId && !req.session?.user?.email) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const deleted = await deleteUserDocument(getUserId(req), req.params.id);
+    res.json({ ok: true, deleted });
+  } catch (error) {
+    console.error('Delete document failed:', error.message);
+    res.status(500).json({ error: error.message || 'Failed to delete document.' });
+  }
 });
 
 app.post('/api/transcribe', async (req, res) => {
