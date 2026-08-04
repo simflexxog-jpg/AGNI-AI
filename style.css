@@ -1322,6 +1322,16 @@ html[data-theme="dark"] .user-message .message-content {
     box-shadow: 0 0 0 4px rgba(96,165,250,0.1), var(--shadow-md);
 }
 
+.composer-notice {
+    padding: 10px 16px 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+    margin-left: 6px;
+    margin-right: 16px;
+    pointer-events: none;
+}
+
 html[data-theme="dark"] .composer-box {
     background: rgba(13,21,37,0.9);
 }
@@ -1397,14 +1407,6 @@ html[data-theme="dark"] .composer-box {
 .composer-textarea::placeholder { color: var(--text-muted); }
 
 /* Toolbar */
-.composer-notice {
-    display: block;
-    margin: 0 0 8px;
-    color: var(--text-secondary);
-    font-size: 13px;
-    line-height: 1.5;
-}
-
 .composer-toolbar {
     display: flex;
     align-items: center;
