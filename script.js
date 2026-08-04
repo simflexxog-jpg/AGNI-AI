@@ -38,8 +38,7 @@ const liveTranscript = document.getElementById('live-transcript');
 const liveEndCallBtn = document.getElementById('live-end-call-btn');
 const liveRetryBtn = document.getElementById('live-retry-btn');
 const liveVoiceSelect = document.getElementById('live-voice-select');
-// Resolve the chat API from the current origin so the browser can reach the Express endpoint
-// without hard-coding hostnames or ports across environments.
+
 const API_ENDPOINT = '/api/chat';
 const WS_ENDPOINT = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/live-voice`;
 
@@ -51,7 +50,7 @@ const UI_FONT_KEY = 'agni-ai-ui-font-v1';
 const UI_DENSITY_KEY = 'agni-ai-ui-density-v1';
 const UI_LANGUAGE_KEY = 'agni-ai-ui-language-v1';
 const TTS_KEY = 'agni-ai-tts-enabled-v1';
-const DEFAULT_WELCOME_TEXT = 'Hello! I’m your AI assistant. Ask me anything and I’ll help.';
+const DEFAULT_WELCOME_TEXT = 'Hello! I\'m your AI assistant. Ask me anything and I\'ll help.';
 
 let editingPromptState = null;
 
@@ -123,8 +122,8 @@ const UI_TRANSLATIONS = {
         portfolio: 'Portfolio',
         contact: 'Contact',
         connecting: 'Connecting…',
-        liveTranscript: 'Tap the orb to begin speaking with Gemini Live.',
-        selectGeminiVoice: 'Select Gemini voice',
+        liveTranscript: 'Tap the orb to begin speaking.',
+        selectGroqVoice: 'Select voice mode',
         retry: 'Retry',
         endCall: 'End call',
     },
@@ -195,8 +194,7 @@ const UI_TRANSLATIONS = {
         portfolio: 'पोर्टफोलियो',
         contact: 'संपर्क करें',
         connecting: 'कनेक्ट हो रहा है…',
-        liveTranscript: 'Gemini Live के साथ बोलने के लिए ओर्ब पर टैप करें।',
-        selectGeminiVoice: 'Gemini आवाज चुनें',
+        liveTranscript: 'बोलना शुरू करने के लिए ओर्ब पर टैप करें।',
         retry: 'पुनः प्रयास',
         endCall: 'कॉल समाप्त करें',
     },
@@ -267,175 +265,70 @@ const UI_TRANSLATIONS = {
         portfolio: 'পোর্টফোলিও',
         contact: 'যোগাযোগ',
         connecting: 'সংযোগ হচ্ছে…',
-        liveTranscript: 'Gemini Live এর সাথে কথা বলতে ওর্বে ট্যাপ করুন।',
-        selectGeminiVoice: 'Gemini কণ্ঠ বেছে নিন',
+        liveTranscript: 'কথা বলতে ওর্বে ট্যাপ করুন।',
         retry: 'পুনরায় চেষ্টা করুন',
         endCall: 'কথা বন্ধ করুন',
     },
     fr: {
-        preferences: 'Préférences',
-        newChat: 'Nouveau chat',
-        provider: 'Fournisseur',
-        model: 'Modèle',
-        deepThinking: 'Réflexion approfondie',
-        searchConversations: 'Rechercher des conversations…',
-        recent: 'Récent',
-        fontSize: 'Taille de police',
-        small: 'Petit',
-        normal: 'Normal',
-        large: 'Grand',
-        density: 'Densité',
-        comfortable: 'Confortable',
-        compact: 'Compact',
-        language: 'Langue',
-        appearance: 'Apparence',
-        tts: 'Synthèse vocale',
-        enableTts: 'Activer TTS',
-        voice: 'Voix',
-        speed: 'Vitesse',
-        pitch: 'Hauteur',
-        resetDefaults: 'Réinitialiser',
-        closePreferences: 'Fermer les préférences',
-        toggleTheme: 'Basculer le mode clair/sombre',
+        preferences: 'Préférences', newChat: 'Nouveau chat', provider: 'Fournisseur', model: 'Modèle',
+        deepThinking: 'Réflexion approfondie', searchConversations: 'Rechercher des conversations…',
+        recent: 'Récent', fontSize: 'Taille de police', small: 'Petit', normal: 'Normal', large: 'Grand',
+        density: 'Densité', comfortable: 'Confortable', compact: 'Compact', language: 'Langue',
+        appearance: 'Apparence', tts: 'Synthèse vocale', enableTts: 'Activer TTS', voice: 'Voix',
+        speed: 'Vitesse', pitch: 'Hauteur', resetDefaults: 'Réinitialiser',
+        closePreferences: 'Fermer les préférences', toggleTheme: 'Basculer le mode clair/sombre',
         toggleTts: 'Basculer la synthèse vocale',
     },
     ja: {
-        preferences: '設定',
-        newChat: '新しいチャット',
-        provider: 'プロバイダー',
-        model: 'モデル',
-        deepThinking: '深い思考',
-        searchConversations: '会話を検索…',
-        recent: '最近',
-        fontSize: 'フォントサイズ',
-        small: '小',
-        normal: '通常',
-        large: '大',
-        density: '密度',
-        comfortable: '快適',
-        compact: 'コンパクト',
-        language: '言語',
-        appearance: '外観',
-        tts: 'テキスト読み上げ',
-        enableTts: 'TTS を有効化',
-        voice: '音声',
-        speed: '速度',
-        pitch: '音高',
-        resetDefaults: 'デフォルトに戻す',
-        closePreferences: '設定を閉じる',
-        toggleTheme: 'ライト/ダークモード切替',
-        toggleTts: 'テキスト読み上げ切替',
+        preferences: '設定', newChat: '新しいチャット', provider: 'プロバイダー', model: 'モデル',
+        deepThinking: '深い思考', searchConversations: '会話を検索…', recent: '最近',
+        fontSize: 'フォントサイズ', small: '小', normal: '通常', large: '大', density: '密度',
+        comfortable: '快適', compact: 'コンパクト', language: '言語', appearance: '外観',
+        tts: 'テキスト読み上げ', enableTts: 'TTS を有効化', voice: '音声', speed: '速度', pitch: '音高',
+        resetDefaults: 'デフォルトに戻す', closePreferences: '設定を閉じる',
+        toggleTheme: 'ライト/ダークモード切替', toggleTts: 'テキスト読み上げ切替',
     },
     ko: {
-        preferences: '환경설정',
-        newChat: '새 채팅',
-        provider: '제공자',
-        model: '모델',
-        deepThinking: '심층 사고',
-        searchConversations: '대화 검색…',
-        recent: '최근',
-        fontSize: '글꼴 크기',
-        small: '작게',
-        normal: '보통',
-        large: '크게',
-        density: '밀도',
-        comfortable: '편안함',
-        compact: '컴팩트',
-        language: '언어',
-        appearance: '모양',
-        tts: '텍스트 음성 변환',
-        enableTts: 'TTS 사용',
-        voice: '음성',
-        speed: '속도',
-        pitch: '피치',
-        resetDefaults: '기본값 복원',
-        closePreferences: '환경설정 닫기',
-        toggleTheme: '라이트/다크 모드 전환',
-        toggleTts: '텍스트 음성 변환 전환',
+        preferences: '환경설정', newChat: '새 채팅', provider: '제공자', model: '모델',
+        deepThinking: '심층 사고', searchConversations: '대화 검색…', recent: '최근',
+        fontSize: '글꼴 크기', small: '작게', normal: '보통', large: '크게', density: '밀도',
+        comfortable: '편안함', compact: '컴팩트', language: '언어', appearance: '모양',
+        tts: '텍스트 음성 변환', enableTts: 'TTS 사용', voice: '음성', speed: '속도', pitch: '피치',
+        resetDefaults: '기본값 복원', closePreferences: '환경설정 닫기',
+        toggleTheme: '라이트/다크 모드 전환', toggleTts: '텍스트 음성 변환 전환',
     },
     zh: {
-        preferences: '首选项',
-        newChat: '新聊天',
-        provider: '提供商',
-        model: '模型',
-        deepThinking: '深度思考',
-        searchConversations: '搜索对话…',
-        recent: '最近',
-        fontSize: '字号',
-        small: '小',
-        normal: '正常',
-        large: '大',
-        density: '密度',
-        comfortable: '舒适',
-        compact: '紧凑',
-        language: '语言',
-        appearance: '外观',
-        tts: '文字转语音',
-        enableTts: '启用 TTS',
-        voice: '语音',
-        speed: '速度',
-        pitch: '音高',
-        resetDefaults: '重置默认值',
-        closePreferences: '关闭首选项',
-        toggleTheme: '切换浅色/深色模式',
-        toggleTts: '切换文字转语音',
+        preferences: '首选项', newChat: '新聊天', provider: '提供商', model: '模型',
+        deepThinking: '深度思考', searchConversations: '搜索对话…', recent: '最近',
+        fontSize: '字号', small: '小', normal: '正常', large: '大', density: '密度',
+        comfortable: '舒适', compact: '紧凑', language: '语言', appearance: '外观',
+        tts: '文字转语音', enableTts: '启用 TTS', voice: '语音', speed: '速度', pitch: '音高',
+        resetDefaults: '重置默认值', closePreferences: '关闭首选项',
+        toggleTheme: '切换浅色/深色模式', toggleTts: '切换文字转语音',
     },
     de: {
-        preferences: 'Einstellungen',
-        newChat: 'Neuer Chat',
-        provider: 'Anbieter',
-        model: 'Modell',
-        deepThinking: 'Tiefe Überlegung',
-        searchConversations: 'Unterhaltungen suchen…',
-        recent: 'Kürzlich',
-        fontSize: 'Schriftgröße',
-        small: 'Klein',
-        normal: 'Normal',
-        large: 'Groß',
-        density: 'Dichte',
-        comfortable: 'Komfortabel',
-        compact: 'Kompakt',
-        language: 'Sprache',
-        appearance: 'Aussehen',
-        tts: 'Text-to-Speech',
-        enableTts: 'TTS aktivieren',
-        voice: 'Stimme',
-        speed: 'Geschwindigkeit',
-        pitch: 'Tonhöhe',
-        resetDefaults: 'Standardwerte zurücksetzen',
-        closePreferences: 'Einstellungen schließen',
-        toggleTheme: 'Hell/Dunkel-Modus umschalten',
+        preferences: 'Einstellungen', newChat: 'Neuer Chat', provider: 'Anbieter', model: 'Modell',
+        deepThinking: 'Tiefe Überlegung', searchConversations: 'Unterhaltungen suchen…',
+        recent: 'Kürzlich', fontSize: 'Schriftgröße', small: 'Klein', normal: 'Normal', large: 'Groß',
+        density: 'Dichte', comfortable: 'Komfortabel', compact: 'Kompakt', language: 'Sprache',
+        appearance: 'Aussehen', tts: 'Text-to-Speech', enableTts: 'TTS aktivieren', voice: 'Stimme',
+        speed: 'Geschwindigkeit', pitch: 'Tonhöhe', resetDefaults: 'Standardwerte zurücksetzen',
+        closePreferences: 'Einstellungen schließen', toggleTheme: 'Hell/Dunkel-Modus umschalten',
         toggleTts: 'Text-to-Speech umschalten',
     },
     ru: {
-        preferences: 'Настройки',
-        newChat: 'Новый чат',
-        provider: 'Поставщик',
-        model: 'Модель',
-        deepThinking: 'Глубокий анализ',
-        searchConversations: 'Поиск бесед…',
-        recent: 'Недавние',
-        fontSize: 'Размер шрифта',
-        small: 'Малый',
-        normal: 'Обычный',
-        large: 'Крупный',
-        density: 'Плотность',
-        comfortable: 'Комфортно',
-        compact: 'Компакт',
-        language: 'Язык',
-        appearance: 'Внешний вид',
-        tts: 'Текст в речь',
-        enableTts: 'Включить TTS',
-        voice: 'Голос',
-        speed: 'Скорость',
-        pitch: 'Высота',
-        resetDefaults: 'Сбросить настройки',
-        closePreferences: 'Закрыть настройки',
-        toggleTheme: 'Переключить светлую/тёмную тему',
+        preferences: 'Настройки', newChat: 'Новый чат', provider: 'Поставщик', model: 'Модель',
+        deepThinking: 'Глубокий анализ', searchConversations: 'Поиск бесед…', recent: 'Недавние',
+        fontSize: 'Размер шрифта', small: 'Малый', normal: 'Обычный', large: 'Крупный',
+        density: 'Плотность', comfortable: 'Комфортно', compact: 'Компакт', language: 'Язык',
+        appearance: 'Внешний вид', tts: 'Текст в речь', enableTts: 'Включить TTS', voice: 'Голос',
+        speed: 'Скорость', pitch: 'Высота', resetDefaults: 'Сбросить настройки',
+        closePreferences: 'Закрыть настройки', toggleTheme: 'Переключить светлую/тёмную тему',
         toggleTts: 'Переключить текст в речь',
     },
 };
-const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024; // 8MB per file
+
+const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
 
 let attachments = [];
 let conversations = [];
@@ -461,19 +354,17 @@ let silenceMonitorId = null;
 let silenceDurationMs = 0;
 let audioContext = null;
 let analyserNode = null;
-let liveSocket = null;
-let liveSessionActive = false;
-let liveMicStream = null;
-let liveAudioContext = null;
-let liveAudioWorkletNode = null;
-let liveSourceNode = null;
-let liveScriptProcessor = null;
-let liveMicCaptureTimer = null;
-let livePendingAudioSamples = [];
-let liveCurrentVoice = 'Aoede';
-let liveTranscriptBuffer = '';
 
-// Sidebar preferences controls: layout, theme, language, and speech settings.
+// ── Groq Voice Agent state ──────────────────────────────────────────────────
+let groqVoiceSocket = null;
+let groqVoiceActive = false;
+let groqVoiceMicStream = null;
+let groqVoiceMediaRecorder = null;
+let groqVoiceAudioChunks = [];
+let groqVoiceIsRecording = false;
+let groqVoiceTtsUtterance = null;
+// ────────────────────────────────────────────────────────────────────────────
+
 const openSettingsBtn = document.getElementById('open-settings-btn');
 const sidebarSettings = document.getElementById('sidebar-settings');
 const closeSettingsBtn = document.getElementById('close-settings-btn');
@@ -484,15 +375,10 @@ const densityOpts = Array.from(document.getElementsByClassName('density-opt'));
 
 function getWelcomeText() {
     if (!currentUser) return DEFAULT_WELCOME_TEXT;
-
     const fullName = currentUser.name || currentUser.email || '';
-    const firstName = fullName
-        .split(/\s+/)
-        .find(Boolean)
-        ?.replace(/[^\p{L}\p{N}]/gu, '') || '';
-
+    const firstName = fullName.split(/\s+/).find(Boolean)?.replace(/[^\p{L}\p{N}]/gu, '') || '';
     const displayName = firstName || (currentUser.email ? currentUser.email.split('@')[0] : 'there');
-    return `Hello! ${displayName} I’m your AI assistant. Ask me anything and I’ll help.`;
+    return `Hello! ${displayName} I'm your AI assistant. Ask me anything and I'll help.`;
 }
 
 function applyFontSize(size) {
@@ -509,72 +395,49 @@ function updateDensitySelection(density, save = true) {
     if (!density) return;
     applyDensity(density);
     densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === density));
-    if (compactViewToggle) {
-        compactViewToggle.checked = density === 'compact';
-    }
-    if (save) {
-        localStorage.setItem(UI_DENSITY_KEY, density);
-    }
+    if (compactViewToggle) compactViewToggle.checked = density === 'compact';
+    if (save) localStorage.setItem(UI_DENSITY_KEY, density);
 }
 
 function updateLanguageSelection(language, save = true) {
     if (!language) return;
-    const resolvedLanguage = ['en', 'hi', 'bn', 'fr', 'ja', 'ko', 'zh', 'de', 'ru'].includes(language) ? language : 'en';
-    document.documentElement.lang = resolvedLanguage;
-    document.documentElement.dataset.lang = resolvedLanguage;
-    if (languageSelect) {
-        languageSelect.value = resolvedLanguage;
-    }
-    if (save) {
-        localStorage.setItem(UI_LANGUAGE_KEY, resolvedLanguage);
-    }
+    const resolved = ['en','hi','bn','fr','ja','ko','zh','de','ru'].includes(language) ? language : 'en';
+    document.documentElement.lang = resolved;
+    document.documentElement.dataset.lang = resolved;
+    if (languageSelect) languageSelect.value = resolved;
+    if (save) localStorage.setItem(UI_LANGUAGE_KEY, resolved);
     updateTranslations();
 }
 
 function updateTranslations() {
     const language = localStorage.getItem(UI_LANGUAGE_KEY) || 'en';
     const dictionary = UI_TRANSLATIONS[language] || UI_TRANSLATIONS.en;
-
     document.querySelectorAll('[data-i18n]').forEach((node) => {
         const key = node.dataset.i18n;
         if (!dictionary[key]) return;
-
-        const tagName = node.tagName?.toLowerCase();
-        if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
-            return;
-        }
-
+        const tag = node.tagName?.toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
         node.textContent = dictionary[key];
     });
-
     document.querySelectorAll('[data-i18n-key]').forEach((node) => {
         const key = node.dataset.i18nKey;
         if (dictionary[key]) {
             node.setAttribute('aria-label', dictionary[key]);
-            if (node.dataset.i18nAttr === 'title') {
-                node.setAttribute('title', dictionary[key]);
-            }
+            if (node.dataset.i18nAttr === 'title') node.setAttribute('title', dictionary[key]);
         }
     });
-
     document.querySelectorAll('[data-i18n-attr]').forEach((node) => {
         const key = node.dataset.i18nAttr;
         const translationKey = node.dataset.i18n ?? node.dataset.i18nKey;
-        if (key === 'placeholder' && dictionary[translationKey]) {
-            node.setAttribute('placeholder', dictionary[translationKey]);
-        }
-        if (key === 'aria-label' && dictionary[translationKey]) {
-            node.setAttribute('aria-label', dictionary[translationKey]);
-        }
-        if (key === 'title' && dictionary[translationKey]) {
-            node.setAttribute('title', dictionary[translationKey]);
-        }
+        if (key === 'placeholder' && dictionary[translationKey]) node.setAttribute('placeholder', dictionary[translationKey]);
+        if (key === 'aria-label' && dictionary[translationKey]) node.setAttribute('aria-label', dictionary[translationKey]);
+        if (key === 'title' && dictionary[translationKey]) node.setAttribute('title', dictionary[translationKey]);
     });
 }
 
 function applyLanguage(language) {
-    const resolvedLanguage = ['en', 'hi', 'bn', 'fr', 'ja', 'ko', 'zh', 'de', 'ru'].includes(language) ? language : 'en';
-    updateLanguageSelection(resolvedLanguage, false);
+    const resolved = ['en','hi','bn','fr','ja','ko','zh','de','ru'].includes(language) ? language : 'en';
+    updateLanguageSelection(resolved, false);
 }
 
 function loadUISettings() {
@@ -586,9 +449,7 @@ function loadUISettings() {
     applyLanguage(language);
     fontOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.font === font));
     densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === density));
-    if (languageSelect) {
-        languageSelect.value = language;
-    }
+    if (languageSelect) languageSelect.value = language;
 }
 
 function saveUISettings(font, density, language) {
@@ -611,9 +472,7 @@ function resetUISettings() {
     updateTTSButton();
     fontOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.font === 'normal'));
     densityOpts.forEach(btn => btn.classList.toggle('active', btn.dataset.density === 'comfortable'));
-    if (languageSelect) {
-        languageSelect.value = 'en';
-    }
+    if (languageSelect) languageSelect.value = 'en';
     if (compactViewToggle) compactViewToggle.checked = false;
     updateCompactMode();
 }
@@ -621,19 +480,15 @@ function resetUISettings() {
 function toggleSidebarSettings(show) {
     if (!sidebarSettings) return;
     sidebarSettings.hidden = !show;
-    if (openSettingsBtn) {
-        openSettingsBtn.setAttribute('aria-expanded', String(show));
-    }
+    if (openSettingsBtn) openSettingsBtn.setAttribute('aria-expanded', String(show));
 }
-
-// --- Theme management ---
 
 function applyTheme(theme) {
     const html = document.documentElement;
-    const resolvedTheme = theme === 'light' ? 'light' : 'dark';
-    html.setAttribute('data-theme', resolvedTheme);
-    html.classList.toggle('light-mode', resolvedTheme === 'light');
-    localStorage.setItem(THEME_KEY, resolvedTheme);
+    const resolved = theme === 'light' ? 'light' : 'dark';
+    html.setAttribute('data-theme', resolved);
+    html.classList.toggle('light-mode', resolved === 'light');
+    localStorage.setItem(THEME_KEY, resolved);
     updateThemeButton();
 }
 
@@ -643,9 +498,8 @@ function initTheme() {
 }
 
 function toggleTheme() {
-    const html = document.documentElement;
-    const isLightMode = html.getAttribute('data-theme') === 'light';
-    applyTheme(isLightMode ? 'dark' : 'light');
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    applyTheme(isLight ? 'dark' : 'light');
 }
 
 function closeActionMenu() {
@@ -662,18 +516,15 @@ function toggleActionMenu() {
 }
 
 function updateThemeButton() {
-    const isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
     if (themeToggleBtn) {
-        themeToggleBtn.classList.toggle('active', isLightMode);
-        themeToggleBtn.setAttribute('aria-checked', String(isLightMode));
+        themeToggleBtn.classList.toggle('active', isLight);
+        themeToggleBtn.setAttribute('aria-checked', String(isLight));
     }
 }
 
-// --- TTS management ---
-
 function initTTS() {
-    const savedTTS = localStorage.getItem(TTS_KEY) || 'false';
-    ttsEnabled = savedTTS === 'true';
+    ttsEnabled = (localStorage.getItem(TTS_KEY) || 'false') === 'true';
     updateTTSButton();
 }
 
@@ -689,12 +540,9 @@ function updateTTSButton() {
     ttsToggleBtn.setAttribute('aria-checked', String(ttsEnabled));
 }
 
-// --- Export / import conversation data ---
-
 function exportConversations() {
     const dataStr = JSON.stringify(conversations, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
+    const url = URL.createObjectURL(new Blob([dataStr], { type: 'application/json' }));
     const link = document.createElement('a');
     link.href = url;
     link.download = `agni-ai-chats-${new Date().toISOString().split('T')[0]}.json`;
@@ -710,10 +558,7 @@ function importConversations(file) {
         try {
             const imported = JSON.parse(e.target.result);
             if (Array.isArray(imported) && imported.length > 0) {
-                // Confirm the imported payload matches the local conversation schema.
-                const isValid = imported.every(conv => 
-                    conv.id && conv.title !== undefined && Array.isArray(conv.messages)
-                );
+                const isValid = imported.every(conv => conv.id && conv.title !== undefined && Array.isArray(conv.messages));
                 if (isValid) {
                     conversations = imported;
                     activeId = conversations[0].id;
@@ -731,18 +576,13 @@ function importConversations(file) {
             showComposerNotice('Failed to parse chat file.');
         }
     };
-    reader.onerror = () => {
-        showComposerNotice('Failed to read file.');
-    };
+    reader.onerror = () => showComposerNotice('Failed to read file.');
     reader.readAsText(file);
 }
 
 function handleImportInput(event) {
     const file = event.target.files?.[0];
-    if (file) {
-        importConversations(file);
-        event.target.value = '';
-    }
+    if (file) { importConversations(file); event.target.value = ''; }
 }
 
 const modelOptions = {
@@ -762,8 +602,6 @@ const modelOptions = {
     ]
 };
 
-// --- Conversation persistence ---
-
 function createConversation(initialBotText) {
     return {
         id: 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
@@ -775,14 +613,12 @@ function createConversation(initialBotText) {
 function personalizeWelcomeMessage() {
     const conv = getActiveConversation();
     if (!conv?.messages?.length) return;
-
     const firstMessage = conv.messages[0];
     const welcomeText = getWelcomeText();
     const isGenericWelcome = firstMessage.role === 'bot' && (
         firstMessage.content === DEFAULT_WELCOME_TEXT ||
-        firstMessage.content === 'Hello! I’m your AI assistant. Ask me anything and I’ll help.'
+        firstMessage.content === "Hello! I'm your AI assistant. Ask me anything and I'll help."
     );
-
     if (isGenericWelcome && firstMessage.content !== welcomeText) {
         firstMessage.content = welcomeText;
         saveState();
@@ -799,40 +635,30 @@ async function loadState() {
             if (Array.isArray(payload) && payload.length > 0) {
                 conversations = payload;
                 activeId = localStorage.getItem(ACTIVE_KEY);
-                if (!activeId || !conversations.some(c => c.id === activeId)) {
-                    activeId = conversations[0].id;
-                }
+                if (!activeId || !conversations.some(c => c.id === activeId)) activeId = conversations[0].id;
                 saveState();
                 return;
             }
         }
-    } catch (error) {
-        // Fall back to the browser cache when the server-side persistence endpoint is unavailable.
-    }
+    } catch (error) {}
 
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         conversations = raw ? JSON.parse(raw) : [];
-    } catch (error) {
-        conversations = [];
-    }
+    } catch (error) { conversations = []; }
+
     if (!Array.isArray(conversations) || conversations.length === 0) {
         conversations = [createConversation(getWelcomeText())];
     }
-
     activeId = localStorage.getItem(ACTIVE_KEY);
-    if (!activeId || !conversations.some(c => c.id === activeId)) {
-        activeId = conversations[0].id;
-    }
+    if (!activeId || !conversations.some(c => c.id === activeId)) activeId = conversations[0].id;
 }
 
 function saveState() {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
         localStorage.setItem(ACTIVE_KEY, activeId);
-    } catch (error) {
-        // Local storage can fail in private browsing or quota-constrained environments; keep the in-memory session alive.
-    }
+    } catch (error) {}
 }
 
 async function fetchCsrfToken() {
@@ -841,22 +667,17 @@ async function fetchCsrfToken() {
         if (!response.ok) return;
         const data = await response.json();
         csrfToken = data?.csrfToken || '';
-    } catch (error) {
-        csrfToken = '';
-    }
+    } catch (error) { csrfToken = ''; }
 }
 
 function buildJsonHeaders(extra = {}) {
     const headers = { 'Content-Type': 'application/json', ...(extra || {}) };
-    if (csrfToken) {
-        headers['X-CSRF-Token'] = csrfToken;
-    }
+    if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
     return headers;
 }
 
 async function persistConversation(conv) {
     if (!conv) return;
-
     try {
         await fetch('/api/conversations', {
             method: 'POST',
@@ -864,14 +685,11 @@ async function persistConversation(conv) {
             credentials: 'include',
             body: JSON.stringify(conv)
         });
-    } catch (error) {
-        // Ignore persistence failures and keep using the current UI state.
-    }
+    } catch (error) {}
 }
 
 async function deleteConversationFromServer(id) {
     if (!id) return;
-
     try {
         await fetch('/api/conversations', {
             method: 'DELETE',
@@ -879,22 +697,16 @@ async function deleteConversationFromServer(id) {
             credentials: 'include',
             body: JSON.stringify({ id })
         });
-    } catch (error) {
-        // Ignore persistence failures and keep using the current UI state.
-    }
+    } catch (error) {}
 }
 
 async function fetchCurrentUser() {
     try {
         const response = await fetch('/api/user');
-        if (!response.ok) {
-            throw new Error('Not authenticated');
-        }
+        if (!response.ok) throw new Error('Not authenticated');
         const data = await response.json();
         return data.user || null;
-    } catch (error) {
-        return null;
-    }
+    } catch (error) { return null; }
 }
 
 function renderUserHeader() {
@@ -907,19 +719,9 @@ function renderUserHeader() {
 
 async function handleLogout() {
     try {
-        const res = await fetch('/auth/logout', {
-            method: 'POST',
-            headers: buildJsonHeaders(),
-            credentials: 'include'
-        });
-        if (!res.ok) {
-            console.warn('Logout request failed with status', res.status);
-        }
-    } catch (error) {
-        // If the logout request fails on the network, still route the user back to the login flow.
-        console.warn('Logout network error:', error);
-    }
-    // Always redirect to the sign-in page, regardless of the server response.
+        const res = await fetch('/auth/logout', { method: 'POST', headers: buildJsonHeaders(), credentials: 'include' });
+        if (!res.ok) console.warn('Logout request failed with status', res.status);
+    } catch (error) { console.warn('Logout network error:', error); }
     window.location.replace('/login');
 }
 
@@ -937,12 +739,8 @@ function switchConversation(id) {
 
 function deleteConversation(id) {
     conversations = conversations.filter(c => c.id !== id);
-    if (conversations.length === 0) {
-        conversations = [createConversation(getWelcomeText())];
-    }
-    if (activeId === id) {
-        activeId = conversations[0].id;
-    }
+    if (conversations.length === 0) conversations = [createConversation(getWelcomeText())];
+    if (activeId === id) activeId = conversations[0].id;
     saveState();
     deleteConversationFromServer(id);
     renderActiveConversation();
@@ -955,32 +753,25 @@ let historyFilterText = '';
 function renderHistoryList() {
     const query = historyFilterText.trim().toLowerCase();
     historyList.innerHTML = '';
-
     conversations
         .filter(conv => !query || (conv.title || 'New chat').toLowerCase().includes(query))
         .forEach(conv => {
             const item = document.createElement('div');
             item.className = 'history-item' + (conv.id === activeId ? ' active' : '');
-
             const titleSpan = document.createElement('span');
             titleSpan.className = 'history-item-title';
             titleSpan.textContent = conv.title || 'New chat';
             item.appendChild(titleSpan);
-
-        const delBtn = document.createElement('button');
-        delBtn.type = 'button';
-        delBtn.className = 'history-delete-btn';
-        delBtn.textContent = '×';
-        delBtn.setAttribute('aria-label', 'Delete chat');
-        delBtn.addEventListener('click', (event) => {
-            event.stopPropagation();
-            deleteConversation(conv.id);
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'history-delete-btn';
+            delBtn.textContent = '×';
+            delBtn.setAttribute('aria-label', 'Delete chat');
+            delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteConversation(conv.id); });
+            item.appendChild(delBtn);
+            item.addEventListener('click', () => switchConversation(conv.id));
+            historyList.appendChild(item);
         });
-        item.appendChild(delBtn);
-
-        item.addEventListener('click', () => switchConversation(conv.id));
-        historyList.appendChild(item);
-    });
 }
 
 function handleHistorySearch(event) {
@@ -990,93 +781,33 @@ function handleHistorySearch(event) {
 
 function initCompactMode() {
     const storedCompact = localStorage.getItem(COMPACT_KEY) === 'true';
-    if (compactViewToggle) {
-        compactViewToggle.checked = storedCompact;
-    }
+    if (compactViewToggle) compactViewToggle.checked = storedCompact;
     updateCompactMode();
-    if (storedCompact) {
-        updateDensitySelection('compact', false);
-    }
+    if (storedCompact) updateDensitySelection('compact', false);
 }
 
 function handleKeyboardShortcuts(event) {
-    // Ignore keypresses that are only modifier state changes.
-    if (!event || (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.key.length === 1 && event.key === event.key.toLowerCase())) {
-        // Continue into the rest of the shortcut resolver.
-    }
-
-    // Global shortcuts are resolved from Ctrl/Cmd combinations.
     if (event.ctrlKey || event.metaKey) {
-        // Use Alt-modified variants to avoid conflicting with browser-level shortcuts.
-        // Toggle sidebar: Ctrl/Cmd + Alt + B
-        if (event.altKey && event.key.toLowerCase() === 'b') {
-            event.preventDefault();
-            toggleSidebarBtn.click();
-            return;
-        }
-
-        // Toggle theme: Ctrl/Cmd + Alt + T
-        if (event.altKey && event.key.toLowerCase() === 't') {
-            event.preventDefault();
-            toggleTheme();
-            return;
-        }
-
-        // Export conversations: Ctrl/Cmd + Alt + E
-        if (event.altKey && event.key.toLowerCase() === 'e') {
-            event.preventDefault();
-            exportConversations();
-            return;
-        }
-
-        // Import conversations (open picker): Ctrl/Cmd + Alt + I
-        if (event.altKey && event.key.toLowerCase() === 'i') {
-            event.preventDefault();
-            importInput.click();
-            return;
-        }
-
-        // Focus message input: Ctrl/Cmd + Alt + J
-        if (event.altKey && event.key.toLowerCase() === 'j') {
-            event.preventDefault();
-            userInput.focus();
-            return;
-        }
+        if (event.altKey && event.key.toLowerCase() === 'b') { event.preventDefault(); toggleSidebarBtn.click(); return; }
+        if (event.altKey && event.key.toLowerCase() === 't') { event.preventDefault(); toggleTheme(); return; }
+        if (event.altKey && event.key.toLowerCase() === 'e') { event.preventDefault(); exportConversations(); return; }
+        if (event.altKey && event.key.toLowerCase() === 'i') { event.preventDefault(); importInput.click(); return; }
+        if (event.altKey && event.key.toLowerCase() === 'j') { event.preventDefault(); userInput.focus(); return; }
     }
-    // Focus the history search with either Ctrl/Cmd+K or the Alt-modified variant.
-    if ((event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === 'k') && (!event.altKey || event.altKey)) {
-        // Allow both Ctrl+K and Ctrl+Alt+K for cross-browser consistency.
-        event.preventDefault();
-        historySearch.focus();
-        return;
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault(); historySearch.focus(); return;
     }
-
-    // New chat uses Ctrl/Cmd+Alt+N to avoid the browser's default new-window behavior.
     if ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === 'n') {
-        event.preventDefault();
-        newChatBtn.click();
-        return;
+        event.preventDefault(); newChatBtn.click(); return;
     }
-
-    // Toggle the preferences panel with Ctrl/Cmd + ,.
     if ((event.ctrlKey || event.metaKey) && event.key === ',') {
         event.preventDefault();
         if (sidebarSettings) toggleSidebarSettings(sidebarSettings.hidden);
         return;
     }
-
     if (event.key === 'Escape') {
-        if (pendingRequest) {
-            event.preventDefault();
-            cancelCurrentRequest();
-            return;
-        }
-
-        // Close the settings drawer when it is open; otherwise release focus from the search and input fields.
-        if (sidebarSettings && !sidebarSettings.hidden) {
-            toggleSidebarSettings(false);
-            return;
-        }
+        if (pendingRequest) { event.preventDefault(); cancelCurrentRequest(); return; }
+        if (sidebarSettings && !sidebarSettings.hidden) { toggleSidebarSettings(false); return; }
         historySearch.blur();
         userInput.blur();
     }
@@ -1091,25 +822,17 @@ const suggestedPrompts = [
 
 function renderSuggestedPrompts() {
     const conv = getActiveConversation();
-    // Show the suggestion bar only when the active conversation has not yet collected any user prompt.
     const hasUserMessage = Array.isArray(conv?.messages) && conv.messages.some(m => m.role === 'user' && (m.content || '').toString().trim() !== '');
     const shouldShow = Array.isArray(conv?.messages) && !hasUserMessage;
-
     suggestionPromptBar.innerHTML = '';
     suggestionPromptBar.classList.toggle('visible', shouldShow);
-
     if (!shouldShow) return;
-
     suggestedPrompts.forEach(prompt => {
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'suggestion-chip';
         chip.textContent = prompt;
-        chip.addEventListener('click', () => {
-            userInput.value = prompt;
-            userInput.focus();
-            handleSend();
-        });
+        chip.addEventListener('click', () => { userInput.value = prompt; userInput.focus(); handleSend(); });
         suggestionPromptBar.appendChild(chip);
     });
 }
@@ -1117,7 +840,6 @@ function renderSuggestedPrompts() {
 function clearActiveConversation() {
     const conv = getActiveConversation();
     if (!conv) return;
-
     conv.title = 'New chat';
     conv.messages = [{ role: 'bot', content: getWelcomeText() }];
     attachments = [];
@@ -1136,47 +858,34 @@ function renderActiveConversation() {
     renderSuggestedPrompts();
 }
 
-// --- Lightweight markdown rendering with HTML escaping ---
-
 function escapeHtml(str) {
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function renderMarkdown(raw) {
     let html = escapeHtml(raw);
-
-    html = html.replace(/```([a-zA-Z0-9]*)\n?([\s\S]*?)```/g, (match, lang, code) => {
-        return `<pre class="code-block"><code>${code.trim()}</code></pre>`;
-    });
+    html = html.replace(/```([a-zA-Z0-9]*)\n?([\s\S]*?)```/g, (m, lang, code) => `<pre class="code-block"><code>${code.trim()}</code></pre>`);
     html = html.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>');
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
     html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
     html = html.replace(/(^|\s)(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
     html = html.replace(/\n/g, '<br>');
-
     return html;
 }
 
 function copyToClipboard(text, button) {
     if (!navigator.clipboard) return;
     navigator.clipboard.writeText(text).then(() => {
-        // Toggle a transient state class without replacing the button's inner icon markup.
         button.classList.add('copied');
-        setTimeout(() => { button.classList.remove('copied'); }, 1500);
+        setTimeout(() => button.classList.remove('copied'), 1500);
     }).catch(() => {});
 }
 
 function getLatestUserMessageIndex(conv = getActiveConversation()) {
     if (!conv?.messages) return -1;
-
     let latestIndex = -1;
-    conv.messages.forEach((message, index) => {
-        if (message.role === 'user') latestIndex = index;
-    });
+    conv.messages.forEach((m, i) => { if (m.role === 'user') latestIndex = i; });
     return latestIndex;
 }
 
@@ -1186,7 +895,6 @@ function isLatestUserMessage(messageIndex, conv = getActiveConversation()) {
 
 function editPromptInComposer(text, messageIndex = null) {
     const targetIndex = messageIndex === null ? getLatestUserMessageIndex() : messageIndex;
-
     userInput.value = text;
     userInput.focus();
     userInput.select();
@@ -1194,71 +902,50 @@ function editPromptInComposer(text, messageIndex = null) {
     showComposerNotice('Editing the latest prompt. Send to replace it.');
 }
 
-// --- Message rendering and interaction helpers ---
-
 function streamBotMessage(messageDiv, text) {
     const content = messageDiv.querySelector('.message-content');
     if (!content) return;
-
     content.textContent = '';
     const chars = Array.from(text);
     let index = 0;
-
     const tick = () => {
-        if (index >= chars.length) {
-            content.innerHTML = renderMarkdown(text);
-            messageDiv.classList.remove('is-streaming');
-            chatBox.scrollTop = chatBox.scrollHeight;
-            return;
-        }
-
-        content.textContent += chars[index];
-        index += 1;
+        if (index >= chars.length) { content.innerHTML = renderMarkdown(text); messageDiv.classList.remove('is-streaming'); chatBox.scrollTop = chatBox.scrollHeight; return; }
+        content.textContent += chars[index]; index++;
         chatBox.scrollTop = chatBox.scrollHeight;
         setTimeout(tick, 12);
     };
-
     tick();
 }
 
 function createStreamingBotMessage() {
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message', 'bot-message', 'is-streaming');
-
     const avatar = document.createElement('div');
     avatar.className = 'message-avatar';
     avatar.setAttribute('aria-hidden', 'true');
     avatar.innerHTML = '<span class="material-symbols-outlined">smart_toy</span>';
     messageDiv.appendChild(avatar);
-
     const messageBody = document.createElement('div');
     messageBody.className = 'message-body';
-
     const content = document.createElement('div');
     content.className = 'message-content';
-    content.textContent = '';
     messageBody.appendChild(content);
-
     const cursor = document.createElement('span');
     cursor.className = 'stream-cursor';
     cursor.textContent = '|';
     messageBody.appendChild(cursor);
-
     const actions = document.createElement('div');
     actions.className = 'message-actions';
-
     const copyBtn = document.createElement('button');
     copyBtn.type = 'button';
     copyBtn.className = 'msg-action-btn';
     copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>Copy';
     copyBtn.addEventListener('click', () => copyToClipboard(content.textContent || '', copyBtn));
     actions.appendChild(copyBtn);
-
     messageBody.appendChild(actions);
     messageDiv.appendChild(messageBody);
     chatBox.appendChild(messageDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
-
     return { messageDiv, content, cursor };
 }
 
@@ -1266,24 +953,19 @@ function updateStreamingBotMessage(messageDiv, partialText, { ragContextUsed = f
     const content = messageDiv.querySelector('.message-content');
     if (!content) return;
     content.textContent = partialText;
-    if (ragContextUsed) {
-        messageDiv.dataset.ragContextUsed = 'true';
-    }
+    if (ragContextUsed) messageDiv.dataset.ragContextUsed = 'true';
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function finalizeStreamingBotMessage(messageDiv, finalText, persist = true) {
     const content = messageDiv.querySelector('.message-content');
     if (!content) return;
-    const noticeMarkup = messageDiv.dataset.ragContextUsed === 'true'
-        ? '<div class="rag-context-indicator">Answering from your documents…</div>'
-        : '';
+    const noticeMarkup = messageDiv.dataset.ragContextUsed === 'true' ? '<div class="rag-context-indicator">Answering from your documents…</div>' : '';
     content.innerHTML = `${noticeMarkup}${renderMarkdown(finalText)}`;
     messageDiv.classList.remove('is-streaming');
     const cursor = messageDiv.querySelector('.stream-cursor');
     if (cursor) cursor.remove();
     chatBox.scrollTop = chatBox.scrollHeight;
-
     if (persist) {
         const conv = getActiveConversation();
         conv.messages.push({ role: 'bot', content: finalText });
@@ -1291,7 +973,6 @@ function finalizeStreamingBotMessage(messageDiv, finalText, persist = true) {
         persistConversation(conv);
         renderHistoryList();
     }
-
     return messageDiv;
 }
 
@@ -1307,13 +988,11 @@ function finalizeStreamingBotMessageWithError(messageDiv, partialText, errorMess
     notice.textContent = `Error: ${errorMessage}`;
     messageDiv.appendChild(notice);
     chatBox.scrollTop = chatBox.scrollHeight;
-
     const conv = getActiveConversation();
     conv.messages.push({ role: 'bot', content: partialText });
     saveState();
     persistConversation(conv);
     renderHistoryList();
-
     return messageDiv;
 }
 
@@ -1321,22 +1000,13 @@ function buildAttachmentPillsHtml(msgAttachments) {
     if (!Array.isArray(msgAttachments) || !msgAttachments.length) return '';
     const pills = msgAttachments.map(item => {
         if (item.type?.startsWith('image/') && item.previewUrl) {
-            return `<div class="msg-attachment-pill msg-attachment-image">
-                      <img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.name)}" class="msg-attachment-img-preview">
-                      <span class="msg-attachment-filename">${escapeHtml(item.name)}</span>
-                    </div>`;
+            return `<div class="msg-attachment-pill msg-attachment-image"><img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.name)}" class="msg-attachment-img-preview"><span class="msg-attachment-filename">${escapeHtml(item.name)}</span></div>`;
         }
         const iconMap = { pdf: 'picture_as_pdf', json: 'data_object', csv: 'table_chart', md: 'article' };
         const ext = (item.name || '').split('.').pop()?.toLowerCase() || '';
         const icon = iconMap[ext] || 'attach_file';
         const sizeLabel = item.size ? ` · ${formatFileSize(item.size)}` : '';
-        return `<div class="msg-attachment-pill msg-attachment-file">
-                  <span class="material-symbols-outlined msg-attachment-icon">${escapeHtml(icon)}</span>
-                  <div class="msg-attachment-info">
-                    <span class="msg-attachment-filename">${escapeHtml(item.name)}</span>
-                    <span class="msg-attachment-filemeta">${escapeHtml(ext.toUpperCase())}${escapeHtml(sizeLabel)}</span>
-                  </div>
-                </div>`;
+        return `<div class="msg-attachment-pill msg-attachment-file"><span class="material-symbols-outlined msg-attachment-icon">${escapeHtml(icon)}</span><div class="msg-attachment-info"><span class="msg-attachment-filename">${escapeHtml(item.name)}</span><span class="msg-attachment-filemeta">${escapeHtml(ext.toUpperCase())}${escapeHtml(sizeLabel)}</span></div></div>`;
     });
     return `<div class="msg-attachments-row">${pills.join('')}</div>`;
 }
@@ -1344,50 +1014,32 @@ function buildAttachmentPillsHtml(msgAttachments) {
 function appendMessage(text, sender, options = {}, messageIndex = null) {
     const { persist = true, animate = false, attachments: msgAttachments = [] } = options;
     const conv = getActiveConversation();
-
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
-
     const avatar = document.createElement('div');
     avatar.className = 'message-avatar';
     avatar.setAttribute('aria-hidden', 'true');
-    avatar.innerHTML = sender === 'user'
-        ? '<span class="material-symbols-outlined">person</span>'
-        : '<span class="material-symbols-outlined">smart_toy</span>';
+    avatar.innerHTML = sender === 'user' ? '<span class="material-symbols-outlined">person</span>' : '<span class="material-symbols-outlined">smart_toy</span>';
     messageDiv.appendChild(avatar);
-
     const messageBody = document.createElement('div');
     messageBody.className = 'message-body';
     messageDiv.appendChild(messageBody);
-
-    // Render attachment pills above message text for user messages
     if (sender === 'user' && msgAttachments.length > 0) {
         const pillsHtml = buildAttachmentPillsHtml(msgAttachments);
-        if (pillsHtml) {
-            const pillsWrapper = document.createElement('div');
-            pillsWrapper.innerHTML = pillsHtml;
-            messageBody.appendChild(pillsWrapper.firstElementChild);
-        }
+        if (pillsHtml) { const pw = document.createElement('div'); pw.innerHTML = pillsHtml; messageBody.appendChild(pw.firstElementChild); }
     }
-
     const content = document.createElement('div');
     content.className = 'message-content';
     messageBody.appendChild(content);
-
     const actions = document.createElement('div');
     actions.className = 'message-actions';
-
     const copyBtn = document.createElement('button');
     copyBtn.type = 'button';
     copyBtn.className = 'msg-action-btn';
     copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>Copy';
     copyBtn.addEventListener('click', () => copyToClipboard(text, copyBtn));
     actions.appendChild(copyBtn);
-
-    const renderIndex = messageIndex !== null && messageIndex !== undefined
-        ? messageIndex
-        : (sender === 'user' ? conv.messages.length : null);
-
+    const renderIndex = messageIndex !== null && messageIndex !== undefined ? messageIndex : (sender === 'user' ? conv.messages.length : null);
     if (sender === 'user' && isLatestUserMessage(renderIndex, conv)) {
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
@@ -1396,45 +1048,30 @@ function appendMessage(text, sender, options = {}, messageIndex = null) {
         editBtn.addEventListener('click', () => editPromptInComposer(text, renderIndex));
         actions.appendChild(editBtn);
     }
-
     if (sender === 'bot') {
-        if (animate) {
-            messageDiv.classList.add('is-streaming');
-            streamBotMessage(messageDiv, text);
-        } else {
-            const noticeMarkup = messageDiv.dataset.ragContextUsed === 'true'
-                ? '<div class="rag-context-indicator">Answering from your documents…</div>'
-                : '';
+        if (animate) { messageDiv.classList.add('is-streaming'); streamBotMessage(messageDiv, text); }
+        else {
+            const noticeMarkup = messageDiv.dataset.ragContextUsed === 'true' ? '<div class="rag-context-indicator">Answering from your documents…</div>' : '';
             content.innerHTML = `${noticeMarkup}${renderMarkdown(text)}`;
         }
-    } else {
-        content.textContent = text;
-    }
-
+    } else { content.textContent = text; }
     messageBody.appendChild(actions);
     chatBox.appendChild(messageDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
-
     if (persist) {
         conv.messages.push({ role: sender === 'user' ? 'user' : 'bot', content: text });
-        if (conv.title === 'New chat' && sender === 'user' && text.trim()) {
-            conv.title = text.length > 28 ? text.slice(0, 28) + '…' : text;
-        }
+        if (conv.title === 'New chat' && sender === 'user' && text.trim()) conv.title = text.length > 28 ? text.slice(0, 28) + '…' : text;
         saveState();
         persistConversation(conv);
         renderHistoryList();
     }
-
     return messageDiv;
 }
 
 function addRegenerateButton(botEl, userText, attachmentsSnapshot, historyForRequest) {
-    // Only the latest bot message should offer regeneration.
     document.querySelectorAll('.regenerate-btn').forEach(btn => btn.remove());
-
     const actions = botEl.querySelector('.message-actions');
     if (!actions) return;
-
     const regenBtn = document.createElement('button');
     regenBtn.type = 'button';
     regenBtn.className = 'msg-action-btn regenerate-btn';
@@ -1453,17 +1090,7 @@ function showFallbackMessage(message = 'The assistant is temporarily unavailable
     appendMessage(message, 'bot');
 }
 
-// --- Attachment handling ---
-
-// Supported file types for non-image attachments that the AI can read
-const SUPPORTED_TEXT_EXTENSIONS = new Set([
-    '.txt', '.md', '.markdown', '.json', '.csv', '.tsv',
-    '.yaml', '.yml', '.xml', '.html', '.htm', '.css',
-    '.js', '.ts', '.jsx', '.tsx', '.py', '.rb', '.go',
-    '.rs', '.java', '.c', '.cpp', '.h', '.sh', '.env',
-    '.toml', '.ini', '.log'
-]);
-
+const SUPPORTED_TEXT_EXTENSIONS = new Set(['.txt','.md','.markdown','.json','.csv','.tsv','.yaml','.yml','.xml','.html','.htm','.css','.js','.ts','.jsx','.tsx','.py','.rb','.go','.rs','.java','.c','.cpp','.h','.sh','.env','.toml','.ini','.log']);
 const SUPPORTED_BINARY_EXTENSIONS = new Set(['.pdf']);
 
 function getFileIcon(file) {
@@ -1471,12 +1098,12 @@ function getFileIcon(file) {
     const type = file.type || '';
     if (type.startsWith('image/')) return 'image';
     if (ext === 'pdf') return 'picture_as_pdf';
-    if (['json', 'yaml', 'yml', 'xml', 'toml', 'ini'].includes(ext)) return 'data_object';
-    if (['csv', 'tsv'].includes(ext)) return 'table_chart';
-    if (['js', 'ts', 'jsx', 'tsx', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'sh'].includes(ext)) return 'code';
-    if (['html', 'htm', 'css'].includes(ext)) return 'web';
-    if (['md', 'markdown'].includes(ext)) return 'article';
-    if (['log', 'txt'].includes(ext)) return 'text_snippet';
+    if (['json','yaml','yml','xml','toml','ini'].includes(ext)) return 'data_object';
+    if (['csv','tsv'].includes(ext)) return 'table_chart';
+    if (['js','ts','jsx','tsx','py','rb','go','rs','java','c','cpp','h','sh'].includes(ext)) return 'code';
+    if (['html','htm','css'].includes(ext)) return 'web';
+    if (['md','markdown'].includes(ext)) return 'article';
+    if (['log','txt'].includes(ext)) return 'text_snippet';
     return 'attach_file';
 }
 
@@ -1494,57 +1121,42 @@ function formatFileSize(bytes) {
 
 function renderAttachments() {
     attachmentPreview.innerHTML = '';
-
     attachments.forEach((item, index) => {
         const chip = document.createElement('div');
         chip.className = 'attachment-chip';
         chip.setAttribute('role', 'listitem');
         chip.setAttribute('aria-label', `Attached: ${item.name}`);
-
         if (item.previewUrl && item.type?.startsWith('image/')) {
-            // Image: show thumbnail
             const img = document.createElement('img');
-            img.src = item.previewUrl;
-            img.alt = item.name;
-            img.className = 'attachment-thumb';
+            img.src = item.previewUrl; img.alt = item.name; img.className = 'attachment-thumb';
             chip.appendChild(img);
         } else {
-            // Non-image: show material icon
             const iconEl = document.createElement('span');
             iconEl.className = 'material-symbols-outlined attachment-file-icon';
             iconEl.setAttribute('aria-hidden', 'true');
             iconEl.textContent = getFileIcon(item);
             chip.appendChild(iconEl);
         }
-
         const meta = document.createElement('div');
         meta.className = 'attachment-meta';
-
         const name = document.createElement('span');
         name.className = 'attachment-name';
         const displayName = item.name.length > 22 ? `${item.name.slice(0, 19)}…` : item.name;
-        name.textContent = displayName;
-        name.title = item.name;
+        name.textContent = displayName; name.title = item.name;
         meta.appendChild(name);
-
         if (item.size) {
             const size = document.createElement('span');
             size.className = 'attachment-size';
             size.textContent = formatFileSize(item.size);
             meta.appendChild(size);
         }
-
         chip.appendChild(meta);
-
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.className = 'attachment-remove-btn';
         removeBtn.setAttribute('aria-label', `Remove ${item.name}`);
         removeBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
-        removeBtn.addEventListener('click', () => {
-            attachments.splice(index, 1);
-            renderAttachments();
-        });
+        removeBtn.addEventListener('click', () => { attachments.splice(index, 1); renderAttachments(); });
         chip.appendChild(removeBtn);
         attachmentPreview.appendChild(chip);
     });
@@ -1566,63 +1178,29 @@ function showComposerNotice(message) {
 }
 
 function addAttachment(file) {
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-        showComposerNotice(`"${file.name}" exceeds the 8 MB limit.`);
-        return;
-    }
-
-    if (attachments.length >= 6) {
-        showComposerNotice('Maximum 6 attachments per message.');
-        return;
-    }
-
-    // Check for duplicates
-    if (attachments.some(a => a.name === file.name && a.size === file.size)) {
-        showComposerNotice(`"${file.name}" is already attached.`);
-        return;
-    }
-
-    if (!isFileSupported(file)) {
-        const ext = '.' + (file.name || '').split('.').pop()?.toLowerCase();
-        showComposerNotice(`"${file.name}" (${ext}) is not supported. Use images, PDF, or text/code files.`);
-        return;
-    }
-
+    if (file.size > MAX_ATTACHMENT_BYTES) { showComposerNotice(`"${file.name}" exceeds the 8 MB limit.`); return; }
+    if (attachments.length >= 6) { showComposerNotice('Maximum 6 attachments per message.'); return; }
+    if (attachments.some(a => a.name === file.name && a.size === file.size)) { showComposerNotice(`"${file.name}" is already attached.`); return; }
+    if (!isFileSupported(file)) { const ext = '.' + (file.name||'').split('.').pop()?.toLowerCase(); showComposerNotice(`"${file.name}" (${ext}) is not supported.`); return; }
     const reader = new FileReader();
-    reader.onload = () => {
-        attachments.push({
-            name: file.name,
-            type: file.type || 'application/octet-stream',
-            size: file.size,
-            previewUrl: reader.result
-        });
-        renderAttachments();
-    };
-    reader.onerror = () => {
-        showComposerNotice(`Couldn't read "${file.name}".`);
-    };
+    reader.onload = () => { attachments.push({ name: file.name, type: file.type || 'application/octet-stream', size: file.size, previewUrl: reader.result }); renderAttachments(); };
+    reader.onerror = () => showComposerNotice(`Couldn't read "${file.name}".`);
     reader.readAsDataURL(file);
 }
 
 function handleAttachmentSelection(event) {
-    const files = Array.from(event.target.files || []);
-    files.forEach(addAttachment);
+    Array.from(event.target.files || []).forEach(addAttachment);
     event.target.value = '';
 }
-
-// --- Provider / model control state ---
 
 function populateModels() {
     const provider = providerSelect.value;
     modelSelect.innerHTML = '';
-
     modelOptions[provider].forEach(option => {
         const opt = document.createElement('option');
-        opt.value = option.value;
-        opt.textContent = option.label;
+        opt.value = option.value; opt.textContent = option.label;
         modelSelect.appendChild(opt);
     });
-
     updateStatusPill();
 }
 
@@ -1635,8 +1213,7 @@ function updateStatusPill() {
 
 function toggleThinking() {
     thinkingToggle.classList.toggle('active');
-    const enabled = thinkingToggle.classList.contains('active');
-    thinkingToggle.setAttribute('aria-checked', String(enabled));
+    thinkingToggle.setAttribute('aria-checked', String(thinkingToggle.classList.contains('active')));
 }
 
 function toggleAutoSubmit() {
@@ -1654,402 +1231,284 @@ function speakResponse(text) {
     window.speechSynthesis.speak(utterance);
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// GROQ VOICE AGENT  –  replaces Gemini Live
+// Flow: orb tap → open mic → record → send to server via WS (groq-voice) →
+//       server does Whisper STT + LLM → client gets reply text → browser TTS
+// ══════════════════════════════════════════════════════════════════════════════
+
 function setLiveOrbState(state) {
     if (!liveOrb) return;
-    liveOrb.classList.remove('listening', 'speaking', 'error');
+    liveOrb.classList.remove('listening', 'speaking', 'error', 'thinking');
     if (state) liveOrb.classList.add(state);
 }
 
 function setLiveStatus(text, state = '') {
-    if (liveStatusText) {
-        liveStatusText.textContent = text || 'Connecting…';
-    }
-    if (state) {
-        setLiveOrbState(state);
-    }
+    if (liveStatusText) liveStatusText.textContent = text || 'Connecting…';
+    if (state) setLiveOrbState(state);
 }
 
 function setLiveTranscript(text) {
     if (!liveTranscript) return;
-    liveTranscript.textContent = text || 'Tap the orb to begin speaking with Gemini Live.';
+    liveTranscript.textContent = text || 'Tap the orb to begin speaking.';
 }
 
-async function loadGeminiConfig() {
-    try {
-        const response = await fetch('/api/config');
-        if (!response.ok) return;
-        const data = await response.json();
-        window.GEMINI_API_KEY = data?.geminiKey || '';
-    } catch (error) {
-        window.GEMINI_API_KEY = window.GEMINI_API_KEY || '';
+/** Stop browser TTS if it is playing */
+function stopGroqTTS() {
+    if (typeof window.speechSynthesis !== 'undefined') {
+        window.speechSynthesis.cancel();
     }
+    groqVoiceTtsUtterance = null;
 }
 
-function float32ToPcm16Base64(samples) {
-    const pcm = new Int16Array(samples.length);
-    for (let i = 0; i < samples.length; i += 1) {
-        const sample = Math.max(-1, Math.min(1, samples[i] || 0));
-        pcm[i] = Math.max(-32768, Math.min(32767, Math.round(sample * 32767)));
+/** Speak text via browser TTS, then signal server that speaking is done */
+function groqTTSSpeak(text) {
+    if (!text || typeof window.speechSynthesis === 'undefined') {
+        notifyGroqDoneSpeaking();
+        return;
     }
-
-    const buffer = new ArrayBuffer(pcm.byteLength);
-    const view = new DataView(buffer);
-    for (let i = 0; i < pcm.length; i += 1) {
-        view.setInt16(i * 2, pcm[i], true);
-    }
-
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i += 1) {
-        binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
+    stopGroqTTS();
+    setLiveOrbState('speaking');
+    setLiveStatus('Speaking…', 'speaking');
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.onend = () => notifyGroqDoneSpeaking();
+    utterance.onerror = () => notifyGroqDoneSpeaking();
+    groqVoiceTtsUtterance = utterance;
+    window.speechSynthesis.speak(utterance);
 }
 
-function stopLiveAudioCapture() {
-    if (liveMicCaptureTimer) {
-        window.clearInterval(liveMicCaptureTimer);
-        liveMicCaptureTimer = null;
-    }
-
-    if (liveScriptProcessor) {
-        try { liveScriptProcessor.disconnect(); } catch (error) {}
-        liveScriptProcessor.onaudioprocess = null;
-        liveScriptProcessor = null;
-    }
-
-    if (liveAudioWorkletNode) {
-        try { liveAudioWorkletNode.disconnect(); } catch (error) {}
-        liveAudioWorkletNode.port.onmessage = null;
-        liveAudioWorkletNode = null;
-    }
-
-    if (liveSourceNode) {
-        try { liveSourceNode.disconnect(); } catch (error) {}
-        liveSourceNode = null;
-    }
-
-    if (liveMicStream) {
-        liveMicStream.getTracks().forEach(track => track.stop());
-        liveMicStream = null;
-    }
-
-    livePendingAudioSamples = [];
-
-    if (liveAudioContext) {
-        liveAudioContext.close().catch(() => {});
-        liveAudioContext = null;
-    }
+function notifyGroqDoneSpeaking() {
+    groqVoiceTtsUtterance = null;
+    if (!groqVoiceActive || !groqVoiceSocket || groqVoiceSocket.readyState !== WebSocket.OPEN) return;
+    groqVoiceSocket.send(JSON.stringify({ type: 'groq-voice', action: 'done-speaking' }));
+    setLiveOrbState('listening');
+    setLiveStatus('Listening… tap orb to speak.', 'listening');
 }
 
-async function ensureLiveAudioContext() {
-    if (!liveAudioContext) {
-        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextCtor) return null;
-        liveAudioContext = new AudioContextCtor();
+/** Stop mic recording and release stream */
+function stopGroqMic() {
+    if (groqVoiceMediaRecorder && groqVoiceIsRecording) {
+        try { groqVoiceMediaRecorder.stop(); } catch (e) {}
     }
-
-    if (liveAudioContext.state === 'suspended') {
-        await liveAudioContext.resume();
+    groqVoiceIsRecording = false;
+    groqVoiceMediaRecorder = null;
+    if (groqVoiceMicStream) {
+        groqVoiceMicStream.getTracks().forEach(t => t.stop());
+        groqVoiceMicStream = null;
     }
-
-    return liveAudioContext;
+    groqVoiceAudioChunks = [];
 }
 
-function playAudioChunk(base64pcm) {
-    if (!base64pcm) return;
+/**
+ * Record one utterance: open mic → record → on stop, send audio chunks to
+ * server then fire end-utterance so server does STT + LLM.
+ */
+async function groqStartRecording() {
+    if (groqVoiceIsRecording) return; // already recording
 
-    const playChunk = async () => {
-        const audioContextToUse = await ensureLiveAudioContext();
-        if (!audioContextToUse) return;
-
-        try {
-            const binary = atob(base64pcm);
-            const buffer = new ArrayBuffer(binary.length);
-            const bytes = new Uint8Array(buffer);
-            for (let i = 0; i < binary.length; i += 1) {
-                bytes[i] = binary.charCodeAt(i);
-            }
-
-            const pcmData = new Int16Array(buffer);
-            const pcmBuffer = audioContextToUse.createBuffer(1, pcmData.length, 24000);
-            const channelData = pcmBuffer.getChannelData(0);
-            for (let i = 0; i < pcmData.length; i += 1) {
-                channelData[i] = pcmData[i] / 32768;
-            }
-
-            const source = audioContextToUse.createBufferSource();
-            source.buffer = pcmBuffer;
-            source.connect(audioContextToUse.destination);
-            source.start();
-        } catch (error) {
-            // Playback failures are non-fatal; continue the interaction flow without blocking the UI.
-        }
-    };
-
-    playChunk();
-}
-
-async function captureMicPCM16(onChunk) {
     if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error('Microphone access is not supported in this browser.');
+        setLiveStatus('Mic not supported in this browser.', 'error');
+        return;
     }
-
-    const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-        }
-    });
-
-    liveMicStream = stream;
-    const audioContextToUse = await ensureLiveAudioContext();
-    if (!audioContextToUse) {
-        throw new Error('Audio context is unavailable.');
-    }
-
-    livePendingAudioSamples = [];
-
-    const processAudioData = (samples) => {
-        if (!samples || !samples.length) return;
-        livePendingAudioSamples.push(...samples);
-    };
 
     try {
-        const useWorklet = typeof window.AudioWorkletNode !== 'undefined' && audioContextToUse.audioWorklet;
-        if (useWorklet) {
-            try {
-                const workletCode = `class MicCaptureProcessor extends AudioWorkletProcessor { process(inputs) { const input = inputs[0]; if (input && input[0]) { this.port.postMessage(input[0]); } return true; } } registerProcessor('mic-capture-processor', MicCaptureProcessor);`;
-                const workletUrl = URL.createObjectURL(new Blob([workletCode], { type: 'text/javascript' }));
-                await audioContextToUse.audioWorklet.addModule(workletUrl);
-                liveAudioWorkletNode = new AudioWorkletNode(audioContextToUse, 'mic-capture-processor');
-                liveAudioWorkletNode.port.onmessage = (event) => {
-                    processAudioData(Array.from(event.data));
-                };
-                liveSourceNode = audioContextToUse.createMediaStreamSource(stream);
-                liveSourceNode.connect(liveAudioWorkletNode);
-
-                const silenceGain = audioContextToUse.createGain();
-                silenceGain.gain.value = 0;
-                liveAudioWorkletNode.connect(silenceGain);
-                silenceGain.connect(audioContextToUse.destination);
-            } catch (workletError) {
-                console.warn('AudioWorklet failed, falling back to ScriptProcessor:', workletError);
-                liveScriptProcessor = audioContextToUse.createScriptProcessor(4096, 1, 1);
-                liveSourceNode = audioContextToUse.createMediaStreamSource(stream);
-                liveSourceNode.connect(liveScriptProcessor);
-
-                const silenceGain = audioContextToUse.createGain();
-                silenceGain.gain.value = 0;
-                liveScriptProcessor.connect(silenceGain);
-                silenceGain.connect(audioContextToUse.destination);
-
-                liveScriptProcessor.onaudioprocess = (event) => {
-                    const samples = event.inputBuffer.getChannelData(0);
-                    processAudioData(Array.from(samples));
-                };
-            }
-        } else {
-            liveScriptProcessor = audioContextToUse.createScriptProcessor(4096, 1, 1);
-            liveSourceNode = audioContextToUse.createMediaStreamSource(stream);
-            liveSourceNode.connect(liveScriptProcessor);
-
-            const silenceGain = audioContextToUse.createGain();
-            silenceGain.gain.value = 0;
-            liveScriptProcessor.connect(silenceGain);
-            silenceGain.connect(audioContextToUse.destination);
-
-            liveScriptProcessor.onaudioprocess = (event) => {
-                const samples = event.inputBuffer.getChannelData(0);
-                processAudioData(Array.from(samples));
-            };
-        }
-    } catch (error) {
-        try { stream.getTracks().forEach(track => track.stop()); } catch (stopError) {}
-        throw error;
-    }
-
-    liveMicCaptureTimer = window.setInterval(() => {
-        if (!livePendingAudioSamples.length) return;
-        const chunk = livePendingAudioSamples.splice(0, livePendingAudioSamples.length);
-        const base64 = float32ToPcm16Base64(chunk);
-        if (typeof onChunk === 'function') {
-            onChunk(base64);
-        }
-    }, 100);
-}
-
-function handleLiveMessage(event) {
-    let payload;
-    try {
-        payload = typeof event?.data === 'string' ? JSON.parse(event.data) : JSON.parse(String(event?.data || ''));
-    } catch (error) {
-        return;
-    }
-
-    if (payload?.error) {
-        setLiveStatus('Live response error.', 'error');
-        setLiveTranscript(payload.error.message || 'The live session returned an error.');
-        return;
-    }
-
-    if (payload?.setupComplete) {
-        setLiveStatus('Connected', 'listening');
-        setLiveTranscript('Live voice ready. Speak now.');
-        return;
-    }
-
-    const parts = payload?.serverContent?.modelTurn?.parts || [];
-    let transcriptText = '';
-    let audioChunk = '';
-
-    parts.forEach((part) => {
-        if (part?.text) {
-            transcriptText += part.text;
-        }
-        if (part?.inlineData?.data && part.inlineData?.mimeType?.includes('audio')) {
-            audioChunk = part.inlineData.data;
-        }
-    });
-
-    if (transcriptText) {
-        liveTranscriptBuffer = (liveTranscriptBuffer + transcriptText).trim();
-        setLiveTranscript(liveTranscriptBuffer || transcriptText);
-    }
-
-    if (audioChunk) {
-        setLiveOrbState('speaking');
-        playAudioChunk(audioChunk);
-    }
-
-    if (payload?.serverContent?.turnComplete) {
-        setLiveOrbState('listening');
-    }
-}
-
-function sendLiveSetupMessage() {
-    if (!liveSocket || liveSocket.readyState !== WebSocket.OPEN) return;
-
-    liveSocket.send(JSON.stringify({
-        type: 'live-voice',
-        action: 'setup',
-        model: 'models/gemini-2.0-flash-live-001',
-        voiceName: liveCurrentVoice
-    }));
-}
-
-function openLiveVoiceModal() {
-    if (liveVoiceModal) {
-        liveVoiceModal.hidden = false;
-    }
-    setLiveStatus('Connecting…');
-    setLiveTranscript('Connecting to Gemini Live…');
-    setLiveOrbState('');
-    startGeminiLiveSession();
-}
-
-function stopGeminiLiveSession({ hideModal = true, resetStatus = true } = {}) {
-    liveSessionActive = false;
-    setLiveOrbState('');
-
-    if (liveSocket) {
-        const socket = liveSocket;
-        liveSocket = null;
-        try { socket.close(); } catch (error) {}
-    }
-
-    stopLiveAudioCapture();
-
-    if (resetStatus) {
-        setLiveStatus('Disconnected', '');
-        setLiveTranscript('Session ended.');
-    }
-
-    if (hideModal && liveVoiceModal) {
-        liveVoiceModal.hidden = true;
-    }
-}
-
-function closeLiveVoiceModal() {
-    stopGeminiLiveSession({ hideModal: true, resetStatus: true });
-}
-
-function retryLiveVoiceSession() {
-    stopGeminiLiveSession({ hideModal: false, resetStatus: false });
-    setLiveStatus('Retrying…', '');
-    setLiveTranscript('Attempting to reconnect to Gemini Live…');
-    startGeminiLiveSession();
-}
-
-async function startGeminiLiveSession() {
-    if (liveSessionActive) return;
-
-    liveSessionActive = true;
-    liveCurrentVoice = liveVoiceSelect?.value || liveCurrentVoice;
-    liveTranscriptBuffer = '';
-    setLiveStatus('Connecting…', '');
-
-    liveSocket = new WebSocket('/api/live-voice');
-
-    liveSocket.addEventListener('open', () => {
-        console.log('Live voice websocket opened', liveSocket.url);
-        setLiveStatus('Listening…', 'listening');
-        sendLiveSetupMessage();
-        captureMicPCM16((pcmBase64) => {
-            if (!liveSocket || liveSocket.readyState !== WebSocket.OPEN) return;
-            liveSocket.send(JSON.stringify({
-                type: 'live-voice',
-                action: 'audio',
-                data: pcmBase64
-            }));
-        }).catch((error) => {
-            const message = error?.message || 'Unable to start microphone.';
-            setLiveStatus(`Mic error: ${message}`, 'error');
-            setLiveTranscript(`Microphone capture failed: ${message}`);
-            stopGeminiLiveSession({ hideModal: false, resetStatus: false });
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
         });
-    });
+        groqVoiceMicStream = stream;
+        groqVoiceAudioChunks = [];
 
-    liveSocket.addEventListener('message', (event) => {
-        handleLiveMessage(event);
-    });
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+        const recorder = new MediaRecorder(stream, { mimeType });
+        groqVoiceMediaRecorder = recorder;
 
-    liveSocket.addEventListener('error', () => {
-        setLiveStatus('Live connection error.', 'error');
-        setLiveTranscript('The live session could not be established. Check the server and browser permissions.');
-        stopGeminiLiveSession({ hideModal: false, resetStatus: false });
-    });
+        recorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) groqVoiceAudioChunks.push(e.data);
+        };
 
-    liveSocket.addEventListener('close', () => {
-        if (liveSessionActive) {
-            setLiveStatus('Connection closed.', '');
-            setLiveTranscript('The Gemini Live session ended.');
+        recorder.onstop = async () => {
+            stream.getTracks().forEach(t => t.stop());
+            groqVoiceMicStream = null;
+            groqVoiceIsRecording = false;
+            groqVoiceMediaRecorder = null;
+
+            if (!groqVoiceActive || !groqVoiceSocket || groqVoiceSocket.readyState !== WebSocket.OPEN) return;
+            if (!groqVoiceAudioChunks.length) {
+                setLiveStatus('No audio captured. Tap orb to try again.', 'listening');
+                setLiveTranscript('No audio captured. Tap orb to speak.');
+                return;
+            }
+
+            // Convert to base64 and send in a single message
+            const blob = new Blob(groqVoiceAudioChunks, { type: mimeType });
+            groqVoiceAudioChunks = [];
+            const arrayBuffer = await blob.arrayBuffer();
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+            // Send audio data
+            groqVoiceSocket.send(JSON.stringify({ type: 'groq-voice', action: 'audio', data: base64 }));
+            // Signal end of utterance so server can transcribe + respond
+            groqVoiceSocket.send(JSON.stringify({ type: 'groq-voice', action: 'end-utterance' }));
+
+            setLiveOrbState('thinking');
+            setLiveStatus('Processing…', 'thinking');
+        };
+
+        recorder.start();
+        groqVoiceIsRecording = true;
+        setLiveOrbState('listening');
+        setLiveStatus('Recording… tap orb to stop.', 'listening');
+        setLiveTranscript('Listening…');
+
+    } catch (err) {
+        setLiveStatus(`Mic error: ${err.message}`, 'error');
+        setLiveTranscript(`Microphone error: ${err.message}`);
+        groqVoiceIsRecording = false;
+    }
+}
+
+/** Toggle record on/off when the user taps the orb */
+function handleOrbTap() {
+    if (!groqVoiceActive) return;
+    if (groqVoiceIsRecording) {
+        stopGroqMic(); // onstop fires → sends audio + end-utterance
+    } else {
+        stopGroqTTS(); // stop any ongoing speech first
+        groqStartRecording();
+    }
+}
+
+/** Handle all incoming server messages for the groq-voice channel */
+function handleGroqVoiceMessage(data) {
+    if (data.type === 'groq-voice-status') {
+        const { status, message } = data;
+        if (status === 'ready') {
+            setLiveStatus('Ready — tap orb to speak.', 'listening');
+            setLiveTranscript('Tap the orb to begin speaking.');
+        } else if (status === 'transcribing') {
+            setLiveOrbState('thinking');
+            setLiveStatus('Transcribing…', 'thinking');
+        } else if (status === 'thinking') {
+            setLiveOrbState('thinking');
+            setLiveStatus('Thinking…', 'thinking');
+        } else if (status === 'speaking') {
+            // TTS is handled client-side; server just echoes status
+        } else if (status === 'error') {
+            setLiveOrbState('error');
+            setLiveStatus(`Error: ${message}`, 'error');
+            setLiveTranscript(message || 'An error occurred.');
         }
-        stopLiveAudioCapture();
-        liveSessionActive = false;
+    } else if (data.type === 'groq-voice-transcript') {
+        // Display the transcript (user or assistant) in the transcript area
+        const prefix = data.role === 'user' ? 'You: ' : 'AI: ';
+        setLiveTranscript(prefix + (data.text || ''));
+    } else if (data.type === 'groq-voice-reply') {
+        // Speak the AI reply using browser TTS
+        groqTTSSpeak(data.text || '');
+    }
+}
+
+/** Open the modal and connect to the Groq voice WS channel */
+function openLiveVoiceModal() {
+    if (liveVoiceModal) liveVoiceModal.hidden = false;
+    setLiveStatus('Connecting…', '');
+    setLiveTranscript('Connecting to Groq voice agent…');
+    setLiveOrbState('');
+    startGroqVoiceSession();
+}
+
+/** Disconnect and hide the modal */
+function closeLiveVoiceModal() {
+    stopGroqVoiceSession({ hideModal: true });
+}
+
+/** Retry the connection */
+function retryLiveVoiceSession() {
+    stopGroqVoiceSession({ hideModal: false });
+    setLiveStatus('Retrying…', '');
+    setLiveTranscript('Reconnecting to Groq voice agent…');
+    setTimeout(() => startGroqVoiceSession(), 400);
+}
+
+function stopGroqVoiceSession({ hideModal = true } = {}) {
+    groqVoiceActive = false;
+    stopGroqTTS();
+    stopGroqMic();
+
+    if (groqVoiceSocket) {
+        const s = groqVoiceSocket;
+        groqVoiceSocket = null;
+        try {
+            s.send(JSON.stringify({ type: 'groq-voice', action: 'end' }));
+            s.close();
+        } catch (e) {}
+    }
+
+    setLiveOrbState('');
+    setLiveStatus('Disconnected', '');
+    setLiveTranscript('Session ended.');
+
+    if (hideModal && liveVoiceModal) liveVoiceModal.hidden = true;
+}
+
+async function startGroqVoiceSession() {
+    if (groqVoiceActive) return;
+    groqVoiceActive = true;
+
+    groqVoiceSocket = new WebSocket(WS_ENDPOINT);
+
+    groqVoiceSocket.addEventListener('open', () => {
+        // Send setup message to initialise Groq voice session on server
+        groqVoiceSocket.send(JSON.stringify({ type: 'groq-voice', action: 'setup' }));
+    });
+
+    groqVoiceSocket.addEventListener('message', (event) => {
+        let payload;
+        try { payload = JSON.parse(event.data); } catch { return; }
+
+        // Ignore generic WS handshake messages
+        if (payload.type === 'connected') return;
+
+        handleGroqVoiceMessage(payload);
+    });
+
+    groqVoiceSocket.addEventListener('error', () => {
+        setLiveOrbState('error');
+        setLiveStatus('Connection error.', 'error');
+        setLiveTranscript('Could not connect to the voice agent. Check server and retry.');
+        stopGroqVoiceSession({ hideModal: false });
+    });
+
+    groqVoiceSocket.addEventListener('close', () => {
+        if (groqVoiceActive) {
+            setLiveStatus('Connection closed.', '');
+            setLiveTranscript('Voice session ended.');
+        }
+        groqVoiceActive = false;
     });
 }
 
-// --- Message send flow ---
+// Wire orb tap to toggle recording
+if (liveOrb) {
+    liveOrb.addEventListener('click', handleOrbTap);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// END GROQ VOICE AGENT
+// ══════════════════════════════════════════════════════════════════════════════
 
 function setComposerBusy(isBusy) {
     const icon = sendBtn.querySelector('.material-symbols-outlined');
     const sendLabel = sendBtn.querySelector('.send-text');
-
     sendBtn.disabled = false;
     sendBtn.classList.toggle('busy', isBusy);
     sendBtn.classList.toggle('cancel-mode', isBusy);
     sendBtn.setAttribute('aria-label', isBusy ? 'Cancel current chat' : 'Send message');
-
-    if (icon) {
-        icon.textContent = isBusy ? 'close' : 'send';
-    }
-    if (sendLabel) {
-        sendLabel.textContent = isBusy ? 'Cancel' : 'Send';
-    }
-
+    if (icon) icon.textContent = isBusy ? 'close' : 'send';
+    if (sendLabel) sendLabel.textContent = isBusy ? 'Cancel' : 'Send';
     userInput.disabled = isBusy;
 }
 
@@ -2057,29 +1516,15 @@ function setVoiceListening(isListening) {
     isVoiceListening = isListening;
     voiceInputBtn.classList.toggle('listening', isListening);
     const icon = voiceInputBtn.querySelector('.material-symbols-outlined');
-    if (icon) {
-        icon.textContent = isListening ? 'stop' : 'mic';
-    }
+    if (icon) icon.textContent = isListening ? 'stop' : 'mic';
     voiceInputBtn.setAttribute('aria-pressed', String(isListening));
 }
 
 function clearVoiceRecorderState() {
-    if (voiceRecorderTimer) {
-        window.clearTimeout(voiceRecorderTimer);
-        voiceRecorderTimer = null;
-    }
-    if (voiceRecorderSilenceTimer) {
-        window.clearTimeout(voiceRecorderSilenceTimer);
-        voiceRecorderSilenceTimer = null;
-    }
-    if (silenceMonitorId) {
-        window.clearInterval(silenceMonitorId);
-        silenceMonitorId = null;
-    }
-    if (audioContext) {
-        audioContext.close().catch(() => {});
-        audioContext = null;
-    }
+    if (voiceRecorderTimer) { window.clearTimeout(voiceRecorderTimer); voiceRecorderTimer = null; }
+    if (voiceRecorderSilenceTimer) { window.clearTimeout(voiceRecorderSilenceTimer); voiceRecorderSilenceTimer = null; }
+    if (silenceMonitorId) { window.clearInterval(silenceMonitorId); silenceMonitorId = null; }
+    if (audioContext) { audioContext.close().catch(() => {}); audioContext = null; }
     analyserNode = null;
     silenceDurationMs = 0;
     recordedChunks = [];
@@ -2090,52 +1535,30 @@ function clearVoiceRecorderState() {
 
 function startSilenceMonitoring(stream) {
     if (!stream || typeof window.AudioContext === 'undefined') return;
-
     try {
-        if (!audioContext) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioContext.state === 'suspended') {
-            audioContext.resume().catch(() => {});
-        }
-
+        if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
         const source = audioContext.createMediaStreamSource(stream);
         analyserNode = audioContext.createAnalyser();
         analyserNode.fftSize = 256;
         source.connect(analyserNode);
-
         const buffer = new Uint8Array(analyserNode.fftSize);
         silenceDurationMs = 0;
         silenceMonitorId = window.setInterval(() => {
             if (!voiceIsRecording || !analyserNode) return;
             analyserNode.getByteTimeDomainData(buffer);
             let sum = 0;
-            for (let i = 0; i < buffer.length; i += 1) {
-                const value = (buffer[i] - 128) / 128;
-                sum += Math.abs(value);
-            }
-            const average = sum / buffer.length;
-            if (average < 0.01) {
-                silenceDurationMs += 200;
-                if (silenceDurationMs >= 3000 && mediaRecorder && mediaRecorder.state !== 'inactive') {
-                    mediaRecorder.stop();
-                }
-            } else {
-                silenceDurationMs = 0;
-            }
+            for (let i = 0; i < buffer.length; i++) { const v = (buffer[i] - 128) / 128; sum += Math.abs(v); }
+            const avg = sum / buffer.length;
+            if (avg < 0.01) { silenceDurationMs += 200; if (silenceDurationMs >= 3000 && mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); }
+            else silenceDurationMs = 0;
         }, 200);
-    } catch (error) {
-        // Ignore microphone analyser setup failures and fall back to manual stop.
-    }
+    } catch (e) {}
 }
 
 function stopVoiceInput() {
-    if (speechRecognition && isVoiceListening) {
-        speechRecognition.stop();
-    }
-    if (mediaRecorder && voiceIsRecording) {
-        mediaRecorder.stop();
-    }
+    if (speechRecognition && isVoiceListening) speechRecognition.stop();
+    if (mediaRecorder && voiceIsRecording) mediaRecorder.stop();
     clearVoiceRecorderState();
     setVoiceListening(false);
 }
@@ -2143,283 +1566,131 @@ function stopVoiceInput() {
 async function transcribeAudioBlob(blob) {
     const formData = new FormData();
     formData.append('audio', blob, 'voice.webm');
-
-    const response = await fetch('/api/transcribe', {
-        method: 'POST',
-        body: formData
-    });
-
-    if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || 'Transcription failed.');
-    }
-
+    const response = await fetch('/api/transcribe', { method: 'POST', body: formData });
+    if (!response.ok) throw new Error((await response.text()) || 'Transcription failed.');
     const data = await response.json();
-    return {
-        transcript: data.transcript || '',
-        fallback: Boolean(data.fallback)
-    };
+    return { transcript: data.transcript || '', fallback: Boolean(data.fallback) };
 }
 
 function applyVoiceTranscript(transcript) {
     const cleaned = transcript.trim();
-    if (!cleaned) {
-        showComposerNotice('No speech was detected.');
-        return;
-    }
-
+    if (!cleaned) { showComposerNotice('No speech was detected.'); return; }
     userInput.value = cleaned;
     showComposerNotice('Voice captured.');
-
-    if (autoSubmitVoice) {
-        handleSend();
-    }
+    if (autoSubmitVoice) handleSend();
 }
 
 function handleVoiceRecordingStop() {
     const blob = new Blob(recordedChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
-    if (!blob.size) {
-        showComposerNotice('No audio captured.');
-        clearVoiceRecorderState();
-        setVoiceListening(false);
-        return;
-    }
-
-    if (voiceFallbackReason) {
-        showComposerNotice(`Using fallback speech recognition: ${voiceFallbackReason}`);
-    }
-
-    const playback = () => {
-        if (typeof window.speechSynthesis !== 'undefined') {
-            window.speechSynthesis.cancel();
-        }
-    };
-
-    playback();
-
+    if (!blob.size) { showComposerNotice('No audio captured.'); clearVoiceRecorderState(); setVoiceListening(false); return; }
+    if (voiceFallbackReason) showComposerNotice(`Using fallback speech recognition: ${voiceFallbackReason}`);
+    if (typeof window.speechSynthesis !== 'undefined') window.speechSynthesis.cancel();
     transcribeAudioBlob(blob).then(({ transcript, fallback }) => {
-        const fallbackText = (fallback && voiceTranscriptBuffer.trim()) || transcript.trim();
-        applyVoiceTranscript(fallbackText);
-    }).catch((error) => {
-        showComposerNotice(error.message || 'Transcription failed.');
-    }).finally(() => {
-        clearVoiceRecorderState();
-        setVoiceListening(false);
-    });
+        applyVoiceTranscript((fallback && voiceTranscriptBuffer.trim()) || transcript.trim());
+    }).catch((e) => { showComposerNotice(e.message || 'Transcription failed.'); })
+      .finally(() => { clearVoiceRecorderState(); setVoiceListening(false); });
 }
 
 async function startVoiceInput() {
     const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (isVoiceListening) {
-        stopVoiceInput();
-        return;
-    }
-
+    if (isVoiceListening) { stopVoiceInput(); return; }
     if (!navigator.mediaDevices?.getUserMedia) {
-        if (SpeechRecognitionCtor) {
-            voiceFallbackReason = 'browser speech recognition';
-        } else {
-            showComposerNotice('Voice input is not supported in this browser.');
-            return;
-        }
+        if (SpeechRecognitionCtor) voiceFallbackReason = 'browser speech recognition';
+        else { showComposerNotice('Voice input is not supported in this browser.'); return; }
     }
-
-    if (!window.MediaRecorder && !SpeechRecognitionCtor) {
-        showComposerNotice('Voice input is not supported in this browser.');
-        return;
-    }
-
+    if (!window.MediaRecorder && !SpeechRecognitionCtor) { showComposerNotice('Voice input is not supported in this browser.'); return; }
     setVoiceListening(true);
     voiceTranscriptBuffer = '';
     recordedChunks = [];
-
     if (SpeechRecognitionCtor && !window.MediaRecorder) {
         voiceFallbackReason = 'MediaRecorder unavailable';
         speechRecognition = speechRecognition || new SpeechRecognitionCtor();
         speechRecognition.continuous = false;
         speechRecognition.interimResults = true;
         speechRecognition.lang = 'en-US';
-        speechRecognition.onstart = () => {
-            voiceTranscriptBuffer = '';
-            setVoiceListening(true);
-        };
-        speechRecognition.onresult = (event) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
-            for (let i = event.resultIndex; i < event.results.length; i += 1) {
-                const result = event.results[i];
-                const transcript = result[0].transcript.trim();
-                if (result.isFinal) {
-                    finalTranscript += `${transcript} `;
-                } else {
-                    interimTranscript += `${transcript} `;
-                }
+        speechRecognition.onstart = () => { voiceTranscriptBuffer = ''; setVoiceListening(true); };
+        speechRecognition.onresult = (e) => {
+            let interim = '', final = '';
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                const t = e.results[i][0].transcript.trim();
+                if (e.results[i].isFinal) final += `${t} `; else interim += `${t} `;
             }
-            voiceTranscriptBuffer = `${voiceTranscriptBuffer}${finalTranscript}${interimTranscript}`.trim();
+            voiceTranscriptBuffer = `${voiceTranscriptBuffer}${final}${interim}`.trim();
             userInput.value = voiceTranscriptBuffer;
         };
-        speechRecognition.onerror = () => {
-            setVoiceListening(false);
-            showComposerNotice('Voice input stopped.');
-        };
-        speechRecognition.onend = () => {
-            setVoiceListening(false);
-        };
-        try {
-            speechRecognition.start();
-        } catch (error) {
-            setVoiceListening(false);
-            showComposerNotice('Could not start voice input.');
-        }
+        speechRecognition.onerror = () => { setVoiceListening(false); showComposerNotice('Voice input stopped.'); };
+        speechRecognition.onend = () => setVoiceListening(false);
+        try { speechRecognition.start(); } catch (e) { setVoiceListening(false); showComposerNotice('Could not start voice input.'); }
         return;
     }
-
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorderStream = stream;
         const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
         mediaRecorder = new MediaRecorder(stream, { mimeType });
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                recordedChunks.push(event.data);
-            }
-        };
-        mediaRecorder.onstop = () => {
-            stream.getTracks().forEach(track => track.stop());
-            mediaRecorderStream = null;
-            handleVoiceRecordingStop();
-        };
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = () => { stream.getTracks().forEach(t => t.stop()); mediaRecorderStream = null; handleVoiceRecordingStop(); };
         if (SpeechRecognitionCtor) {
             speechRecognition = speechRecognition || new SpeechRecognitionCtor();
             speechRecognition.continuous = false;
             speechRecognition.interimResults = true;
             speechRecognition.lang = 'en-US';
-            speechRecognition.onresult = (event) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; i += 1) {
-                    const result = event.results[i];
-                    const transcript = result[0].transcript.trim();
-                    if (result.isFinal) {
-                        finalTranscript += `${transcript} `;
-                    } else {
-                        interimTranscript += `${transcript} `;
-                    }
+            speechRecognition.onresult = (e) => {
+                let interim = '', final = '';
+                for (let i = e.resultIndex; i < e.results.length; i++) {
+                    const t = e.results[i][0].transcript.trim();
+                    if (e.results[i].isFinal) final += `${t} `; else interim += `${t} `;
                 }
-                voiceTranscriptBuffer = `${voiceTranscriptBuffer}${finalTranscript}${interimTranscript}`.trim();
+                voiceTranscriptBuffer = `${voiceTranscriptBuffer}${final}${interim}`.trim();
                 userInput.value = voiceTranscriptBuffer;
             };
-            speechRecognition.onerror = () => {
-                showComposerNotice('Voice input stopped.');
-            };
-            speechRecognition.onend = () => {
-                if (voiceIsRecording) {
-                    speechRecognition.start();
-                }
-            };
+            speechRecognition.onerror = () => showComposerNotice('Voice input stopped.');
+            speechRecognition.onend = () => { if (voiceIsRecording) speechRecognition.start(); };
             speechRecognition.start();
         }
-
         mediaRecorder.start();
         voiceIsRecording = true;
-        voiceRecorderTimer = window.setTimeout(() => {
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-        }, 8000);
+        voiceRecorderTimer = window.setTimeout(() => { if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); }, 8000);
         startSilenceMonitoring(stream);
-    } catch (error) {
-        setVoiceListening(false);
-        showComposerNotice('Microphone access was denied or is unavailable.');
-    }
+    } catch (e) { setVoiceListening(false); showComposerNotice('Microphone access was denied or is unavailable.'); }
 }
 
 function removeThinkingIndicator() {
-    if (pendingRequest?.thinkingId) {
-        document.getElementById(pendingRequest.thinkingId)?.remove();
-    }
+    if (pendingRequest?.thinkingId) document.getElementById(pendingRequest.thinkingId)?.remove();
 }
 
 function connectWebSocket() {
-    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
-        return;
-    }
-
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
     socket = new WebSocket(WS_ENDPOINT);
-    socket.addEventListener('open', () => {
-        socketReady = true;
-        updateStatusPill();
-    });
-
+    socket.addEventListener('open', () => { socketReady = true; updateStatusPill(); });
     socket.addEventListener('message', (event) => {
         try {
             const data = JSON.parse(event.data);
-            if (data.type === 'connected') {
-                socketReady = true;
-                updateStatusPill();
-                return;
-            }
-
-            if (data.type === 'status') {
-                return;
-            }
-
+            if (data.type === 'connected') { socketReady = true; updateStatusPill(); return; }
+            if (data.type === 'status') return;
             if (data.type === 'done') {
                 removeThinkingIndicator();
-                const request = pendingRequest;
-                pendingRequest = null;
+                const request = pendingRequest; pendingRequest = null;
                 if (!request) return;
-
                 const botEl = appendMessage(data.content, 'bot', { animate: true });
-                if (data.ragUsed) {
-                    botEl.dataset.ragContextUsed = 'true';
-                }
+                if (data.ragUsed) botEl.dataset.ragContextUsed = 'true';
                 addRegenerateButton(botEl, request.userText, request.attachmentsSnapshot, request.historyForRequest);
                 speakResponse(data.content);
-                setComposerBusy(false);
-                return;
+                setComposerBusy(false); return;
             }
-
-            if (data.type === 'error') {
-                removeThinkingIndicator();
-                pendingRequest = null;
-                setComposerBusy(false);
-                showFallbackMessage();
-            }
-        } catch (error) {
-            removeThinkingIndicator();
-            pendingRequest = null;
-            setComposerBusy(false);
-            showFallbackMessage();
-        }
+            if (data.type === 'error') { removeThinkingIndicator(); pendingRequest = null; setComposerBusy(false); showFallbackMessage(); }
+        } catch (e) { removeThinkingIndicator(); pendingRequest = null; setComposerBusy(false); showFallbackMessage(); }
     });
-
-    socket.addEventListener('close', () => {
-        socketReady = false;
-        updateStatusPill();
-        window.setTimeout(connectWebSocket, 1500);
-    });
-
-    socket.addEventListener('error', () => {
-        socketReady = false;
-        updateStatusPill();
-    });
+    socket.addEventListener('close', () => { socketReady = false; updateStatusPill(); window.setTimeout(connectWebSocket, 1500); });
+    socket.addEventListener('error', () => { socketReady = false; updateStatusPill(); });
 }
 
 function cancelCurrentRequest() {
     const activeRequest = pendingRequest;
     if (!activeRequest) return;
-
     activeRequest.cancelled = true;
-    if (activeRequest.abortController && activeRequest.abortController.signal && !activeRequest.abortController.signal.aborted) {
-        activeRequest.abortController.abort();
-    }
-
-    if (activeRequest.source === 'ws' && socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: 'cancel' }));
-    }
-
+    if (activeRequest.abortController && !activeRequest.abortController.signal.aborted) activeRequest.abortController.abort();
+    if (activeRequest.source === 'ws' && socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'cancel' }));
     removeThinkingIndicator();
     setComposerBusy(false);
     showComposerNotice('Chat canceled.');
@@ -2427,7 +1698,6 @@ function cancelCurrentRequest() {
 
 async function fetchAIResponse(userText, attachmentsSnapshot, historyForRequest) {
     setComposerBusy(true);
-
     const thinkingId = 'thinking-' + Date.now();
     const thinkingDiv = document.createElement('div');
     thinkingDiv.classList.add('message', 'bot-message', 'thinking-indicator');
@@ -2435,181 +1705,85 @@ async function fetchAIResponse(userText, attachmentsSnapshot, historyForRequest)
     thinkingDiv.innerHTML = '<span class="thinking-label">Thinking<span class="thinking-dots"><span></span><span></span><span></span></span></span>';
     chatBox.appendChild(thinkingDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
-
     const abortController = new AbortController();
     pendingRequest = { thinkingId, userText, attachmentsSnapshot, historyForRequest, abortController, cancelled: false, source: 'http' };
-
     if (socketReady && socket && socket.readyState === WebSocket.OPEN) {
         pendingRequest.source = 'ws';
-        socket.send(JSON.stringify({
-            type: 'chat',
-            message: userText,
-            history: historyForRequest,
-            provider: providerSelect.value,
-            model: modelSelect.value,
-            thinking: thinkingToggle.classList.contains('active'),
-            attachments: attachmentsSnapshot
-        }));
+        socket.send(JSON.stringify({ type: 'chat', message: userText, history: historyForRequest, provider: providerSelect.value, model: modelSelect.value, thinking: thinkingToggle.classList.contains('active'), attachments: attachmentsSnapshot }));
         return;
     }
-
     try {
         const response = await fetch(API_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            signal: abortController.signal,
-            body: JSON.stringify({
-                message: userText,
-                history: historyForRequest,
-                provider: providerSelect.value,
-                model: modelSelect.value,
-                thinking: thinkingToggle.classList.contains('active'),
-                attachments: attachmentsSnapshot
-            })
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: abortController.signal,
+            body: JSON.stringify({ message: userText, history: historyForRequest, provider: providerSelect.value, model: modelSelect.value, thinking: thinkingToggle.classList.contains('active'), attachments: attachmentsSnapshot })
         });
-
-        if (!response.ok) {
-            const errorData = await response.text();
-            throw new Error(errorData || 'Request failed');
-        }
-
+        if (!response.ok) throw new Error((await response.text()) || 'Request failed');
         const streamMessage = createStreamingBotMessage();
-        let partialText = '';
-        let hadError = false;
-        let errorText = '';
-
+        let partialText = '', hadError = false, errorText = '';
         const reader = response.body?.getReader();
-        if (!reader) {
-            throw new Error('Streaming response unsupported');
-        }
-
+        if (!reader) throw new Error('Streaming response unsupported');
         const decoder = new TextDecoder();
         let buffer = '';
-
         const processEvent = (rawEvent) => {
             const lines = rawEvent.split(/\r?\n/);
-            let eventType = 'message';
-            let dataLines = [];
-
+            let eventType = 'message', dataLines = [];
             for (const line of lines) {
-                if (line.startsWith('event:')) {
-                    eventType = line.slice(6).trim();
-                } else if (line.startsWith('data:')) {
-                    dataLines.push(line.slice(5).trim());
-                }
+                if (line.startsWith('event:')) eventType = line.slice(6).trim();
+                else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
             }
-
             const rawData = dataLines.join('\n');
             if (!rawData) return;
-
-            let parsed;
-            try {
-                parsed = JSON.parse(rawData);
-            } catch {
-                return;
-            }
-
+            let parsed; try { parsed = JSON.parse(rawData); } catch { return; }
             if (eventType === 'message') {
                 const delta = parsed?.delta;
-                if (typeof delta === 'string') {
-                    partialText += delta;
-                    updateStreamingBotMessage(streamMessage.messageDiv, partialText, { ragContextUsed: Boolean(parsed?.ragUsed) });
-                } else if (parsed?.error && typeof parsed.error === 'string') {
-                    hadError = true;
-                    errorText = parsed.error;
-                }
-            } else if (eventType === 'error') {
-                hadError = true;
-                errorText = parsed?.message || parsed?.error || 'An error occurred while streaming.';
-            } else if (eventType === 'done') {
-                if (parsed?.ragUsed) {
-                    streamMessage.messageDiv.dataset.ragContextUsed = 'true';
-                }
-            }
+                if (typeof delta === 'string') { partialText += delta; updateStreamingBotMessage(streamMessage.messageDiv, partialText, { ragContextUsed: Boolean(parsed?.ragUsed) }); }
+                else if (parsed?.error) { hadError = true; errorText = parsed.error; }
+            } else if (eventType === 'error') { hadError = true; errorText = parsed?.message || parsed?.error || 'An error occurred.'; }
+            else if (eventType === 'done') { if (parsed?.ragUsed) streamMessage.messageDiv.dataset.ragContextUsed = 'true'; }
         };
-
         while (true) {
             const { value, done } = await reader.read();
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
             let mark;
-
-            while ((mark = buffer.indexOf('\n\n')) !== -1) {
-                const rawEvent = buffer.slice(0, mark);
-                buffer = buffer.slice(mark + 2);
-                processEvent(rawEvent);
-            }
+            while ((mark = buffer.indexOf('\n\n')) !== -1) { processEvent(buffer.slice(0, mark)); buffer = buffer.slice(mark + 2); }
         }
-
-        if (buffer.trim()) {
-            processEvent(buffer.trim());
-        }
-
-        if (hadError) {
-            finalizeStreamingBotMessageWithError(streamMessage.messageDiv, partialText, errorText || 'Stream ended with error');
-        } else {
-            finalizeStreamingBotMessage(streamMessage.messageDiv, partialText);
-            addRegenerateButton(streamMessage.messageDiv, userText, attachmentsSnapshot, historyForRequest);
-            speakResponse(partialText);
-        }
+        if (buffer.trim()) processEvent(buffer.trim());
+        if (hadError) finalizeStreamingBotMessageWithError(streamMessage.messageDiv, partialText, errorText || 'Stream ended with error');
+        else { finalizeStreamingBotMessage(streamMessage.messageDiv, partialText); addRegenerateButton(streamMessage.messageDiv, userText, attachmentsSnapshot, historyForRequest); speakResponse(partialText); }
     } catch (error) {
-        if (error?.name === 'AbortError' || abortController.signal.aborted) {
-            removeThinkingIndicator();
-            pendingRequest = null;
-            setComposerBusy(false);
-            return;
-        }
-
-        removeThinkingIndicator();
-        pendingRequest = null;
+        if (error?.name === 'AbortError' || abortController.signal.aborted) { removeThinkingIndicator(); pendingRequest = null; setComposerBusy(false); return; }
+        removeThinkingIndicator(); pendingRequest = null;
         const streamMessage = createStreamingBotMessage();
         finalizeStreamingBotMessageWithError(streamMessage.messageDiv, '', error.message || 'The assistant is temporarily unavailable.');
-    } finally {
-        removeThinkingIndicator();
-        pendingRequest = null;
-        setComposerBusy(false);
-    }
+    } finally { removeThinkingIndicator(); pendingRequest = null; setComposerBusy(false); }
 }
 
 function handleSend() {
     if (sendBtn.classList.contains('cancel-mode') || pendingRequest) return;
-
     const text = userInput.value.trim();
     if (text === '' && attachments.length === 0) return;
-
     const conv = getActiveConversation();
     const normalizedText = text || 'Shared attachments';
     const attachmentsSnapshot = attachments.slice();
-
     if (editingPromptState && editingPromptState.messageIndex !== null) {
         const targetIndex = editingPromptState.messageIndex;
         if (targetIndex >= 0 && targetIndex < conv.messages.length) {
             conv.messages[targetIndex].content = normalizedText;
             conv.messages.splice(targetIndex + 1);
-            saveState();
-            persistConversation(conv);
-            renderActiveConversation();
-            renderHistoryList();
+            saveState(); persistConversation(conv); renderActiveConversation(); renderHistoryList();
         }
         editingPromptState = null;
-    } else {
-        appendMessage(normalizedText, 'user', { attachments: attachmentsSnapshot });
-    }
-
+    } else { appendMessage(normalizedText, 'user', { attachments: attachmentsSnapshot }); }
     const historyForRequest = conv.messages.map(m => ({ role: m.role, content: m.content }));
     userInput.value = '';
     attachments = [];
     renderAttachments();
-
-    // Refresh the suggestion bar visibility after the latest message changes the conversation state.
     renderSuggestedPrompts();
-
     fetchAIResponse(normalizedText, attachmentsSnapshot, historyForRequest);
 }
 
-// --- Event wiring ---
+// ── Event wiring ─────────────────────────────────────────────────────────────
 
 newChatBtn.addEventListener('click', async () => {
     const conv = createConversation(getWelcomeText());
@@ -2625,16 +1799,8 @@ newChatBtn.addEventListener('click', async () => {
 
 function setSidebarOpen(isOpen) {
     const isMobile = window.innerWidth <= 900;
-    const wasOpen = isMobile
-        ? sidebar.classList.contains('mobile-open')
-        : !sidebar.classList.contains('collapsed');
-
-    if (isOpen && !wasOpen) {
-        // Add opening class to trigger stagger animation, then remove after animation completes
-        sidebar.classList.add('sidebar-opening');
-        setTimeout(() => sidebar.classList.remove('sidebar-opening'), 600);
-    }
-
+    const wasOpen = isMobile ? sidebar.classList.contains('mobile-open') : !sidebar.classList.contains('collapsed');
+    if (isOpen && !wasOpen) { sidebar.classList.add('sidebar-opening'); setTimeout(() => sidebar.classList.remove('sidebar-opening'), 600); }
     if (isMobile) {
         sidebar.classList.toggle('mobile-open', isOpen);
         sidebar.classList.remove('collapsed');
@@ -2649,138 +1815,65 @@ function setSidebarOpen(isOpen) {
 }
 
 toggleSidebarBtn.addEventListener('click', () => {
-    if (window.innerWidth <= 900) {
-        setSidebarOpen(!sidebar.classList.contains('mobile-open'));
-    } else {
-        setSidebarOpen(sidebar.classList.contains('collapsed'));
-    }
+    if (window.innerWidth <= 900) setSidebarOpen(!sidebar.classList.contains('mobile-open'));
+    else setSidebarOpen(sidebar.classList.contains('collapsed'));
 });
 
 sidebarOverlay.addEventListener('click', () => setSidebarOpen(false));
-
-window.addEventListener('resize', () => {
-    if (window.innerWidth > 900) {
-        setSidebarOpen(true);
-    } else {
-        setSidebarOpen(false);
-    }
-});
+window.addEventListener('resize', () => { if (window.innerWidth > 900) setSidebarOpen(true); else setSidebarOpen(false); });
 
 themeToggleBtn.addEventListener('click', toggleTheme);
 ttsToggleBtn.addEventListener('click', toggleTTS);
-actionMenuBtn.addEventListener('click', (event) => {
-    event.stopPropagation();
-    toggleActionMenu();
-});
-exportBtn.addEventListener('click', () => {
-    closeActionMenu();
-    exportConversations();
-});
-importBtn.addEventListener('click', () => {
-    closeActionMenu();
-    importInput.click();
-});
-clearChatBtn.addEventListener('click', () => {
-    closeActionMenu();
-    clearActiveConversation();
-});
+actionMenuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleActionMenu(); });
+exportBtn.addEventListener('click', () => { closeActionMenu(); exportConversations(); });
+importBtn.addEventListener('click', () => { closeActionMenu(); importInput.click(); });
+clearChatBtn.addEventListener('click', () => { closeActionMenu(); clearActiveConversation(); });
 importInput.addEventListener('change', handleImportInput);
 
 const aboutDevBtn = document.getElementById('about-dev-btn');
 const aboutOverlay = document.getElementById('about-overlay');
 const aboutCloseBtn = document.getElementById('about-close-btn');
+function openAboutModal() { if (!aboutOverlay) return; aboutOverlay.hidden = false; closeActionMenu(); }
+function closeAboutModal() { if (!aboutOverlay) return; aboutOverlay.hidden = true; }
+if (aboutDevBtn) aboutDevBtn.addEventListener('click', openAboutModal);
+if (aboutCloseBtn) aboutCloseBtn.addEventListener('click', closeAboutModal);
+if (aboutOverlay) aboutOverlay.addEventListener('click', (e) => { if (e.target === aboutOverlay) closeAboutModal(); });
 
-function openAboutModal() {
-    if (!aboutOverlay) return;
-    aboutOverlay.hidden = false;
-    closeActionMenu();
-}
-
-function closeAboutModal() {
-    if (!aboutOverlay) return;
-    aboutOverlay.hidden = true;
-}
-
-if (aboutDevBtn) {
-    aboutDevBtn.addEventListener('click', () => {
-        openAboutModal();
-    });
-}
-
-if (aboutCloseBtn) {
-    aboutCloseBtn.addEventListener('click', closeAboutModal);
-}
-
-if (aboutOverlay) {
-    aboutOverlay.addEventListener('click', (event) => {
-        if (event.target === aboutOverlay) closeAboutModal();
-    });
-}
-
-document.addEventListener('click', (event) => {
-    if (!actionMenuBtn.contains(event.target) && !actionMenuDropdown.contains(event.target)) {
-        closeActionMenu();
-    }
-});
-
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeActionMenu();
-});
+document.addEventListener('click', (e) => { if (!actionMenuBtn.contains(e.target) && !actionMenuDropdown.contains(e.target)) closeActionMenu(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeActionMenu(); });
 
 providerSelect.addEventListener('change', populateModels);
 modelSelect.addEventListener('change', updateStatusPill);
 thinkingToggle.addEventListener('click', toggleThinking);
 imageInput.addEventListener('change', handleAttachmentSelection);
 fileInput.addEventListener('change', handleAttachmentSelection);
-sendBtn.addEventListener('click', () => {
-    if (sendBtn.classList.contains('cancel-mode')) {
-        cancelCurrentRequest();
-        return;
-    }
-    handleSend();
-});
+sendBtn.addEventListener('click', () => { if (sendBtn.classList.contains('cancel-mode')) { cancelCurrentRequest(); return; } handleSend(); });
 voiceInputBtn.addEventListener('click', startVoiceInput);
 autoSubmitToggleBtn.addEventListener('click', toggleAutoSubmit);
-if (liveVoiceBtn) {
-    liveVoiceBtn.addEventListener('click', openLiveVoiceModal);
-}
-if (liveEndCallBtn) {
-    liveEndCallBtn.addEventListener('click', closeLiveVoiceModal);
-}
-if (liveRetryBtn) {
-    liveRetryBtn.addEventListener('click', retryLiveVoiceSession);
-}
-if (liveVoiceSelect) {
-    liveVoiceSelect.addEventListener('change', () => {
-        liveCurrentVoice = liveVoiceSelect.value;
-        if (liveSocket && liveSocket.readyState === WebSocket.OPEN) {
-            sendLiveSetupMessage();
-        }
-    });
-}
-userInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleSend();
-});
-userInput.addEventListener('focus', () => {
-    stopVoiceInput();
-});
 
+// Live voice modal buttons
+if (liveVoiceBtn) liveVoiceBtn.addEventListener('click', openLiveVoiceModal);
+if (liveEndCallBtn) liveEndCallBtn.addEventListener('click', closeLiveVoiceModal);
+if (liveRetryBtn) liveRetryBtn.addEventListener('click', retryLiveVoiceSession);
+
+// liveVoiceSelect is no longer needed for Groq (no server-side voice selection)
+// but keep it harmless if the HTML still has it
+if (liveVoiceSelect) liveVoiceSelect.style.display = 'none';
+
+userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSend(); });
+userInput.addEventListener('focus', () => { stopVoiceInput(); });
 document.addEventListener('keydown', handleKeyboardShortcuts);
 
 compactViewToggle.addEventListener('change', handleCompactToggle);
 compactViewToggleBtn.addEventListener('click', () => {
     compactViewToggle.checked = !compactViewToggle.checked;
     handleCompactToggle();
-    const density = compactViewToggle.checked ? 'compact' : 'comfortable';
-    updateDensitySelection(density);
+    updateDensitySelection(compactViewToggle.checked ? 'compact' : 'comfortable');
     closeActionMenu();
 });
 historySearch.addEventListener('input', handleHistorySearch);
 
-// Settings panel events: clicking the footer Settings button toggles the panel
-if (openSettingsBtn) openSettingsBtn.addEventListener('click', () => {
-    if (sidebarSettings) toggleSidebarSettings(sidebarSettings.hidden);
-});
+if (openSettingsBtn) openSettingsBtn.addEventListener('click', () => { if (sidebarSettings) toggleSidebarSettings(sidebarSettings.hidden); });
 if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => toggleSidebarSettings(false));
 if (resetSettingsBtn) resetSettingsBtn.addEventListener('click', () => resetUISettings());
 
@@ -2790,13 +1883,11 @@ fontOpts.forEach(btn => btn.addEventListener('click', (e) => {
     saveUISettings(size, null);
     fontOpts.forEach(b => b.classList.toggle('active', b === e.currentTarget));
 }));
-
 densityOpts.forEach(btn => btn.addEventListener('click', (e) => {
     const d = e.currentTarget.dataset.density;
     updateDensitySelection(d, true);
     saveUISettings(null, d);
 }));
-
 if (languageSelect) {
     languageSelect.addEventListener('change', (e) => {
         const lang = e.currentTarget.value;
@@ -2805,7 +1896,7 @@ if (languageSelect) {
     });
 }
 
-// --- Initialization ---
+// ── Initialization ───────────────────────────────────────────────────────────
 
 async function initializeApp() {
     initTheme();
@@ -2813,15 +1904,9 @@ async function initializeApp() {
     initCompactMode();
     loadUISettings();
     currentUser = await fetchCurrentUser();
-    if (!currentUser) {
-        window.location.href = '/login';
-        return;
-    }
+    if (!currentUser) { window.location.href = '/login'; return; }
     renderUserHeader();
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', handleLogout);
-    }
-    await loadGeminiConfig();
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     await loadState();
     personalizeWelcomeMessage();
     renderAttachments();
