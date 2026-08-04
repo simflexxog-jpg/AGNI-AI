@@ -16,6 +16,8 @@ const { OAuth2Client } = require('google-auth-library');
 const { WebSocketServer, WebSocket: NodeWebSocket } = require('ws');
 const busboy = require('busboy');
 const pdfParse = require('pdf-parse');
+const { RecursiveCharacterTextSplitter } = require('@langchain/textsplitters');
+const { Document } = require('@langchain/core/documents');
 const fetch = global.fetch || require('node-fetch');
 
 process.on('unhandledRejection', (reason, promise) => {
@@ -175,32 +177,24 @@ function tokenize(text) {
   return (text || '').toLowerCase().match(/[a-z0-9]+/g) || [];
 }
 
-function splitTextIntoChunks(text, { chunkSizeTokens = RAG_CHUNK_SIZE_TOKENS, overlapTokens = RAG_CHUNK_OVERLAP_TOKENS } = {}) {
+async function buildLangChainChunks(text, sourcePath) {
   const normalized = normalizeText(text);
   if (!normalized) return [];
 
-  const tokens = normalized.split(/\s+/).filter(Boolean);
-  if (!tokens.length) return [];
+  const splitter = new RecursiveCharacterTextSplitter({
+    chunkSize: RAG_CHUNK_SIZE_TOKENS,
+    chunkOverlap: RAG_CHUNK_OVERLAP_TOKENS
+  });
 
-  const chunks = [];
-  let start = 0;
+  const docs = await splitter.splitDocuments([
+    new Document({ pageContent: normalized, metadata: { source: sourcePath } })
+  ]);
 
-  while (start < tokens.length) {
-    const end = Math.min(tokens.length, start + chunkSizeTokens);
-    const chunkTokens = tokens.slice(start, end);
-    const chunkText = chunkTokens.join(' ').trim();
-    if (chunkText) chunks.push(chunkText);
-    if (end >= tokens.length) break;
-    start += Math.max(1, chunkSizeTokens - overlapTokens);
-  }
-
-  return chunks;
-}
-
-function buildChunksFromText(text, sourcePath) {
-  const chunks = splitTextIntoChunks(text);
-  return chunks
-    .map(chunk => ({ text: chunk.trim(), source: sourcePath }))
+  return docs
+    .map(doc => ({
+      text: sanitizeTextInput(doc.pageContent || '', { maxLength: 120000 }),
+      source: sanitizeTextInput(doc.metadata?.source || sourcePath || '', { maxLength: 400 })
+    }))
     .filter(chunk => chunk.text.length >= 40);
 }
 
@@ -233,7 +227,8 @@ async function buildKnowledgeIndex() {
       try {
         const content = await fs.promises.readFile(fullPath, 'utf8');
         if (!content || content.length > 200000) continue;
-        collectedChunks.push(...buildChunksFromText(content, path.relative(rootDir, fullPath).replace(/\\/g, '/')));
+        const langChainChunks = await buildLangChainChunks(content, path.relative(rootDir, fullPath).replace(/\\/g, '/'));
+        collectedChunks.push(...langChainChunks);
       } catch (error) {
         // Ignore unreadable files
       }
@@ -299,67 +294,87 @@ async function generateEmbeddingValues(text) {
   }
 }
 
-async function retrieveRelevantContext(userMessage, userId, limit = RAG_TOP_K) {
+async function getRelevantDocuments(query, userId, limit = RAG_TOP_K) {
   if (!RAG_ENABLED) return [];
-  const query = sanitizeTextInput(String(userMessage || ''), { maxLength: 12000 }).trim();
-  if (!query) return [];
+  const normalizedQuery = sanitizeTextInput(String(query || ''), { maxLength: 12000 }).trim();
+  if (!normalizedQuery) return [];
 
   const pool = await connectToDatabase();
   if (!pool || !userId) return [];
 
-  const embeddingValues = await generateEmbeddingValues(query);
-  let rows = [];
+  const safeUserId = sanitizeTextInput(userId, { maxLength: 200 });
+  const embeddingValues = await generateEmbeddingValues(normalizedQuery);
+  const rows = await pool.query(
+    `SELECT content, filename, document_id, chunk_index
+     FROM knowledge_chunks
+     WHERE user_id = $1`,
+    [safeUserId]
+  );
 
   if (embeddingValues.length) {
     const embeddingLiteral = `[${embeddingValues.join(',')}]`;
-    const vectorQuery = await pool.query(
+    const vectorRows = await pool.query(
       `SELECT content, filename, document_id, chunk_index
        FROM knowledge_chunks
        WHERE user_id = $1
        ORDER BY embedding <=> $2::vector
        LIMIT $3`,
-      [sanitizeTextInput(userId, { maxLength: 200 }), embeddingLiteral, limit]
-    );
-    rows = vectorQuery.rows;
-  }
-
-  if (!rows.length) {
-    const fallbackQuery = await pool.query(
-      `SELECT content, filename, document_id, chunk_index
-       FROM knowledge_chunks
-       WHERE user_id = $1
-       ORDER BY created_at DESC`,
-      [sanitizeTextInput(userId, { maxLength: 200 })]
+      [safeUserId, embeddingLiteral, limit]
     );
 
-    rows = fallbackQuery.rows
-      .map(row => ({
-        ...row,
-        score: scoreChunk(query, `${row.filename || ''} ${row.content || ''}`)
-      }))
-      .filter(item => item.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
-      .map(({ score, ...row }) => row);
+    return vectorRows.rows.map(row => ({
+      text: sanitizeTextInput(row.content || '', { maxLength: 8000 }),
+      source: sanitizeTextInput(row.filename || '', { maxLength: 400 }),
+      documentId: sanitizeTextInput(row.document_id || '', { maxLength: 200 }),
+      metadata: {
+        chunkIndex: Number(row.chunk_index || 0),
+        documentId: sanitizeTextInput(row.document_id || '', { maxLength: 200 })
+      }
+    }));
   }
 
-  return rows.map(row => ({
-    text: sanitizeTextInput(row.content || '', { maxLength: 8000 }),
-    source: sanitizeTextInput(row.filename || '', { maxLength: 400 }),
-    documentId: sanitizeTextInput(row.document_id || '', { maxLength: 200 })
-  }));
+  const scoredChunks = rows.rows
+    .map(row => ({
+      row,
+      score: scoreChunk(normalizedQuery, `${row.filename || ''} ${row.content || ''}`)
+    }))
+    .filter(item => item.score > 0);
+
+  return scoredChunks
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ row }) => ({
+      text: sanitizeTextInput(row.content || '', { maxLength: 8000 }),
+      source: sanitizeTextInput(row.filename || '', { maxLength: 400 }),
+      documentId: sanitizeTextInput(row.document_id || '', { maxLength: 200 }),
+      metadata: {
+        chunkIndex: Number(row.chunk_index || 0),
+        documentId: sanitizeTextInput(row.document_id || '', { maxLength: 200 })
+      }
+    }));
+}
+
+async function retrieveRelevantContext(userMessage, userId, limit = RAG_TOP_K) {
+  return getRelevantDocuments(userMessage, userId, limit);
+}
+
+function formatRetrievedDocuments(contextChunks) {
+  if (!Array.isArray(contextChunks) || !contextChunks.length) {
+    return '';
+  }
+
+  return contextChunks
+    .map((chunk, index) => `[${index + 1}] ${chunk.source || 'document'}\n${chunk.text || ''}`)
+    .join('\n\n');
 }
 
 function buildPromptWithContext(currentText, contextChunks) {
-  if (!Array.isArray(contextChunks) || !contextChunks.length) {
+  const formattedContext = formatRetrievedDocuments(contextChunks);
+  if (!formattedContext) {
     return currentText;
   }
 
-  const contextBlock = contextChunks
-    .map((chunk, index) => `[${index + 1}] ${chunk.source}\n${chunk.text}`)
-    .join('\n\n');
-
-  return `${currentText}\n\nRelevant project context:\n${contextBlock}\n\nUse the context above when it helps answer. If it is not relevant, answer normally.`;
+  return `${currentText}\n\nRelevant project context:\n${formattedContext}\n\nUse the context above when it helps answer. If it is not relevant, answer normally.`;
 }
 
 function isOriginAllowed(origin) {
@@ -804,13 +819,11 @@ async function storeUploadedDocument(userId, documentId, filename, content) {
   const pool = await connectToDatabase();
   if (!pool) return 0;
 
-  const chunks = splitTextIntoChunks(content, {
-    chunkSizeTokens: RAG_CHUNK_SIZE_TOKENS,
-    overlapTokens: RAG_CHUNK_OVERLAP_TOKENS
-  });
+  const langChainChunks = await buildLangChainChunks(content, filename);
 
   let inserted = 0;
-  for (const [index, chunkText] of chunks.entries()) {
+  for (const [index, chunk] of langChainChunks.entries()) {
+    const chunkText = chunk.text;
     const embeddingValues = await generateEmbeddingValues(chunkText);
     const embeddingLiteral = embeddingValues.length ? `[${embeddingValues.join(',')}]` : null;
 
