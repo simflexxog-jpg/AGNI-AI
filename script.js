@@ -54,6 +54,8 @@ const UI_LANGUAGE_KEY = 'agni-ai-ui-language-v1';
 const TTS_KEY = 'agni-ai-tts-enabled-v1';
 const DEFAULT_WELCOME_TEXT = 'Hello! I’m your AI assistant. Ask me anything and I’ll help.';
 
+let editingPromptState = null;
+
 const UI_TRANSLATIONS = {
     en: {
         preferences: 'Preferences',
@@ -1131,7 +1133,7 @@ function clearActiveConversation() {
 function renderActiveConversation() {
     chatBox.innerHTML = '';
     const conv = getActiveConversation();
-    conv.messages.forEach(m => appendMessage(m.content, m.role, { persist: false }));
+    conv.messages.forEach((m, index) => appendMessage(m.content, m.role, { persist: false }, index));
     renderSuggestedPrompts();
 }
 
@@ -1169,11 +1171,24 @@ function copyToClipboard(text, button) {
     }).catch(() => {});
 }
 
-function editPromptInComposer(text) {
+function getLatestUserMessageIndex(conv = getActiveConversation()) {
+    if (!conv?.messages) return -1;
+
+    let latestIndex = -1;
+    conv.messages.forEach((message, index) => {
+        if (message.role === 'user') latestIndex = index;
+    });
+    return latestIndex;
+}
+
+function editPromptInComposer(text, messageIndex = null) {
+    const targetIndex = messageIndex === null ? getLatestUserMessageIndex() : messageIndex;
+
     userInput.value = text;
     userInput.focus();
     userInput.select();
-    showComposerNotice('Prompt loaded. Edit and send when ready.');
+    editingPromptState = targetIndex < 0 ? null : { messageIndex: targetIndex };
+    showComposerNotice('Editing the latest prompt. Send to replace it.');
 }
 
 // --- Message rendering and interaction helpers ---
@@ -1293,7 +1308,7 @@ function finalizeStreamingBotMessageWithError(messageDiv, partialText, errorMess
     return messageDiv;
 }
 
-function appendMessage(text, sender, options = {}) {
+function appendMessage(text, sender, options = {}, messageIndex = null) {
     const { persist = true, animate = false } = options;
     const conv = getActiveConversation();
 
@@ -1331,7 +1346,7 @@ function appendMessage(text, sender, options = {}) {
         editBtn.type = 'button';
         editBtn.className = 'msg-action-btn';
         editBtn.innerHTML = '<span class="material-symbols-outlined">edit</span>Edit';
-        editBtn.addEventListener('click', () => editPromptInComposer(text));
+        editBtn.addEventListener('click', () => editPromptInComposer(text, messageIndex));
         actions.appendChild(editBtn);
     }
 
@@ -2428,20 +2443,35 @@ function handleSend() {
     if (text === '' && attachments.length === 0) return;
 
     const conv = getActiveConversation();
-    // Capture the conversation state before the new user message is appended so the request
-    // carries the correct prior context to the provider endpoint.
-    const historyForRequest = conv.messages.map(m => ({ role: m.role, content: m.content }));
+    const normalizedText = text || 'Shared attachments';
     const attachmentsSnapshot = attachments.slice();
 
-    appendMessage(text || 'Shared attachments', 'user');
+    if (editingPromptState && editingPromptState.messageIndex !== null) {
+        const targetIndex = editingPromptState.messageIndex;
+        if (targetIndex >= 0 && targetIndex < conv.messages.length) {
+            conv.messages[targetIndex].content = normalizedText;
+            if (conv.messages.length > targetIndex + 1) {
+                conv.messages.splice(targetIndex + 1);
+            }
+            saveState();
+            persistConversation(conv);
+            renderActiveConversation();
+            renderHistoryList();
+        }
+        editingPromptState = null;
+    } else {
+        appendMessage(normalizedText, 'user');
+    }
+
+    const historyForRequest = conv.messages.map(m => ({ role: m.role, content: m.content }));
     userInput.value = '';
     attachments = [];
     renderAttachments();
-    
+
     // Refresh the suggestion bar visibility after the latest message changes the conversation state.
     renderSuggestedPrompts();
 
-    fetchAIResponse(text || 'Please review the attached files.', attachmentsSnapshot, historyForRequest);
+    fetchAIResponse(normalizedText, attachmentsSnapshot, historyForRequest);
 }
 
 // --- Event wiring ---
