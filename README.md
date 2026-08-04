@@ -33,7 +33,7 @@ At a glance:
 - Frontend: HTML, CSS, JavaScript
 - Backend: Node.js + Express
 - Real-time chat: WebSocket with HTTP streaming fallback
-- Voice: browser microphone capture, Groq Whisper transcription, and Gemini Live support
+- Voice: browser microphone capture, Groq Whisper transcription, and live voice mode with browser speech synthesis
 - Auth: Google login plus local email/password support
 - Storage: PostgreSQL when configured, in-memory fallback when not
 
@@ -75,7 +75,7 @@ Primary flows
 - Login flow: browser receives Google credentials -> server verifies the token -> session is created -> user lands on the main chat workspace.
 - Chat flow: user message is sent to the server -> provider response is streamed back -> UI renders partial output in real time.
 - Voice flow: browser microphone captures audio -> `/api/transcribe` submits it to Groq -> transcript is inserted into the composer or auto-submitted.
-- Live voice flow: browser opens a live WebSocket -> server proxies the Gemini Live connection -> audio and response text are exchanged in real time.
+- Live voice flow: browser opens a live WebSocket -> server proxies the Groq voice session -> audio is transcribed and the assistant reply is spoken back via browser TTS.
 
 ---
 
@@ -124,7 +124,7 @@ Core assistant features
 - Streaming chat responses over WebSocket with HTTP SSE fallback for reliability
 - Rich composer with attachments, image support, conversation history, and quick suggestion chips
 - Voice input using browser microphone capture, with server-side Groq Whisper transcription
-- Live Gemini voice mode using a dedicated WebSocket proxy and selectable voice profiles
+- Live voice mode using a dedicated Groq voice WebSocket proxy and selectable voice profiles
 - Client-side TTS via the browser speech engine, controlled through preferences and persisted locally
 - Export/import of chat history as JSON
 - Search fallback using DuckDuckGo when the upstream AI provider is unavailable
@@ -313,7 +313,7 @@ Provider selection
 - UI exposes a provider dropdown. The server uses provider-specific functions: `callGroq`, `callOpenAI`, and `callGemini`.
 
 Groq
-- Used for both chat completions (if chosen) and Whisper-style transcription via `POST /api/transcribe`.
+- Used for both chat completions (if chosen), Whisper-style transcription via `POST /api/transcribe`, and live voice sessions via the Groq voice WebSocket proxy.
 - Requires `GROQ_API_KEY` in env variables for transcription and `callGroq` API usage.
 
 OpenAI
