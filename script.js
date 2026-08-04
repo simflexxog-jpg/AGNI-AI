@@ -1384,12 +1384,16 @@ function appendMessage(text, sender, options = {}, messageIndex = null) {
     copyBtn.addEventListener('click', () => copyToClipboard(text, copyBtn));
     actions.appendChild(copyBtn);
 
-    if (sender === 'user' && isLatestUserMessage(messageIndex, conv)) {
+    const renderIndex = messageIndex !== null && messageIndex !== undefined
+        ? messageIndex
+        : (sender === 'user' ? conv.messages.length : null);
+
+    if (sender === 'user' && isLatestUserMessage(renderIndex, conv)) {
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
         editBtn.className = 'msg-action-btn';
         editBtn.innerHTML = '<span class="material-symbols-outlined">edit</span>Edit';
-        editBtn.addEventListener('click', () => editPromptInComposer(text, messageIndex));
+        editBtn.addEventListener('click', () => editPromptInComposer(text, renderIndex));
         actions.appendChild(editBtn);
     }
 
