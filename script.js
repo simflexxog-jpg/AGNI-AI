@@ -1181,6 +1181,10 @@ function getLatestUserMessageIndex(conv = getActiveConversation()) {
     return latestIndex;
 }
 
+function isLatestUserMessage(messageIndex, conv = getActiveConversation()) {
+    return messageIndex === getLatestUserMessageIndex(conv);
+}
+
 function editPromptInComposer(text, messageIndex = null) {
     const targetIndex = messageIndex === null ? getLatestUserMessageIndex() : messageIndex;
 
@@ -1341,7 +1345,7 @@ function appendMessage(text, sender, options = {}, messageIndex = null) {
     copyBtn.addEventListener('click', () => copyToClipboard(text, copyBtn));
     actions.appendChild(copyBtn);
 
-    if (sender === 'user') {
+    if (sender === 'user' && isLatestUserMessage(messageIndex, conv)) {
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
         editBtn.className = 'msg-action-btn';
@@ -2450,9 +2454,7 @@ function handleSend() {
         const targetIndex = editingPromptState.messageIndex;
         if (targetIndex >= 0 && targetIndex < conv.messages.length) {
             conv.messages[targetIndex].content = normalizedText;
-            if (conv.messages.length > targetIndex + 1) {
-                conv.messages.splice(targetIndex + 1);
-            }
+            conv.messages.splice(targetIndex + 1);
             saveState();
             persistConversation(conv);
             renderActiveConversation();

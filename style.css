@@ -132,6 +132,7 @@ html[data-theme="dark"] body {
     flex-shrink: 0;
     vertical-align: middle;
     transition: font-variation-settings var(--t-fast);
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -149,6 +150,7 @@ html[data-theme="dark"] body {
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.55);
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     z-index: 40;
     opacity: 0;
