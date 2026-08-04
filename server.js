@@ -939,6 +939,85 @@ function isImageAttachment(item) {
   return Boolean(item.type && item.type.startsWith('image/') && item.previewUrl);
 }
 
+/**
+ * Extract readable text from a chat-time attachment (data URL).
+ * Supports: plain text, PDF, JSON, CSV, Markdown, and code files.
+ * Images are handled natively by the vision-capable AI models.
+ * Returns { text, truncated } or null if extraction is not applicable.
+ */
+async function extractTextFromChatAttachment(item) {
+  if (!item || !item.previewUrl || isImageAttachment(item)) return null;
+
+  const decoded = extractBase64(item.previewUrl);
+  if (!decoded) return null;
+
+  const { mimeType, data } = decoded;
+  const buffer = Buffer.from(data, 'base64');
+  const filename = item.name || '';
+  const ext = path.extname(filename).toLowerCase();
+
+  const MAX_TEXT_CHARS = 40000;
+
+  try {
+    // Plain text / code / markdown / JSON / CSV
+    const isTextualMime = mimeType.startsWith('text/') || [
+      'application/json', 'application/xml', 'application/javascript',
+      'application/typescript', 'application/x-yaml'
+    ].includes(mimeType);
+    const isTextualExt = [
+      '.txt', '.md', '.markdown', '.json', '.csv', '.tsv', '.yaml', '.yml',
+      '.xml', '.html', '.htm', '.css', '.js', '.ts', '.jsx', '.tsx',
+      '.py', '.rb', '.go', '.rs', '.java', '.c', '.cpp', '.h', '.sh',
+      '.env', '.toml', '.ini', '.log'
+    ].includes(ext);
+
+    if (isTextualMime || isTextualExt) {
+      let text = buffer.toString('utf8');
+      const truncated = text.length > MAX_TEXT_CHARS;
+      if (truncated) text = text.slice(0, MAX_TEXT_CHARS);
+      return { text: sanitizeTextInput(text, { maxLength: MAX_TEXT_CHARS }), truncated };
+    }
+
+    // PDF
+    if (mimeType === 'application/pdf' || ext === '.pdf') {
+      const parsed = await pdfParse(buffer);
+      let text = parsed?.text || '';
+      const truncated = text.length > MAX_TEXT_CHARS;
+      if (truncated) text = text.slice(0, MAX_TEXT_CHARS);
+      return { text: sanitizeTextInput(text, { maxLength: MAX_TEXT_CHARS }), truncated };
+    }
+  } catch (err) {
+    console.warn(`Failed to extract text from attachment "${filename}":`, err.message);
+  }
+
+  return null;
+}
+
+/**
+ * Build an enriched user message by extracting text from non-image attachments
+ * and appending it as inline context that the AI can read and reason about.
+ */
+async function buildMessageWithAttachments(userMessage, attachments) {
+  const nonImageAttachments = attachments.filter(item => !isImageAttachment(item));
+  if (!nonImageAttachments.length) return userMessage;
+
+  const sections = [];
+  for (const item of nonImageAttachments) {
+    const result = await extractTextFromChatAttachment(item);
+    if (result && result.text.trim()) {
+      const header = `--- Attached file: ${item.name}${result.truncated ? ' (truncated to 40 000 chars)' : ''} ---`;
+      sections.push(`${header}\n${result.text.trim()}`);
+    } else {
+      // File type cannot be read as text; just mention its name
+      sections.push(`--- Attached file: ${item.name} (binary / unsupported format — no text extracted) ---`);
+    }
+  }
+
+  if (!sections.length) return userMessage;
+
+  return `${userMessage}\n\n${sections.join('\n\n')}\n\n(The attached file content above has been provided for your reference. Please read it carefully and use it to answer the user's question.)`;
+}
+
 async function callGemini(history, currentText, attachments, modelName, thinkingEnabled, abortSignal) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('Missing GEMINI_API_KEY');
@@ -1236,10 +1315,9 @@ async function handleChat(req, res) {
 
   const history = sanitizeHistory(payload.history);
   const attachments = sanitizeAttachments(payload.attachments);
-  const nonImageNames = attachments.filter(item => !isImageAttachment(item)).map(item => item.name);
-  const currentText = nonImageNames.length
-    ? `${userMessage}\n\nAttachments: ${nonImageNames.join(', ')}`
-    : userMessage;
+  // Extract text from non-image attachments and inline it into the message so
+  // every AI provider (including text-only ones like Groq) can read the files.
+  const currentText = await buildMessageWithAttachments(userMessage, attachments);
   const relevantContext = await retrieveRelevantContext(userMessage, getUserId(req));
   const ragUsed = Array.isArray(relevantContext) && relevantContext.length > 0;
   const enrichedText = buildPromptWithContext(currentText, relevantContext);
@@ -1289,16 +1367,14 @@ async function handleChat(req, res) {
   }
 }
 
-function buildChatPayload(payload) {
+async function buildChatPayload(payload) {
   const userMessage = typeof payload.message === 'string' ? payload.message : '';
   if (!userMessage.trim()) return null;
 
   const history = sanitizeHistory(payload.history);
   const attachments = sanitizeAttachments(payload.attachments);
-  const nonImageNames = attachments.filter(item => !isImageAttachment(item)).map(item => item.name);
-  const currentText = nonImageNames.length
-    ? `${userMessage}\n\nAttachments: ${nonImageNames.join(', ')}`
-    : userMessage;
+  // Extract text from non-image attachments so all providers can read file contents.
+  const currentText = await buildMessageWithAttachments(userMessage, attachments);
 
   const provider = ['gemini', 'groq', 'openai'].includes(String(payload.provider || '').toLowerCase())
     ? String(payload.provider).toLowerCase()
@@ -1314,7 +1390,7 @@ function buildChatPayload(payload) {
 }
 
 async function handleWebSocketChat(ws, payload, abortSignal) {
-  const chatPayload = buildChatPayload(payload);
+  const chatPayload = await buildChatPayload(payload);
   if (!chatPayload) {
     ws.send(JSON.stringify({ type: 'error', error: 'Message is required.' }));
     return;

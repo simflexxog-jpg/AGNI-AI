@@ -1317,8 +1317,32 @@ function finalizeStreamingBotMessageWithError(messageDiv, partialText, errorMess
     return messageDiv;
 }
 
+function buildAttachmentPillsHtml(msgAttachments) {
+    if (!Array.isArray(msgAttachments) || !msgAttachments.length) return '';
+    const pills = msgAttachments.map(item => {
+        if (item.type?.startsWith('image/') && item.previewUrl) {
+            return `<div class="msg-attachment-pill msg-attachment-image">
+                      <img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.name)}" class="msg-attachment-img-preview">
+                      <span class="msg-attachment-filename">${escapeHtml(item.name)}</span>
+                    </div>`;
+        }
+        const iconMap = { pdf: 'picture_as_pdf', json: 'data_object', csv: 'table_chart', md: 'article' };
+        const ext = (item.name || '').split('.').pop()?.toLowerCase() || '';
+        const icon = iconMap[ext] || 'attach_file';
+        const sizeLabel = item.size ? ` · ${formatFileSize(item.size)}` : '';
+        return `<div class="msg-attachment-pill msg-attachment-file">
+                  <span class="material-symbols-outlined msg-attachment-icon">${escapeHtml(icon)}</span>
+                  <div class="msg-attachment-info">
+                    <span class="msg-attachment-filename">${escapeHtml(item.name)}</span>
+                    <span class="msg-attachment-filemeta">${escapeHtml(ext.toUpperCase())}${escapeHtml(sizeLabel)}</span>
+                  </div>
+                </div>`;
+    });
+    return `<div class="msg-attachments-row">${pills.join('')}</div>`;
+}
+
 function appendMessage(text, sender, options = {}, messageIndex = null) {
-    const { persist = true, animate = false } = options;
+    const { persist = true, animate = false, attachments: msgAttachments = [] } = options;
     const conv = getActiveConversation();
 
     const messageDiv = document.createElement('div');
@@ -1335,6 +1359,16 @@ function appendMessage(text, sender, options = {}, messageIndex = null) {
     const messageBody = document.createElement('div');
     messageBody.className = 'message-body';
     messageDiv.appendChild(messageBody);
+
+    // Render attachment pills above message text for user messages
+    if (sender === 'user' && msgAttachments.length > 0) {
+        const pillsHtml = buildAttachmentPillsHtml(msgAttachments);
+        if (pillsHtml) {
+            const pillsWrapper = document.createElement('div');
+            pillsWrapper.innerHTML = pillsHtml;
+            messageBody.appendChild(pillsWrapper.firstElementChild);
+        }
+    }
 
     const content = document.createElement('div');
     content.className = 'message-content';
@@ -1417,27 +1451,92 @@ function showFallbackMessage(message = 'The assistant is temporarily unavailable
 
 // --- Attachment handling ---
 
+// Supported file types for non-image attachments that the AI can read
+const SUPPORTED_TEXT_EXTENSIONS = new Set([
+    '.txt', '.md', '.markdown', '.json', '.csv', '.tsv',
+    '.yaml', '.yml', '.xml', '.html', '.htm', '.css',
+    '.js', '.ts', '.jsx', '.tsx', '.py', '.rb', '.go',
+    '.rs', '.java', '.c', '.cpp', '.h', '.sh', '.env',
+    '.toml', '.ini', '.log'
+]);
+
+const SUPPORTED_BINARY_EXTENSIONS = new Set(['.pdf']);
+
+function getFileIcon(file) {
+    const ext = (file.name || '').split('.').pop()?.toLowerCase() || '';
+    const type = file.type || '';
+    if (type.startsWith('image/')) return 'image';
+    if (ext === 'pdf') return 'picture_as_pdf';
+    if (['json', 'yaml', 'yml', 'xml', 'toml', 'ini'].includes(ext)) return 'data_object';
+    if (['csv', 'tsv'].includes(ext)) return 'table_chart';
+    if (['js', 'ts', 'jsx', 'tsx', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'sh'].includes(ext)) return 'code';
+    if (['html', 'htm', 'css'].includes(ext)) return 'web';
+    if (['md', 'markdown'].includes(ext)) return 'article';
+    if (['log', 'txt'].includes(ext)) return 'text_snippet';
+    return 'attach_file';
+}
+
+function isFileSupported(file) {
+    if (file.type?.startsWith('image/')) return true;
+    const ext = '.' + (file.name || '').split('.').pop()?.toLowerCase();
+    return SUPPORTED_TEXT_EXTENSIONS.has(ext) || SUPPORTED_BINARY_EXTENSIONS.has(ext);
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function renderAttachments() {
     attachmentPreview.innerHTML = '';
 
     attachments.forEach((item, index) => {
         const chip = document.createElement('div');
         chip.className = 'attachment-chip';
+        chip.setAttribute('role', 'listitem');
+        chip.setAttribute('aria-label', `Attached: ${item.name}`);
 
-        if (item.previewUrl && item.type.startsWith('image/')) {
+        if (item.previewUrl && item.type?.startsWith('image/')) {
+            // Image: show thumbnail
             const img = document.createElement('img');
             img.src = item.previewUrl;
             img.alt = item.name;
+            img.className = 'attachment-thumb';
             chip.appendChild(img);
+        } else {
+            // Non-image: show material icon
+            const iconEl = document.createElement('span');
+            iconEl.className = 'material-symbols-outlined attachment-file-icon';
+            iconEl.setAttribute('aria-hidden', 'true');
+            iconEl.textContent = getFileIcon(item);
+            chip.appendChild(iconEl);
         }
 
+        const meta = document.createElement('div');
+        meta.className = 'attachment-meta';
+
         const name = document.createElement('span');
-        name.textContent = item.name.length > 24 ? `${item.name.slice(0, 21)}...` : item.name;
-        chip.appendChild(name);
+        name.className = 'attachment-name';
+        const displayName = item.name.length > 22 ? `${item.name.slice(0, 19)}…` : item.name;
+        name.textContent = displayName;
+        name.title = item.name;
+        meta.appendChild(name);
+
+        if (item.size) {
+            const size = document.createElement('span');
+            size.className = 'attachment-size';
+            size.textContent = formatFileSize(item.size);
+            meta.appendChild(size);
+        }
+
+        chip.appendChild(meta);
 
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
-        removeBtn.textContent = '×';
+        removeBtn.className = 'attachment-remove-btn';
+        removeBtn.setAttribute('aria-label', `Remove ${item.name}`);
+        removeBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
         removeBtn.addEventListener('click', () => {
             attachments.splice(index, 1);
             renderAttachments();
@@ -1464,7 +1563,24 @@ function showComposerNotice(message) {
 
 function addAttachment(file) {
     if (file.size > MAX_ATTACHMENT_BYTES) {
-        showComposerNotice(`"${file.name}" is too large (max 8MB).`);
+        showComposerNotice(`"${file.name}" exceeds the 8 MB limit.`);
+        return;
+    }
+
+    if (attachments.length >= 6) {
+        showComposerNotice('Maximum 6 attachments per message.');
+        return;
+    }
+
+    // Check for duplicates
+    if (attachments.some(a => a.name === file.name && a.size === file.size)) {
+        showComposerNotice(`"${file.name}" is already attached.`);
+        return;
+    }
+
+    if (!isFileSupported(file)) {
+        const ext = '.' + (file.name || '').split('.').pop()?.toLowerCase();
+        showComposerNotice(`"${file.name}" (${ext}) is not supported. Use images, PDF, or text/code files.`);
         return;
     }
 
@@ -1472,7 +1588,7 @@ function addAttachment(file) {
     reader.onload = () => {
         attachments.push({
             name: file.name,
-            type: file.type,
+            type: file.type || 'application/octet-stream',
             size: file.size,
             previewUrl: reader.result
         });
@@ -2475,7 +2591,7 @@ function handleSend() {
         }
         editingPromptState = null;
     } else {
-        appendMessage(normalizedText, 'user');
+        appendMessage(normalizedText, 'user', { attachments: attachmentsSnapshot });
     }
 
     const historyForRequest = conv.messages.map(m => ({ role: m.role, content: m.content }));
