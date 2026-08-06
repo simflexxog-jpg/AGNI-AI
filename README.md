@@ -41,6 +41,15 @@ This project is designed to showcase a modern AI assistant workflow with practic
 
 ---
 
+Getting Started
+- Install dependencies: `npm install`
+- Configure environment variables in a `.env` file or your hosting platform.
+- Start locally: `npm start`
+- Open the app in your browser at `http://localhost:3000` (or the configured port).
+- For production, set `NODE_ENV=production`, `SESSION_SECRET`, and optionally `DATABASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GROQ_API_KEY`, `OPENAI_API_KEY`, and `GEMINI_API_KEY`.
+
+---
+
 2. Project Overview
 
 Purpose
@@ -195,17 +204,19 @@ Main responsibilities
 - WebSocket endpoint for streaming chat
 
 Key modules and functions
-- Session configuration: uses `express-session` with `connect-pg-simple` when `DATABASE_URL` present
+- Session configuration: uses `express-session` with `connect-pg-simple` when `DATABASE_URL` is present
 - `readBody(req)`: robust body reader used when `express.json()` is not available
 - `handleConversationPersistence(req, res)`: route middleware that serves and persists conversations
 - `upsertConversation` / `listConversations`: Postgres-backed persistence (JSONB for `messages`)
 - `POST /auth/google/callback`: verifies Google ID token via `google-auth-library` and stores session
+- `POST /auth/login` and `POST /auth/register`: local email/password auth flows
+- `POST /auth/logout`: clear session cookie and destroy server session
 - `POST /api/transcribe`: uses `busboy` to parse uploaded audio and forwards to Groq transcription endpoint
 
 Important notes and fixes
 - Use `req.body` (from `express.json()`) when available to avoid re-consuming the request stream;
-  fallback to manual `readBody()` for legacy form-encoded or streamed requests.
-- Session cookie configuration: when `NODE_ENV=production` set `sameSite='none'` and `secure=true` to support cross-site contexts on Render.
+  fallback to manual `readBody()` for raw request bodies.
+- Session cookie configuration is set to `sameSite: 'lax'` and `secure: true` in production, with POST-based login flows and session cookies handled server-side.
 
 Logging and debugging
 - Endpoints include helpful console logs for `POST /auth/google/callback` and `GET /debug/check-session` to inspect cookies and session state during debugging.
@@ -334,12 +345,13 @@ Purpose
 - Provide streaming responses (token-by-token or chunk streaming) for a responsive UX.
 
 Flow
-- Client opens WS to root path. Server responds with `connected` and listens for `chat` events.
-- Server sends `status`, `message` (partial deltas), and `done` events as JSON frames.
+- Client opens WS to `/api/live-voice`. Server responds with `connected` and listens for `chat`, `groq-voice`, and `live-voice` messages.
+- Server sends `status`, `message`, `groq-voice-reply`, `live-status`, and `error` frames as JSON.
 
 Client handling
-- `fetchAIResponse()` manages both WS and HTTP fallback. On WS, sending is JSON `{type:'chat', message, history, provider, model}`.
+- `fetchAIResponse()` manages both WS and HTTP fallback. On WS, sending is JSON `{ type:'chat', message, history, provider, model }`.
 - Partial content is appended to a streaming message container and finalized on `done`.
+- The same socket path is also used for live voice audio relay and Groq voice session control.
 
 Considerations
 - Add reconnect/backoff logic with exponential backoff and jitter.
@@ -362,11 +374,14 @@ Environment variables (set in Render dashboard)
 - `SESSION_SECRET` — strong random string
 - `DATABASE_URL` — Render Postgres connection string (if using)
 - `GOOGLE_CLIENT_ID` — Google OAuth client ID; ensure OAuth console includes your Render origin in "Authorized JavaScript origins"
+- `GOOGLE_CLIENT_SECRET` — client secret used during Google authorization code exchange
+- `CALLBACK_URL` — optional configured redirect callback URL used by client-side config endpoints
 - `GROQ_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` — provider keys
+- `ALLOWED_ORIGINS` — optional comma-separated origins for CORS
 - `NODE_ENV` — `production`
 
 Networking & cookies
-- On Render, sessions require `sameSite: none` and `secure: true` for cross-site cookies. `server.js` already sets these when `NODE_ENV==='production'`.
+- In production, the app sets `secure: true` and `sameSite: 'lax'` for the session cookie. Use HTTPS and ensure your OAuth/Render origins are consistent with Google settings.
 
 Steps
 1. Push code to Git repository.
@@ -393,7 +408,11 @@ List and notes
 - `SESSION_SECRET` — keep secret. Use a 32+ char random string.
 - `DATABASE_URL` — set by Render when adding Postgres. DO NOT expose publicly.
 - `GOOGLE_CLIENT_ID` — required for login. On Google Cloud Console, set Authorized JavaScript origins to `https://<your-render-service>.onrender.com` and Authorized redirect URIs if you use redirect flow.
+- `GOOGLE_CLIENT_SECRET` — required for the server-side Google code exchange flow.
+- `CALLBACK_URL` — optional URL returned by `/api/google-client-id` and `/api/config` if configured.
+- `ALLOWED_ORIGINS` — optional comma-separated CORS whitelist for browser origins.
 - `GROQ_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` — API keys for providers.
+- `RAG_ENABLED` — optional flag to enable or disable project-aware RAG context scanning.
 
 How to add in Render
 1. Go to your service in Render > Environment > Environment Variables.
@@ -411,9 +430,12 @@ Health
 - `GET /health` — 200 `{ "status": "ok" }`
 
 Auth
-- `GET /api/google-client-id` — `{ clientId: '...' }`
-- `POST /auth/google/callback` — body JSON `{ id_token }` -> validates token, sets session
-- `POST /auth/logout` — invalidates session
+- `GET /api/google-client-id` — returns `{ clientId, callbackUrl }`
+- `POST /auth/google/callback` — body JSON `{ id_token }` or `{ credential }`; validates token, sets session
+- `POST /auth/google/redirect` — body JSON `{ credential }` or `{ id_token }`; validates token and redirects to `/`
+- `POST /auth/login` — body JSON `{ email, password }`; local login
+- `POST /auth/register` — body JSON `{ name, email, password }`; local registration
+- `POST /auth/logout` — invalidates session and clears cookies
 
 User
 - `GET /api/user` — returns `{ user }` or `{ user: null }`
@@ -421,16 +443,24 @@ User
 Conversations
 - `GET /api/conversations` — requires session; returns `[ { id, title, messages, createdAt, updatedAt }, ... ]`
 - `POST /api/conversations` — body: conversation object; returns persisted object
-- `DELETE /api/conversations` — body `{ id }`
+- `PUT /api/conversations` — body: conversation object; updates or creates conversation
+- `DELETE /api/conversations` — body `{ id }`; deletes a conversation
+
+Documents
+- `POST /api/upload` — multipart/form-data upload `.txt` or `.pdf`; extracts text for document/RAG ingestion
+- `GET /api/documents` — list uploaded document metadata for the current user
+- `DELETE /api/documents/:id` — delete a user document by id
 
 Transcription
-- `POST /api/transcribe` — multipart/form-data upload `file` -> server forwards to Groq and returns `{ transcript, fallback }`
+- `POST /api/transcribe` — multipart/form-data upload `file` -> Groq transcription; returns `{ transcript }`
 
 Chat
-- `POST /api/chat` — HTTP fallback for chat; body includes `message`, `history`, `provider`, `model`
+- `POST /api/chat` — HTTP fallback for chat; body includes `{ message, history, provider, model }`
 
 WebSocket
-- Root path `/` for socket. Client must send JSON `{ type: 'chat', message, history, provider, model }`.
+- Path `/api/live-voice` for websocket connections.
+- Client must send JSON messages such as `{ type: 'chat', message, history, provider, model }`.
+- The server also accepts `groq-voice` and `live-voice` socket messages for live and voice-assisted interactions.
 
 Examples
 ```bash
@@ -444,6 +474,9 @@ curl -i --cookie "connect.sid=<cookie>" http://localhost:3001/api/conversations
 curl -i --cookie "connect.sid=<cookie>" -X POST -H "Content-Type: application/json" \
   -d '{"id":"c-123","title":"Test","messages":[{"role":"bot","content":"Hi"}]}' \
   http://localhost:3001/api/conversations
+
+# upload supporting text or PDF
+curl -i --cookie "connect.sid=<cookie>" -X POST -F "file=@notes.txt" http://localhost:3001/api/upload
 ```
 
 ---
