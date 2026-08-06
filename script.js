@@ -1250,7 +1250,7 @@ function setLiveStatus(text, state = '') {
 
 function setLiveTranscript(text) {
     if (!liveTranscript) return;
-    liveTranscript.textContent = text || 'Tap the orb to begin speaking.';
+    liveTranscript.textContent = text || 'Tap the orb - And mic is all yours.';
 }
 
 /** Stop browser TTS if it is playing */
