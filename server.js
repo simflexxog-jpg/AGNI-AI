@@ -113,6 +113,7 @@ const oauthClient = new OAuth2Client(
 );
 const inMemoryConversations = new Map();
 const inMemoryUsers = new Map();
+const passwordResetTokens = new Map();
 
 let ragIndexCache = null;
 let ragIndexCacheTime = 0;
@@ -141,6 +142,10 @@ function sanitizeTextInput(value, { maxLength = 4000, allowEmpty = false } = {})
 
 function normalizeEmailForAuth(email) {
   return sanitizeTextInput(email || '', { maxLength: 200 }).toLowerCase();
+}
+
+function isValidEmailAddress(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || '').trim());
 }
 
 function buildLocalUserId(email) {
@@ -1778,6 +1783,7 @@ app.use((req, res, next) => {
     || req.path === '/auth/google/redirect'
     || req.path === '/auth/login'
     || req.path === '/auth/register'
+    || req.path === '/auth/forgot-password'
     || req.path === '/auth/logout';
 
   if (exemptPath) {
@@ -1906,6 +1912,26 @@ app.post('/auth/login', async (req, res) => {
     console.error('Local login failed:', error?.message);
     res.status(500).json({ error: error?.message || 'Login failed.' });
   }
+});
+
+app.post('/auth/forgot-password', async (req, res) => {
+  const email = normalizeEmailForAuth(req.body?.email);
+
+  if (!email || !isValidEmailAddress(email)) {
+    return res.status(400).json({ error: 'Enter a valid email address.' });
+  }
+
+  const user = await getUserByEmail(email);
+  if (user) {
+    const token = crypto.randomBytes(16).toString('hex');
+    passwordResetTokens.set(token, { email, createdAt: Date.now() });
+    console.log(`Password reset requested for ${email} (token ${token})`);
+  }
+
+  return res.json({
+    ok: true,
+    message: 'If an account exists for that email, we will send reset instructions shortly.'
+  });
 });
 
 app.post('/auth/register', async (req, res) => {

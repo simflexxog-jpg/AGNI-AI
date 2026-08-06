@@ -150,6 +150,48 @@
     }
     .field-label a:hover { color: #818cf8; }
 
+    .forgot-link {
+      font-size: 0.75rem;
+      color: rgba(99,102,241,0.9);
+      text-decoration: none;
+      background: none;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+      font: inherit;
+    }
+    .forgot-link:hover { color: #818cf8; }
+
+    .forgot-password-panel {
+      display: grid;
+      gap: 10px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.04);
+      margin-top: -4px;
+    }
+    .forgot-password-panel[hidden] { display: none; }
+    .forgot-password-panel .hint {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.70);
+      line-height: 1.5;
+    }
+    .forgot-action-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .forgot-action-row input {
+      flex: 1;
+      min-width: 0;
+    }
+    .forgot-action-row .btn-secondary {
+      width: auto;
+      white-space: nowrap;
+      padding: 10px 12px;
+    }
+
     /* Input wrapper for icon/toggle */
     .input-wrap {
       position: relative;
@@ -483,7 +525,7 @@
         <div class="field">
           <div class="field-label">
             <label for="password">Password</label>
-            <a href="/forgot-password" tabindex="0">Forgot password?</a>
+            <button type="button" class="forgot-link" id="forgot-password-link" tabindex="0">Forgot password?</button>
           </div>
           <div class="input-wrap">
             <input
@@ -510,6 +552,23 @@
             </button>
           </div>
           <span class="field-error" id="password-error" role="alert" aria-live="polite"></span>
+        </div>
+
+        <div id="forgot-password-panel" class="forgot-password-panel" hidden>
+          <p class="hint">Enter your email and we’ll send reset instructions if an account exists.</p>
+          <div class="forgot-action-row">
+            <input
+              id="forgot-email"
+              name="forgot_email"
+              type="email"
+              inputmode="email"
+              autocomplete="email"
+              placeholder="you@example.com"
+              aria-label="Email address for password reset"
+            />
+            <button type="button" class="btn-secondary" id="forgot-password-submit">Send</button>
+          </div>
+          <div class="field-error" id="forgot-email-error" role="alert" aria-live="polite"></div>
         </div>
 
         <!-- Remember me -->
@@ -577,6 +636,11 @@
     const togglePw   = document.getElementById('toggle-pw');
     const eyeIcon    = document.getElementById('eye-icon');
     const eyeOffIcon = document.getElementById('eye-off-icon');
+    const forgotLink = document.getElementById('forgot-password-link');
+    const forgotPanel = document.getElementById('forgot-password-panel');
+    const forgotEmail = document.getElementById('forgot-email');
+    const forgotSubmit = document.getElementById('forgot-password-submit');
+    const forgotEmailError = document.getElementById('forgot-email-error');
     const rateBar    = document.getElementById('rate-bar');
     const rateBarFill = document.getElementById('rate-bar-fill');
     const rateBarLabel = document.getElementById('rate-bar-label');
@@ -630,6 +694,56 @@
       eyeOffIcon.style.display = showing ? 'none' : '';
       togglePw.setAttribute('aria-pressed', String(!showing));
       togglePw.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+    });
+
+    function toggleForgotPassword(open) {
+      forgotPanel.hidden = !open;
+      if (open) {
+        forgotEmail.focus();
+      }
+    }
+
+    forgotLink.addEventListener('click', event => {
+      event.preventDefault();
+      toggleForgotPassword(forgotPanel.hidden);
+    });
+
+    forgotSubmit.addEventListener('click', async () => {
+      const email = forgotEmail.value.trim();
+      forgotEmailError.textContent = '';
+
+      if (!email || !isValidEmail(email)) {
+        forgotEmailError.textContent = 'Enter a valid email address.';
+        forgotEmail.focus();
+        return;
+      }
+
+      forgotSubmit.disabled = true;
+      forgotSubmit.textContent = 'Sending…';
+
+      try {
+        const res = await fetch('/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email })
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          setStatus(data.error || 'Unable to process your request right now.', 'error');
+        } else {
+          setStatus(data.message || 'If an account exists for that email, we will send reset instructions shortly.', 'info');
+          forgotEmail.value = '';
+          toggleForgotPassword(false);
+        }
+      } catch (err) {
+        setStatus('Network error. Please try again.', 'error');
+      } finally {
+        forgotSubmit.disabled = false;
+        forgotSubmit.textContent = 'Send';
+      }
     });
 
     // ── Real-time field validation ─────────────────────────────────
