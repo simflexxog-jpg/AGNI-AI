@@ -150,26 +150,44 @@
     }
     .field-label a:hover { color: #818cf8; }
 
+    .forgot-link-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 6px;
+    }
     .forgot-link {
       font-size: 0.75rem;
-      color: rgba(99,102,241,0.9);
+      font-weight: 600;
+      color: #a5b4fc;
       text-decoration: none;
-      background: none;
-      border: 0;
-      padding: 0;
+      background: rgba(99,102,241,0.12);
+      border: 1px solid rgba(129,140,248,0.24);
+      border-radius: 999px;
+      padding: 6px 10px;
       cursor: pointer;
       font: inherit;
+      transition: background var(--transition), color var(--transition), transform var(--transition), border-color var(--transition);
     }
-    .forgot-link:hover { color: #818cf8; }
+    .forgot-link:hover {
+      color: #e0e7ff;
+      background: rgba(99,102,241,0.18);
+      border-color: rgba(129,140,248,0.38);
+      transform: translateY(-1px);
+    }
+    .forgot-link:focus-visible {
+      outline: 2px solid #818cf8;
+      outline-offset: 2px;
+    }
 
     .forgot-password-panel {
       display: grid;
       gap: 10px;
       padding: 12px 14px;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: var(--radius-sm);
-      background: rgba(255,255,255,0.04);
-      margin-top: -4px;
+      border: 1px solid rgba(129,140,248,0.24);
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(255,255,255,0.04));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+      margin-top: 8px;
     }
     .forgot-password-panel[hidden] { display: none; }
     .forgot-password-panel .hint {
@@ -185,11 +203,19 @@
     .forgot-action-row input {
       flex: 1;
       min-width: 0;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.06);
+      padding: 10px 12px;
+      border-radius: 10px;
     }
     .forgot-action-row .btn-secondary {
       width: auto;
       white-space: nowrap;
       padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      border-color: rgba(255,255,255,0.12);
     }
 
     /* Input wrapper for icon/toggle */
@@ -525,7 +551,6 @@
         <div class="field">
           <div class="field-label">
             <label for="password">Password</label>
-            <button type="button" class="forgot-link" id="forgot-password-link" tabindex="0">Forgot password?</button>
           </div>
           <div class="input-wrap">
             <input
@@ -551,10 +576,10 @@
               </svg>
             </button>
           </div>
-          <span class="field-error" id="password-error" role="alert" aria-live="polite"></span>
-        </div>
-
-        <div id="forgot-password-panel" class="forgot-password-panel" hidden>
+          <div class="forgot-link-row">
+            <button type="button" class="forgot-link" id="forgot-password-link" tabindex="0">Forgot password?</button>
+          </div>
+          <div id="forgot-password-panel" class="forgot-password-panel" hidden>
           <p class="hint">Enter your email and we’ll send reset instructions if an account exists.</p>
           <div class="forgot-action-row">
             <input
