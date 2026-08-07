@@ -1960,17 +1960,26 @@ app.post('/auth/forgot-password', async (req, res) => {
   }
 
   const user = await getUserByEmail(email);
+  let canReset = false;
+  let debugOtp;
+  let message = 'If an account exists for that email, an OTP code has been sent.';
+
   if (user && user.provider === 'local') {
     const code = String(Math.floor(100000 + Math.random() * 900000)).padStart(6, '0');
     passwordResetOtps.set(email, { code, createdAt: Date.now(), attempts: 0 });
+    debugOtp = process.env.NODE_ENV !== 'production' ? code : undefined;
+    canReset = true;
     console.log(`Password reset OTP for ${email}: ${code}`);
   } else if (user) {
     console.log(`Password reset requested for ${email} (provider=${user.provider})`);
+    message = 'This account is not eligible for email/password reset. Use your provider sign-in or create a local password.';
   }
 
   return res.json({
     ok: true,
-    message: 'If an account exists for that email, an OTP code has been sent.'
+    message,
+    canReset,
+    debugOtp
   });
 });
 
