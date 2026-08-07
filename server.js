@@ -1809,6 +1809,13 @@ app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, 'register.html'));
 });
 
+app.get('/forgot-password', (req, res) => {
+  if (req.session?.user?.googleId || req.session?.user?.email) {
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(__dirname, 'forgot-password.html'));
+});
+
 app.get('/auth/google', (req, res) => {
   res.redirect('/login');
 });

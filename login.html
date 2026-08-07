@@ -156,10 +156,11 @@
       margin-top: 6px;
     }
     .forgot-link {
+      position: relative;
       font-size: 0.75rem;
       font-weight: 600;
       color: rgba(99,102,241,0.95);
-      text-decoration: underline;
+      text-decoration: none;
       background: none;
       border: none;
       padding: 0;
@@ -167,75 +168,28 @@
       font: inherit;
       transition: color var(--transition), transform var(--transition);
     }
+    .forgot-link::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -2px;
+      height: 2px;
+      background: linear-gradient(135deg, rgba(139,92,246,0.95), rgba(99,102,241,0.95));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform var(--transition);
+      border-radius: 999px;
+    }
     .forgot-link:hover {
       color: #dbeafe;
       transform: translateY(-1px);
     }
+    .forgot-link:hover::after {
+      transform: scaleX(1);
+    }
     .forgot-link:focus-visible {
       outline: 2px solid rgba(99,102,241,0.24);
-      outline-offset: 2px;
-    }
-
-    .forgot-password-panel {
-      display: grid;
-      gap: 8px;
-      padding: 6px 0 0 0;
-      border: none;
-      border-radius: 0;
-      background: transparent;
-      box-shadow: none;
-      margin-top: 6px;
-    }
-    .forgot-password-panel[hidden] { display: none; }
-    .forgot-password-panel .hint {
-      font-size: 0.78rem;
-      color: rgba(255,255,255,0.65);
-      line-height: 1.4;
-    }
-    .forgot-action-row {
-      display: flex;
-      gap: 8px;
-      align-items: baseline;
-      font-size: 0.92rem;
-    }
-    .forgot-action-row input {
-      flex: 1;
-      min-width: 0;
-      border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(255,255,255,0.06);
-      padding: 10px 12px;
-      border-radius: 10px;
-      color: var(--text);
-      font: inherit;
-      outline: none;
-      transition: border-color var(--transition), background var(--transition);
-    }
-    .forgot-action-row input::placeholder { color: rgba(255,255,255,0.35); }
-    .forgot-action-row input:focus {
-      border-color: rgba(99,102,241,0.75);
-      background: rgba(255,255,255,0.09);
-    }
-    .forgot-action-row .btn-secondary {
-      width: auto;
-      white-space: nowrap;
-      padding: 8px 14px;
-      margin: 0;
-      background: rgba(99,102,241,0.12);
-      border: 1px solid rgba(99,102,241,0.18);
-      color: rgba(99,102,241,0.95);
-      text-decoration: none;
-      font: inherit;
-      cursor: pointer;
-      border-radius: 999px;
-      transition: background var(--transition), border-color var(--transition), transform var(--transition);
-    }
-    .forgot-action-row .btn-secondary:hover {
-      background: rgba(99,102,241,0.18);
-      border-color: rgba(99,102,241,0.28);
-      transform: translateY(-1px);
-    }
-    .forgot-action-row .btn-secondary:focus-visible {
-      outline: 2px solid rgba(99,102,241,0.30);
       outline-offset: 2px;
     }
 
@@ -598,24 +552,8 @@
             </button>
           </div>
           <div class="forgot-link-row">
-            <button type="button" class="forgot-link" id="forgot-password-link" tabindex="0">Forgot password?</button>
+            <a href="/forgot-password" class="forgot-link">Forgot password?</a>
           </div>
-          <div id="forgot-password-panel" class="forgot-password-panel" hidden>
-          <p class="hint">Enter your email and we’ll send reset instructions if an account exists.</p>
-          <div class="forgot-action-row">
-            <input
-              id="forgot-email"
-              name="forgot_email"
-              type="email"
-              inputmode="email"
-              autocomplete="email"
-              placeholder="you@example.com"
-              aria-label="Email address for password reset"
-            />
-            <button type="button" class="btn-secondary" id="forgot-password-submit">Send</button>
-          </div>
-          <div class="field-error" id="forgot-email-error" role="alert" aria-live="polite"></div>
-        </div>
 
         <!-- Remember me -->
         <div class="row-check">
@@ -682,11 +620,6 @@
     const togglePw   = document.getElementById('toggle-pw');
     const eyeIcon    = document.getElementById('eye-icon');
     const eyeOffIcon = document.getElementById('eye-off-icon');
-    const forgotLink = document.getElementById('forgot-password-link');
-    const forgotPanel = document.getElementById('forgot-password-panel');
-    const forgotEmail = document.getElementById('forgot-email');
-    const forgotSubmit = document.getElementById('forgot-password-submit');
-    const forgotEmailError = document.getElementById('forgot-email-error');
     const rateBar    = document.getElementById('rate-bar');
     const rateBarFill = document.getElementById('rate-bar-fill');
     const rateBarLabel = document.getElementById('rate-bar-label');
@@ -740,56 +673,6 @@
       eyeOffIcon.style.display = showing ? 'none' : '';
       togglePw.setAttribute('aria-pressed', String(!showing));
       togglePw.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
-    });
-
-    function toggleForgotPassword(open) {
-      forgotPanel.hidden = !open;
-      if (open) {
-        forgotEmail.focus();
-      }
-    }
-
-    forgotLink.addEventListener('click', event => {
-      event.preventDefault();
-      toggleForgotPassword(forgotPanel.hidden);
-    });
-
-    forgotSubmit.addEventListener('click', async () => {
-      const email = forgotEmail.value.trim();
-      forgotEmailError.textContent = '';
-
-      if (!email || !isValidEmail(email)) {
-        forgotEmailError.textContent = 'Enter a valid email address.';
-        forgotEmail.focus();
-        return;
-      }
-
-      forgotSubmit.disabled = true;
-      forgotSubmit.textContent = 'Sending…';
-
-      try {
-        const res = await fetch('/auth/forgot-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ email })
-        });
-
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          setStatus(data.error || 'Unable to process your request right now.', 'error');
-        } else {
-          setStatus(data.message || 'If an account exists for that email, we will send reset instructions shortly.', 'info');
-          forgotEmail.value = '';
-          toggleForgotPassword(false);
-        }
-      } catch (err) {
-        setStatus('Network error. Please try again.', 'error');
-      } finally {
-        forgotSubmit.disabled = false;
-        forgotSubmit.textContent = 'Send';
-      }
     });
 
     // ── Real-time field validation ─────────────────────────────────
