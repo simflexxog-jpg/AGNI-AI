@@ -15,6 +15,7 @@ const { Pool } = require('pg');
 const { OAuth2Client } = require('google-auth-library');
 const { WebSocketServer, WebSocket: NodeWebSocket } = require('ws');
 const busboy = require('busboy');
+const nodemailer = require('nodemailer');
 const pdfParse = require('pdf-parse');
 const { RecursiveCharacterTextSplitter } = require('@langchain/textsplitters');
 const { Document } = require('@langchain/core/documents');
@@ -142,6 +143,60 @@ function sanitizeTextInput(value, { maxLength = 4000, allowEmpty = false } = {})
 
 function normalizeEmailForAuth(email) {
   return sanitizeTextInput(email || '', { maxLength: 200 }).toLowerCase();
+}
+
+function createEmailTransporter() {
+  if (process.env.EMAIL_SERVICE) {
+    return nodemailer.createTransport({
+      service: process.env.EMAIL_SERVICE,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+  }
+
+  if (process.env.EMAIL_HOST) {
+    return nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: Number(process.env.EMAIL_PORT || 587),
+      secure: process.env.EMAIL_SECURE === 'true',
+      auth: process.env.EMAIL_USER ? {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      } : undefined
+    });
+  }
+
+  return null;
+}
+
+async function sendPasswordResetEmail(email, code) {
+  const transporter = createEmailTransporter();
+  const fromAddress = process.env.EMAIL_FROM || `no-reply@${process.env.EMAIL_HOST || 'localhost'}`;
+  const subject = 'Your password reset code';
+  const text = `Your password reset code is ${code}. It expires in 10 minutes.`;
+  const html = `<p>Your password reset code is <strong>${code}</strong>.</p><p>It expires in 10 minutes.</p>`;
+
+  if (!transporter) {
+    console.log(`SMTP not configured. OTP for ${email}: ${code}`);
+    return false;
+  }
+
+  try {
+    await transporter.sendMail({
+      from: fromAddress,
+      to: email,
+      subject,
+      text,
+      html
+    });
+    return true;
+  } catch (error) {
+    console.warn('Failed to send password reset email:', error?.message || error);
+    console.log(`Fallback OTP for ${email}: ${code}`);
+    return false;
+  }
 }
 
 function isValidEmailAddress(email) {
@@ -1969,6 +2024,10 @@ app.post('/auth/forgot-password', async (req, res) => {
     passwordResetOtps.set(email, { code, createdAt: Date.now(), attempts: 0 });
     debugOtp = process.env.NODE_ENV !== 'production' ? code : undefined;
     canReset = true;
+    const sent = await sendPasswordResetEmail(email, code);
+    if (!sent) {
+      console.log(`OTP for ${email} generated but email delivery is not configured or failed.`);
+    }
     console.log(`Password reset OTP for ${email}: ${code}`);
   } else if (user) {
     console.log(`Password reset requested for ${email} (provider=${user.provider})`);
