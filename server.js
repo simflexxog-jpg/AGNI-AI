@@ -2026,10 +2026,11 @@ app.post('/auth/forgot-password', async (req, res) => {
     passwordResetOtps.set(email, { code, createdAt: Date.now(), attempts: 0 });
     debugOtp = process.env.NODE_ENV !== 'production' ? code : undefined;
     canReset = true;
-    const result = await sendPasswordResetEmail(email, code);
-    if (!result.sent) {
-      console.warn(`OTP delivery failed for ${email}: ${result.error}`);
-    }
+    void sendPasswordResetEmail(email, code).then(result => {
+      if (!result.sent) {
+        console.warn(`OTP delivery failed for ${email}: ${result.error}`);
+      }
+    });
     console.log(`Password reset OTP for ${email}: ${code}`);
   }
 
