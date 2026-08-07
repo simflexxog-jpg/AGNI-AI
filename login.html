@@ -201,26 +201,42 @@
     .forgot-action-row input {
       flex: 1;
       min-width: 0;
-      border: none;
-      background: transparent;
-      padding: 0;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      padding: 10px 12px;
+      border-radius: 10px;
       color: var(--text);
       font: inherit;
       outline: none;
-      border-bottom: none;
+      transition: border-color var(--transition), background var(--transition);
     }
     .forgot-action-row input::placeholder { color: rgba(255,255,255,0.35); }
+    .forgot-action-row input:focus {
+      border-color: rgba(99,102,241,0.75);
+      background: rgba(255,255,255,0.09);
+    }
     .forgot-action-row .btn-secondary {
       width: auto;
       white-space: nowrap;
-      padding: 0;
+      padding: 8px 14px;
       margin: 0;
-      background: none;
-      border: none;
+      background: rgba(99,102,241,0.12);
+      border: 1px solid rgba(99,102,241,0.18);
       color: rgba(99,102,241,0.95);
-      text-decoration: underline;
+      text-decoration: none;
       font: inherit;
       cursor: pointer;
+      border-radius: 999px;
+      transition: background var(--transition), border-color var(--transition), transform var(--transition);
+    }
+    .forgot-action-row .btn-secondary:hover {
+      background: rgba(99,102,241,0.18);
+      border-color: rgba(99,102,241,0.28);
+      transform: translateY(-1px);
+    }
+    .forgot-action-row .btn-secondary:focus-visible {
+      outline: 2px solid rgba(99,102,241,0.30);
+      outline-offset: 2px;
     }
 
     /* Input wrapper for icon/toggle */
