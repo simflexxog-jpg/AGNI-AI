@@ -113,7 +113,7 @@ const oauthClient = new OAuth2Client(
 );
 const inMemoryConversations = new Map();
 const inMemoryUsers = new Map();
-const passwordResetTokens = new Map();
+const passwordResetOtps = new Map();
 
 let ragIndexCache = null;
 let ragIndexCacheTime = 0;
@@ -609,6 +609,37 @@ async function getUserByEmail(email) {
   const { rows } = await pool.query(
     'SELECT google_id AS "googleId", name, email, avatar, provider, password_hash AS "passwordHash", password_salt AS "passwordSalt" FROM users WHERE email = $1 LIMIT 1',
     [normalizedEmail]
+  );
+
+  return rows[0] ? normalizeUser(rows[0]) : null;
+}
+
+async function updateLocalUserPassword(email, password) {
+  const normalizedEmail = normalizeEmailForAuth(email);
+  if (!normalizedEmail || !password || password.length < 8) {
+    return null;
+  }
+
+  const { hash, salt } = hashPassword(password);
+  const pool = await connectToDatabase();
+  if (!pool) {
+    for (const [key, user] of inMemoryUsers.entries()) {
+      if (normalizeEmailForAuth(user.email) === normalizedEmail && user.provider === 'local') {
+        user.passwordHash = hash;
+        user.passwordSalt = salt;
+        inMemoryUsers.set(key, user);
+        return normalizeUser(user);
+      }
+    }
+    return null;
+  }
+
+  const { rows } = await pool.query(
+    `UPDATE users
+     SET password_hash = $1, password_salt = $2, updated_at = NOW()
+     WHERE email = $3 AND provider = 'local'
+     RETURNING google_id AS "googleId", name, email, avatar, provider`,
+    [hash, salt, normalizedEmail]
   );
 
   return rows[0] ? normalizeUser(rows[0]) : null;
@@ -1929,15 +1960,71 @@ app.post('/auth/forgot-password', async (req, res) => {
   }
 
   const user = await getUserByEmail(email);
-  if (user) {
-    const token = crypto.randomBytes(16).toString('hex');
-    passwordResetTokens.set(token, { email, createdAt: Date.now() });
-    console.log(`Password reset requested for ${email} (token ${token})`);
+  if (user && user.provider === 'local') {
+    const code = String(Math.floor(100000 + Math.random() * 900000)).padStart(6, '0');
+    passwordResetOtps.set(email, { code, createdAt: Date.now(), attempts: 0 });
+    console.log(`Password reset OTP for ${email}: ${code}`);
+  } else if (user) {
+    console.log(`Password reset requested for ${email} (provider=${user.provider})`);
   }
 
   return res.json({
     ok: true,
-    message: 'If an account exists for that email, we will send reset instructions shortly.'
+    message: 'If an account exists for that email, an OTP code has been sent.'
+  });
+});
+
+app.post('/auth/reset-password', async (req, res) => {
+  const email = normalizeEmailForAuth(req.body?.email);
+  const otp = String(req.body?.otp || '').trim();
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+  if (!email || !isValidEmailAddress(email) || !otp || !password) {
+    return res.status(400).json({ error: 'Email, OTP, and new password are required.' });
+  }
+
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  }
+
+  const otpEntry = passwordResetOtps.get(email);
+  if (!otpEntry || Date.now() - otpEntry.createdAt > 10 * 60 * 1000) {
+    if (otpEntry) passwordResetOtps.delete(email);
+    return res.status(400).json({ error: 'OTP expired or invalid.' });
+  }
+
+  if (otpEntry.attempts >= 5) {
+    passwordResetOtps.delete(email);
+    return res.status(400).json({ error: 'OTP expired or invalid.' });
+  }
+
+  if (otpEntry.code !== otp) {
+    otpEntry.attempts += 1;
+    passwordResetOtps.set(email, otpEntry);
+    return res.status(400).json({ error: 'Invalid OTP code.' });
+  }
+
+  const user = await getUserByEmail(email);
+  if (!user || user.provider !== 'local') {
+    passwordResetOtps.delete(email);
+    return res.status(400).json({ error: 'Unable to reset password for this account.' });
+  }
+
+  const updatedUser = await updateLocalUserPassword(email, password);
+  if (!updatedUser) {
+    return res.status(500).json({ error: 'Unable to update password.' });
+  }
+
+  passwordResetOtps.delete(email);
+
+  req.session.user = updatedUser;
+  req.session.save(err => {
+    if (err) {
+      console.warn('Session save failed:', err?.message);
+      return res.status(500).json({ error: 'Session save failed.' });
+    }
+
+    res.json({ ok: true, message: 'Password reset successful. Redirecting…', redirect: '/' });
   });
 });
 
