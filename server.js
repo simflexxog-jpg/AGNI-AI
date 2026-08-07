@@ -180,7 +180,7 @@ async function sendPasswordResetEmail(email, code) {
 
   if (!transporter) {
     console.log(`SMTP not configured. OTP for ${email}: ${code}`);
-    return false;
+    return { sent: false, error: 'SMTP not configured' };
   }
 
   try {
@@ -191,11 +191,12 @@ async function sendPasswordResetEmail(email, code) {
       text,
       html
     });
-    return true;
+    return { sent: true };
   } catch (error) {
-    console.warn('Failed to send password reset email:', error?.message || error);
+    const message = error?.message || String(error);
+    console.warn('Failed to send password reset email:', message);
     console.log(`Fallback OTP for ${email}: ${code}`);
-    return false;
+    return { sent: false, error: message };
   }
 }
 
@@ -2024,9 +2025,9 @@ app.post('/auth/forgot-password', async (req, res) => {
     passwordResetOtps.set(email, { code, createdAt: Date.now(), attempts: 0 });
     debugOtp = process.env.NODE_ENV !== 'production' ? code : undefined;
     canReset = true;
-    const sent = await sendPasswordResetEmail(email, code);
-    if (!sent) {
-      console.log(`OTP for ${email} generated but email delivery is not configured or failed.`);
+    const result = await sendPasswordResetEmail(email, code);
+    if (!result.sent) {
+      console.warn(`OTP delivery failed for ${email}: ${result.error}`);
     }
     console.log(`Password reset OTP for ${email}: ${code}`);
   } else if (user) {
