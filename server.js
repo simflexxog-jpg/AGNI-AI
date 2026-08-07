@@ -680,9 +680,10 @@ async function updateLocalUserPassword(email, password) {
   const pool = await connectToDatabase();
   if (!pool) {
     for (const [key, user] of inMemoryUsers.entries()) {
-      if (normalizeEmailForAuth(user.email) === normalizedEmail && user.provider === 'local') {
+      if (normalizeEmailForAuth(user.email) === normalizedEmail) {
         user.passwordHash = hash;
         user.passwordSalt = salt;
+        user.provider = 'local';
         inMemoryUsers.set(key, user);
         return normalizeUser(user);
       }
@@ -692,8 +693,8 @@ async function updateLocalUserPassword(email, password) {
 
   const { rows } = await pool.query(
     `UPDATE users
-     SET password_hash = $1, password_salt = $2, updated_at = NOW()
-     WHERE email = $3 AND provider = 'local'
+     SET password_hash = $1, password_salt = $2, provider = 'local', updated_at = NOW()
+     WHERE email = $3
      RETURNING google_id AS "googleId", name, email, avatar, provider`,
     [hash, salt, normalizedEmail]
   );
@@ -808,8 +809,8 @@ async function loginLocalUser(email, password) {
   }
 
   const { rows } = await pool.query(
-    'SELECT google_id AS "googleId", name, email, avatar, provider, password_hash AS "passwordHash", password_salt AS "passwordSalt" FROM users WHERE email = $1 AND provider = $2 LIMIT 1',
-    [normalizedEmail, 'local']
+    'SELECT google_id AS "googleId", name, email, avatar, provider, password_hash AS "passwordHash", password_salt AS "passwordSalt" FROM users WHERE email = $1 LIMIT 1',
+    [normalizedEmail]
   );
 
   const row = rows[0];
@@ -2020,7 +2021,7 @@ app.post('/auth/forgot-password', async (req, res) => {
   let debugOtp;
   let message = 'If an account exists for that email, an OTP code has been sent.';
 
-  if (user && user.provider === 'local') {
+  if (user) {
     const code = String(Math.floor(100000 + Math.random() * 900000)).padStart(6, '0');
     passwordResetOtps.set(email, { code, createdAt: Date.now(), attempts: 0 });
     debugOtp = process.env.NODE_ENV !== 'production' ? code : undefined;
@@ -2030,9 +2031,6 @@ app.post('/auth/forgot-password', async (req, res) => {
       console.warn(`OTP delivery failed for ${email}: ${result.error}`);
     }
     console.log(`Password reset OTP for ${email}: ${code}`);
-  } else if (user) {
-    console.log(`Password reset requested for ${email} (provider=${user.provider})`);
-    message = 'This account is not eligible for email/password reset. Use your provider sign-in or create a local password.';
   }
 
   return res.json({
