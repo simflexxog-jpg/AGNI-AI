@@ -183,6 +183,8 @@ async function sendPasswordResetEmail(email, code) {
     return { sent: false, error: 'SMTP not configured' };
   }
 
+  console.log(`Sending password reset email from ${fromAddress} to ${email}`);
+
   try {
     await transporter.sendMail({
       from: fromAddress,
@@ -191,6 +193,7 @@ async function sendPasswordResetEmail(email, code) {
       text,
       html
     });
+    console.log(`Password reset email sent to ${email}`);
     return { sent: true };
   } catch (error) {
     const message = error?.message || String(error);
@@ -2020,6 +2023,8 @@ app.post('/auth/forgot-password', async (req, res) => {
   let canReset = false;
   let debugOtp;
   let message = 'If an account exists for that email, an OTP code has been sent.';
+
+  console.log(`Forgot-password request for ${email} — user found: ${Boolean(user)}`);
 
   if (user) {
     const code = String(Math.floor(100000 + Math.random() * 900000)).padStart(6, '0');
