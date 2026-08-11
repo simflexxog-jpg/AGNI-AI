@@ -145,6 +145,79 @@ function normalizeEmailForAuth(email) {
   return sanitizeTextInput(email || '', { maxLength: 200 }).toLowerCase();
 }
 
+async function sendEmailWithSendGrid(email, fromAddress, subject, text, html) {
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) {
+    return { sent: false, error: 'SendGrid API key not configured' };
+  }
+
+  const payload = {
+    personalizations: [{ to: [{ email }] }],
+    from: { email: fromAddress },
+    subject,
+    content: [
+      { type: 'text/plain', value: text },
+      { type: 'text/html', value: html }
+    ]
+  };
+
+  try {
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      return { sent: false, error: `SendGrid error ${response.status}: ${body}` };
+    }
+
+    return { sent: true };
+  } catch (error) {
+    return { sent: false, error: error?.message || String(error) };
+  }
+}
+
+async function sendEmailWithMailgun(email, fromAddress, subject, text, html) {
+  const apiKey = process.env.MAILGUN_API_KEY;
+  const domain = process.env.MAILGUN_DOMAIN;
+  if (!apiKey || !domain) {
+    return { sent: false, error: 'Mailgun API key or domain not configured' };
+  }
+
+  const url = `https://api.mailgun.net/v3/${domain}/messages`;
+  const form = new URLSearchParams();
+  form.append('from', fromAddress);
+  form.append('to', email);
+  form.append('subject', subject);
+  form.append('text', text);
+  form.append('html', html);
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString('base64')}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: form.toString()
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      return { sent: false, error: `Mailgun error ${response.status}: ${body}` };
+    }
+
+    return { sent: true };
+  } catch (error) {
+    return { sent: false, error: error?.message || String(error) };
+  }
+}
+
 function createEmailTransporter() {
   if (process.env.EMAIL_SERVICE) {
     return nodemailer.createTransport({
@@ -172,12 +245,24 @@ function createEmailTransporter() {
 }
 
 async function sendPasswordResetEmail(email, code) {
-  const transporter = createEmailTransporter();
-  const fromAddress = process.env.EMAIL_FROM || `no-reply@${process.env.EMAIL_HOST || 'localhost'}`;
+  const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || `no-reply@${process.env.EMAIL_HOST || 'localhost'}`;
   const subject = 'Your password reset code';
   const text = `Your password reset code is ${code}. It expires in 10 minutes.`;
   const html = `<p>Your password reset code is <strong>${code}</strong>.</p><p>It expires in 10 minutes.</p>`;
 
+  if (process.env.SENDGRID_API_KEY) {
+    console.log(`Sending password reset email via SendGrid from ${fromAddress} to ${email}`);
+    const result = await sendEmailWithSendGrid(email, fromAddress, subject, text, html);
+    if (result.sent) {
+      console.log(`Password reset email sent to ${email} via SendGrid`);
+      return result;
+    }
+    console.warn(`Failed to send password reset email via SendGrid: ${result.error}`);
+    console.log(`Fallback OTP for ${email}: ${code}`);
+    return result;
+  }
+
+  const transporter = createEmailTransporter();
   if (!transporter) {
     console.log(`SMTP not configured. OTP for ${email}: ${code}`);
     return { sent: false, error: 'SMTP not configured' };
