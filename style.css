@@ -1552,6 +1552,7 @@ html[data-theme="dark"] .composer-box {
 .send-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 7px;
     padding: 10px 20px;
     border: none;
@@ -1959,6 +1960,8 @@ html[data-theme="dark"] .live-voice-panel {
         flex-shrink: 0;
         min-height: 44px;
         margin-right: max(0px, env(safe-area-inset-right));
+        gap: 0;
+        justify-content: center;
     }
     .send-btn .material-symbols-outlined { font-size: 18px; }
 
