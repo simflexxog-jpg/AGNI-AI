@@ -336,9 +336,6 @@
                             <span class="material-symbols-outlined" aria-hidden="true">schedule_send</span>
                             <span data-i18n="autoSend">Auto-send</span>
                         </button>
-                        <button id="image-gen-btn" class="icon-btn sm" type="button" aria-label="Generate image with Pollinations">
-                            <span class="material-symbols-outlined">image_search</span>
-                        </button>
                     </div>
                     <div class="toolbar-right">
                         <button id="live-voice-btn" class="live-voice-btn" type="button">
@@ -422,22 +419,5 @@
 </div>
 
 <script src="script.js?v=8"></script>
-
-<div class="modal-backdrop" id="image-gen-modal" hidden role="dialog" aria-modal="true" aria-labelledby="image-gen-title">
-    <div class="image-gen-modal-content">
-        <div class="image-gen-modal-box">
-            <div class="image-gen-modal-header">
-                <h3 id="image-gen-title" class="image-gen-modal-title">Generate image</h3>
-                <button id="image-gen-close-btn" class="image-gen-modal-close-btn" type="button" aria-label="Close image generator">×</button>
-            </div>
-            <textarea id="image-prompt-input" class="image-gen-prompt-input" rows="4" placeholder="Describe the image you want to create..."></textarea>
-            <div class="image-gen-modal-actions">
-                <button id="image-gen-cancel-btn" class="btn ghost" type="button">Cancel</button>
-                <button id="image-gen-submit-btn" class="btn image-gen-submit-btn" type="button">Generate</button>
-            </div>
-            <div id="image-gen-status" class="image-gen-status"></div>
-        </div>
-    </div>
-</div>
 </body>
 </html>

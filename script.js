@@ -38,13 +38,6 @@ const liveTranscript = document.getElementById('live-transcript');
 const liveEndCallBtn = document.getElementById('live-end-call-btn');
 const liveRetryBtn = document.getElementById('live-retry-btn');
 const liveVoiceSelect = document.getElementById('live-voice-select');
-const imageGenBtn = document.getElementById('image-gen-btn');
-const imageGenModal = document.getElementById('image-gen-modal');
-const imagePromptInput = document.getElementById('image-prompt-input');
-const imageGenSubmitBtn = document.getElementById('image-gen-submit-btn');
-const imageGenCancelBtn = document.getElementById('image-gen-cancel-btn');
-const imageGenCloseBtn = document.getElementById('image-gen-close-btn');
-const imageGenStatus = document.getElementById('image-gen-status');
 
 const API_ENDPOINT = '/api/chat';
 const WS_ENDPOINT = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/live-voice`;
@@ -872,7 +865,6 @@ function escapeHtml(str) {
 function renderMarkdown(raw) {
     let html = escapeHtml(raw);
     html = html.replace(/```([a-zA-Z0-9]*)\n?([\s\S]*?)```/g, (m, lang, code) => `<pre class="code-block"><code>${code.trim()}</code></pre>`);
-    html = html.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, (_, alt, url) => `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" class="message-image" loading="lazy" />`);
     html = html.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>');
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
@@ -1791,73 +1783,6 @@ function handleSend() {
     fetchAIResponse(normalizedText, attachmentsSnapshot, historyForRequest);
 }
 
-function showImageGenModal() {
-    imageGenModal.hidden = false;
-    imagePromptInput.value = '';
-    imageGenStatus.textContent = '';
-    imageGenStatus.style.display = 'none';
-    imageGenStatus.style.color = 'var(--text-secondary)';
-    imagePromptInput.focus();
-}
-
-function closeImageGenModal() {
-    imageGenModal.hidden = true;
-    imageGenStatus.textContent = '';
-    imageGenStatus.style.display = 'none';
-    imageGenStatus.style.color = 'var(--text-secondary)';
-    imagePromptInput.value = '';
-    imageGenSubmitBtn.disabled = false;
-}
-
-async function generateImageWithPollinations() {
-    const prompt = imagePromptInput.value.trim();
-    if (!prompt) {
-        imageGenStatus.textContent = 'Please enter an image prompt.';
-        imageGenStatus.style.display = 'block';
-        imageGenStatus.style.color = 'var(--red-400)';
-        return;
-    }
-
-    imageGenStatus.textContent = 'Generating image...';
-    imageGenStatus.style.display = 'block';
-    imageGenStatus.style.color = 'var(--text-secondary)';
-    imageGenSubmitBtn.disabled = true;
-
-    try {
-        const response = await fetch('/api/generate-image', {
-            method: 'POST',
-            headers: buildJsonHeaders(),
-            body: JSON.stringify({ prompt })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Request failed with ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (!data?.imageUrl) {
-            throw new Error('No image URL returned by the server.');
-        }
-
-        const conv = getActiveConversation();
-        appendMessage(`Generated image: ${prompt}`, 'user');
-        appendMessage(`![${prompt}](${data.imageUrl})`, 'bot');
-        saveState();
-        persistConversation(conv);
-        renderActiveConversation();
-
-        imageGenStatus.textContent = 'Image generated successfully.';
-        imageGenStatus.style.color = 'var(--green-400)';
-        setTimeout(() => closeImageGenModal(), 1200);
-    } catch (error) {
-        console.error('Image generation failed:', error);
-        imageGenStatus.textContent = error.message || 'Image generation failed.';
-        imageGenStatus.style.color = 'var(--red-400)';
-    } finally {
-        imageGenSubmitBtn.disabled = false;
-    }
-}
-
 // ── Event wiring ─────────────────────────────────────────────────────────────
 
 newChatBtn.addEventListener('click', async () => {
@@ -1924,17 +1849,6 @@ imageInput.addEventListener('change', handleAttachmentSelection);
 fileInput.addEventListener('change', handleAttachmentSelection);
 sendBtn.addEventListener('click', () => { if (sendBtn.classList.contains('cancel-mode')) { cancelCurrentRequest(); return; } handleSend(); });
 voiceInputBtn.addEventListener('click', startVoiceInput);
-imageGenBtn.addEventListener('click', showImageGenModal);
-imageGenCloseBtn.addEventListener('click', closeImageGenModal);
-imageGenCancelBtn.addEventListener('click', closeImageGenModal);
-imageGenSubmitBtn.addEventListener('click', generateImageWithPollinations);
-imageGenModal.addEventListener('click', (event) => { if (event.target === imageGenModal) closeImageGenModal(); });
-imagePromptInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        generateImageWithPollinations();
-    }
-});
 autoSubmitToggleBtn.addEventListener('click', toggleAutoSubmit);
 
 // Live voice modal buttons
