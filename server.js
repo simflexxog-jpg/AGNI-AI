@@ -2537,6 +2537,22 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.post('/api/generate-image', async (req, res) => {
+  try {
+    const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required.' });
+    }
+
+    const safePrompt = prompt.replace(/\s+/g, ' ').slice(0, 180);
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}`;
+    res.json({ imageUrl });
+  } catch (error) {
+    console.error('Image generation failed:', error);
+    res.status(500).json({ error: 'Image generation failed.' });
+  }
+});
+
 app.use('/api', isAuthenticated);
 
 app.post('/api/chat', async (req, res) => {
