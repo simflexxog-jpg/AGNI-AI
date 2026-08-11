@@ -2555,25 +2555,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Image Generation Endpoint (using free APIs or Puter.js integration)
-app.post('/api/generate-image', async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    
-    if (!prompt || typeof prompt !== 'string') {
-      return res.status(400).json({ error: 'Prompt is required' });
-    }
-
-    // Try using Pollinations AI API (free image generation)
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.substring(0, 200))}`;
-    
-    res.json({ imageUrl });
-  } catch (error) {
-    console.error('Image generation error:', error);
-    res.status(500).json({ error: 'Failed to generate image' });
-  }
-});
-
 app.use(express.static(path.join(__dirname)));
 
 // ---- Server & WebSocket -----------------------------------------------------

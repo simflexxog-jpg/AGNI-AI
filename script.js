@@ -38,13 +38,6 @@ const liveTranscript = document.getElementById('live-transcript');
 const liveEndCallBtn = document.getElementById('live-end-call-btn');
 const liveRetryBtn = document.getElementById('live-retry-btn');
 const liveVoiceSelect = document.getElementById('live-voice-select');
-const imageGenBtn = document.getElementById('image-gen-btn');
-const imageGenModal = document.getElementById('image-gen-modal');
-const imagePromptInput = document.getElementById('image-prompt-input');
-const imageGenSubmitBtn = document.getElementById('image-gen-submit-btn');
-const imageGenCancelBtn = document.getElementById('image-gen-cancel-btn');
-const imageGenCloseBtn = document.getElementById('image-gen-close-btn');
-const imageGenStatus = document.getElementById('image-gen-status');
 
 const API_ENDPOINT = '/api/chat';
 const WS_ENDPOINT = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/live-voice`;
@@ -111,7 +104,6 @@ const UI_TRANSLATIONS = {
         attachFile: 'Attach file',
         voiceInput: 'Voice input',
         autoSend: 'Auto-send',
-        generateImage: 'Generate image',
         sendMessage: 'Send message',
         send: 'Send',
         composerHint: 'AGNI AI can make mistakes. Check important info.',
@@ -1791,83 +1783,6 @@ function handleSend() {
     fetchAIResponse(normalizedText, attachmentsSnapshot, historyForRequest);
 }
 
-// ── Image Generation with Puter.js ──────────────────────────────────────────
-
-function showImageGenModal() {
-    imageGenModal.hidden = false;
-    imagePromptInput.focus();
-    imageGenStatus.style.display = 'none';
-    imageGenStatus.textContent = '';
-    imagePromptInput.value = '';
-    imageGenStatus.style.color = 'var(--text-secondary)';
-}
-
-function closeImageGenModal() {
-    imageGenModal.hidden = true;
-    imageGenStatus.style.display = 'none';
-    imageGenStatus.textContent = '';
-    imageGenStatus.style.color = 'var(--text-secondary)';
-    imagePromptInput.value = '';
-    imageGenSubmitBtn.disabled = false;
-}
-
-async function generateImageWithPuter() {
-    const prompt = imagePromptInput.value.trim();
-    if (!prompt) {
-        imageGenStatus.textContent = 'Please enter an image description';
-        imageGenStatus.style.display = 'block';
-        return;
-    }
-
-    imageGenStatus.textContent = 'Generating image...';
-    imageGenStatus.style.display = 'block';
-    imageGenStatus.style.color = 'var(--text-secondary)';
-    imageGenSubmitBtn.disabled = true;
-
-    try {
-        // Use local API endpoint primarily (more reliable)
-        const response = await fetch('/api/generate-image', {
-            method: 'POST',
-            headers: buildJsonHeaders(),
-            body: JSON.stringify({ prompt })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (!data.imageUrl) {
-            throw new Error('No image URL returned');
-        }
-
-        const conv = getActiveConversation();
-        appendMessage(`Generated image: ${prompt}`, 'user');
-        
-        // Create a proper message with the image
-        const botMessage = {
-            role: 'bot',
-            content: `Here's your generated image:\n\n![Generated Image](${data.imageUrl})`
-        };
-        conv.messages.push(botMessage);
-        
-        saveState();
-        await persistConversation(conv);
-        renderActiveConversation();
-        
-        imageGenStatus.textContent = 'Image generated successfully!';
-        imageGenStatus.style.color = 'var(--green-400)';
-        setTimeout(() => closeImageGenModal(), 1500);
-    } catch (error) {
-        console.error('Image generation error:', error);
-        imageGenStatus.textContent = `Error: ${error.message || 'Failed to generate image'}`;
-        imageGenStatus.style.color = 'var(--red-400)';
-    } finally {
-        imageGenSubmitBtn.disabled = false;
-    }
-}
-
 // ── Event wiring ─────────────────────────────────────────────────────────────
 
 newChatBtn.addEventListener('click', async () => {
@@ -1934,14 +1849,6 @@ imageInput.addEventListener('change', handleAttachmentSelection);
 fileInput.addEventListener('change', handleAttachmentSelection);
 sendBtn.addEventListener('click', () => { if (sendBtn.classList.contains('cancel-mode')) { cancelCurrentRequest(); return; } handleSend(); });
 voiceInputBtn.addEventListener('click', startVoiceInput);
-
-// Image generation event listeners
-imageGenBtn.addEventListener('click', showImageGenModal);
-imageGenCloseBtn.addEventListener('click', closeImageGenModal);
-imageGenCancelBtn.addEventListener('click', closeImageGenModal);
-imageGenSubmitBtn.addEventListener('click', generateImageWithPuter);
-imagePromptInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); generateImageWithPuter(); } });
-imageGenModal.addEventListener('click', (e) => { if (e.target === imageGenModal) closeImageGenModal(); });
 autoSubmitToggleBtn.addEventListener('click', toggleAutoSubmit);
 
 // Live voice modal buttons
