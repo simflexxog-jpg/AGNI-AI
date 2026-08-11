@@ -1806,6 +1806,9 @@ function closeImageGenModal() {
     imageGenModal.hidden = true;
     imageGenStatus.style.display = 'none';
     imageGenStatus.textContent = '';
+    imageGenStatus.style.color = 'var(--text-secondary)';
+    imagePromptInput.value = '';
+    imageGenSubmitBtn.disabled = false;
 }
 
 async function generateImageWithPuter() {
@@ -1818,66 +1821,47 @@ async function generateImageWithPuter() {
 
     imageGenStatus.textContent = 'Generating image...';
     imageGenStatus.style.display = 'block';
+    imageGenStatus.style.color = 'var(--text-secondary)';
     imageGenSubmitBtn.disabled = true;
 
     try {
-        // Use Puter.js AI image generation
-        if (typeof window.puter !== 'undefined' && window.puter.ai && window.puter.ai.image) {
-            const response = await window.puter.ai.image({
-                prompt: prompt,
-                model: 'image_generation'
-            });
+        // Use local API endpoint primarily (more reliable)
+        const response = await fetch('/api/generate-image', {
+            method: 'POST',
+            headers: buildJsonHeaders(),
+            body: JSON.stringify({ prompt })
+        });
 
-            if (response && response.url) {
-                // Add generated image to chat
-                const conv = getActiveConversation();
-                appendMessage(`Generated image: ${prompt}`, 'user');
-                
-                // Add AI response with image
-                const imageHtml = `<img src="${escapeHtml(response.url)}" alt="${escapeHtml(prompt)}" style="max-width: 100%; max-height: 400px; border-radius: 8px; margin-top: 8px;">`;
-                appendMessage(imageHtml, 'bot');
-                
-                // Save conversation
-                saveState();
-                await persistConversation(conv);
-                renderActiveConversation();
-                
-                imageGenStatus.textContent = 'Image generated successfully!';
-                setTimeout(() => closeImageGenModal(), 1500);
-            } else {
-                throw new Error('No image URL returned from Puter.js');
-            }
-        } else {
-            // Fallback: Use local API endpoint if Puter.js not available
-            const response = await fetch('/api/generate-image', {
-                method: 'POST',
-                headers: buildJsonHeaders(),
-                body: JSON.stringify({ prompt })
-            });
-
-            if (!response.ok) throw new Error('Image generation failed');
-            const data = await response.json();
-
-            if (data.imageUrl) {
-                const conv = getActiveConversation();
-                appendMessage(`Generated image: ${prompt}`, 'user');
-                
-                const imageHtml = `<img src="${escapeHtml(data.imageUrl)}" alt="${escapeHtml(prompt)}" style="max-width: 100%; max-height: 400px; border-radius: 8px; margin-top: 8px;">`;
-                appendMessage(imageHtml, 'bot');
-                
-                saveState();
-                await persistConversation(conv);
-                renderActiveConversation();
-                
-                imageGenStatus.textContent = 'Image generated successfully!';
-                setTimeout(() => closeImageGenModal(), 1500);
-            } else {
-                throw new Error('No image URL in response');
-            }
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
         }
+
+        const data = await response.json();
+
+        if (!data.imageUrl) {
+            throw new Error('No image URL returned');
+        }
+
+        const conv = getActiveConversation();
+        appendMessage(`Generated image: ${prompt}`, 'user');
+        
+        // Create a proper message with the image
+        const botMessage = {
+            role: 'bot',
+            content: `Here's your generated image:\n\n![Generated Image](${data.imageUrl})`
+        };
+        conv.messages.push(botMessage);
+        
+        saveState();
+        await persistConversation(conv);
+        renderActiveConversation();
+        
+        imageGenStatus.textContent = 'Image generated successfully!';
+        imageGenStatus.style.color = 'var(--green-400)';
+        setTimeout(() => closeImageGenModal(), 1500);
     } catch (error) {
         console.error('Image generation error:', error);
-        imageGenStatus.textContent = `Error: ${error.message}`;
+        imageGenStatus.textContent = `Error: ${error.message || 'Failed to generate image'}`;
         imageGenStatus.style.color = 'var(--red-400)';
     } finally {
         imageGenSubmitBtn.disabled = false;
