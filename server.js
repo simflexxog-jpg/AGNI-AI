@@ -1245,8 +1245,31 @@ async function callGroq(history, currentText, modelName, thinkingEnabled, abortS
   const groqData = await response.json();
   if (!response.ok) {
     console.error('Groq request failed', response.status, groqData);
+    // If the requested model appears unsupported (e.g. gpt-oss-20b), retry with a known working Groq model.
+    if (String(modelName).toLowerCase() === 'gpt-oss-20b') {
+      try {
+        console.log('Retrying Groq request with fallback model llama-3.1-8b-instant');
+        const fallbackResp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({ model: 'llama-3.1-8b-instant', temperature: thinkingEnabled ? 0.8 : 0.6, messages }),
+          signal: abortSignal || withTimeout(UPSTREAM_TIMEOUT_MS)
+        });
+        const fallbackData = await fallbackResp.json();
+        if (!fallbackResp.ok) {
+          console.error('Groq fallback request failed', fallbackResp.status, fallbackData);
+          throw new Error(fallbackData?.error?.message || 'Groq fallback request failed');
+        }
+        return fallbackData?.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response.";
+      } catch (err) {
+        console.error('Groq fallback attempt failed:', err?.message || err);
+        throw new Error(groqData?.error?.message || err?.message || 'Groq request failed');
+      }
+    }
+
     throw new Error(groqData?.error?.message || 'Groq request failed');
   }
+
   return groqData?.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response.";
 }
 
