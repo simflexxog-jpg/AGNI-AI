@@ -593,6 +593,7 @@ const modelOptions = {
     ],
     groq: [
         { label: 'GPT OSS 20B', value: 'gpt-oss-20b' },
+        { label: 'Llama 3.1 8B', value: 'llama-3.1-8b-instant' },
         { label: 'Llama 3.3 70B Versatile', value: 'llama-3.3-70b-versatile' },
         { label: 'Mixtral 8x7B', value: 'mixtral-8x7b-32768' }
     ],
