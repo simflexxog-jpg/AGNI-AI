@@ -47,7 +47,7 @@ const mimeTypes = {
 
 const ALLOWED_MODELS = {
   gemini: ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro'],
-  groq: ['gpt-oss-20b', 'llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'mixtral-8x7b-32768'],
+  groq: ['gpt-oss-20b', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'qwen-3.6-27b'],
   openai: ['gpt-4o-mini', 'gpt-4o']
 };
 
@@ -57,7 +57,7 @@ const DEFAULT_MODELS = {
   openai: 'gpt-4o-mini'
 };
 
-const GROQ_VOICE_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_VOICE_MODEL = 'qwen-3.6-27b';
 const GROQ_VOICE_MAX_TOKENS = 300;
 const GROQ_VOICE_TEMPERATURE = 0.7;
 
