@@ -47,14 +47,25 @@ const mimeTypes = {
 
 const ALLOWED_MODELS = {
   gemini: ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro'],
-  groq: ['gpt-oss-20b', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'qwen-3.6-27b'],
-  openai: ['gpt-4o-mini', 'gpt-4o']
+  groq: [
+    'openai/gpt-oss-120b',
+    'openai/gpt-oss-20b',
+    'gpt-oss-120b',
+    'gpt-oss-20b',
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+    'mixtral-8x7b-32768',
+    'qwen-3.6-27b'
+  ],
+  openai: ['gpt-4o-mini', 'gpt-4o'],
+  cerebras: ['llama-3.3-70b']
 };
 
 const DEFAULT_MODELS = {
   gemini: 'gemini-2.0-flash',
-  groq: 'gpt-oss-20b',
-  openai: 'gpt-4o-mini'
+  groq: 'openai/gpt-oss-120b',
+  openai: 'gpt-4o-mini',
+  cerebras: 'llama-3.3-70b'
 };
 
 const GROQ_VOICE_MODEL = 'qwen-3.6-27b';
@@ -1245,14 +1256,17 @@ async function callGroq(history, currentText, modelName, thinkingEnabled, abortS
   const groqData = await response.json();
   if (!response.ok) {
     console.error('Groq request failed', response.status, groqData);
-    // If the requested model appears unsupported (e.g. gpt-oss-20b), retry with a known working Groq model.
-    if (String(modelName).toLowerCase() === 'gpt-oss-20b') {
+    const normalizedModel = String(modelName).toLowerCase();
+    const isGptOss = normalizedModel.includes('gpt-oss');
+
+    if (isGptOss) {
+      const fallbackModel = 'llama-3.3-70b-versatile';
       try {
-        console.log('Retrying Groq request with fallback model llama-3.1-8b-instant');
+        console.log(`Retrying Groq request with fallback model ${fallbackModel}`);
         const fallbackResp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({ model: 'llama-3.1-8b-instant', temperature: thinkingEnabled ? 0.8 : 0.6, messages }),
+          body: JSON.stringify({ model: fallbackModel, temperature: thinkingEnabled ? 0.8 : 0.6, messages }),
           signal: abortSignal || withTimeout(UPSTREAM_TIMEOUT_MS)
         });
         const fallbackData = await fallbackResp.json();
@@ -1301,6 +1315,28 @@ async function callOpenAI(history, currentText, attachments, modelName, thinking
   const openAiData = await response.json();
   if (!response.ok) throw new Error(openAiData?.error?.message || 'OpenAI request failed');
   return openAiData?.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response.";
+}
+
+async function callCerebras(history, currentText, modelName, thinkingEnabled, abortSignal) {
+  const apiKey = process.env.CEREBRAS_API_KEY;
+  if (!apiKey) throw new Error('Missing CEREBRAS_API_KEY');
+
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    ...history.map(m => ({ role: m.role, content: m.content })),
+    { role: 'user', content: currentText }
+  ];
+
+  const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: modelName, temperature: thinkingEnabled ? 0.8 : 0.6, messages }),
+    signal: abortSignal || withTimeout(UPSTREAM_TIMEOUT_MS)
+  });
+
+  const cerebrasData = await response.json();
+  if (!response.ok) throw new Error(cerebrasData?.error?.message || 'Cerebras request failed');
+  return cerebrasData?.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response.";
 }
 
 function writeSseEvent(res, event, data) {
@@ -1476,6 +1512,13 @@ async function streamProviderResponse({ provider, history, enrichedText, attachm
       { role: 'user', content: lastUserContent }
     ];
     await streamOpenAICompatible('OpenAI', 'https://api.openai.com/v1/chat/completions', process.env.OPENAI_API_KEY, messages, modelName, thinkingEnabled, abortSignal, onDelta);
+  } else if (provider === 'cerebras') {
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...history.map(m => ({ role: m.role, content: m.content })),
+      { role: 'user', content: enrichedText }
+    ];
+    await streamOpenAICompatible('Cerebras', 'https://api.cerebras.ai/v1/chat/completions', process.env.CEREBRAS_API_KEY, messages, modelName, thinkingEnabled, abortSignal, onDelta);
   } else {
     await streamGemini(history, enrichedText, attachments, modelName, thinkingEnabled, abortSignal, onDelta);
   }
@@ -1515,7 +1558,7 @@ async function handleChat(req, res) {
   const ragUsed = Array.isArray(relevantContext) && relevantContext.length > 0;
   const enrichedText = buildPromptWithContext(currentText, relevantContext);
 
-  const provider = ['gemini', 'groq', 'openai'].includes(String(payload.provider || '').toLowerCase())
+  const provider = ['gemini', 'groq', 'openai', 'cerebras'].includes(String(payload.provider || '').toLowerCase())
     ? String(payload.provider).toLowerCase()
     : 'gemini';
 
@@ -1568,7 +1611,7 @@ async function buildChatPayload(payload) {
   const attachments = sanitizeAttachments(payload.attachments);
   const currentText = await buildMessageWithAttachments(userMessage, attachments);
 
-  const provider = ['gemini', 'groq', 'openai'].includes(String(payload.provider || '').toLowerCase())
+  const provider = ['gemini', 'groq', 'openai', 'cerebras'].includes(String(payload.provider || '').toLowerCase())
     ? String(payload.provider).toLowerCase()
     : 'gemini';
 
@@ -1601,6 +1644,8 @@ async function handleWebSocketChat(ws, payload, abortSignal) {
       botText = await callGroq(history, enrichedText, modelName, thinkingEnabled, abortSignal);
     } else if (provider === 'openai') {
       botText = await callOpenAI(history, enrichedText, attachments, modelName, thinkingEnabled, abortSignal);
+    } else if (provider === 'cerebras') {
+      botText = await callCerebras(history, enrichedText, modelName, thinkingEnabled, abortSignal);
     } else {
       botText = await callGemini(history, enrichedText, attachments, modelName, thinkingEnabled, abortSignal);
     }

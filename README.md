@@ -46,7 +46,7 @@ Getting Started
 - Configure environment variables in a `.env` file or your hosting platform.
 - Start locally: `npm start`
 - Open the app in your browser at `http://localhost:3000` (or the configured port).
-- For production, set `NODE_ENV=production`, `SESSION_SECRET`, and optionally `DATABASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GROQ_API_KEY`, `OPENAI_API_KEY`, and `GEMINI_API_KEY`.
+- For production, set `NODE_ENV=production`, `SESSION_SECRET`, and optionally `DATABASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GROQ_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, and `CEREBRAS_API_KEY`.
 
 ---
 
@@ -78,7 +78,7 @@ Overview
 - Client layer: browser app rendered from `index.html`, controlled by `script.js`, and responsible for chat UI, voice capture, transcript handling, and local settings.
 - Server layer: `server.js` handles authentication, session management, chat orchestration, provider calls, transcription, and WebSocket live voice routing.
 - Data layer: PostgreSQL is the recommended persistence layer, with in-memory fallback for development and local testing.
-- External integrations: Google OAuth, Groq Whisper, Gemini Live, and the selected LLM APIs via OpenAI, Groq, or Gemini.
+- External integrations: Google OAuth, Groq Whisper, Gemini Live, and the selected LLM APIs via OpenAI, Groq, Gemini, or Cerebras.
 
 Primary flows
 - Login flow: browser receives Google credentials -> server verifies the token -> session is created -> user lands on the main chat workspace.
@@ -129,7 +129,7 @@ Conventions
 Core assistant features
 - Google OAuth sign-in with session-based authentication and local account registration support
 - Per-user conversation persistence with PostgreSQL when configured, and in-memory fallback for local development
-- Multi-provider chat routing across Gemini, Groq, and OpenAI models
+- Multi-provider chat routing across Gemini, Groq, OpenAI, and Cerebras models
 - Streaming chat responses over WebSocket with HTTP SSE fallback for reliability
 - Rich composer with attachments, image support, conversation history, and quick suggestion chips
 - Voice input using browser microphone capture, with server-side Groq Whisper transcription
@@ -318,10 +318,10 @@ In-memory fallback
 
 ---
 
-12. AI Provider Integration (Groq, OpenAI, Gemini)
+12. AI Provider Integration (Groq, OpenAI, Gemini, Cerebras)
 
 Provider selection
-- UI exposes a provider dropdown. The server uses provider-specific functions: `callGroq`, `callOpenAI`, and `callGemini`.
+- UI exposes a provider dropdown. The server uses provider-specific functions: `callGroq`, `callOpenAI`, `callGemini`, and `callCerebras`.
 
 Groq
 - Used for both chat completions (if chosen), Whisper-style transcription via `POST /api/transcribe`, and live voice sessions via the Groq voice WebSocket proxy.
@@ -332,6 +332,9 @@ OpenAI
 
 Google Gemini
 - Optional provider; configure `GEMINI_API_KEY` and ensure server code uses the proper REST endpoint and keys.
+
+Cerebras
+- Optional OpenAI-compatible provider; configure `CEREBRAS_API_KEY`. The UI currently exposes the `llama-3.3-70b` model.
 
 Provider selection best practices
 - Use environment variables and do not commit keys.

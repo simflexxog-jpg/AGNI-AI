@@ -592,14 +592,16 @@ const modelOptions = {
         { label: 'Gemini 1.5 Pro', value: 'gemini-1.5-pro' }
     ],
     groq: [
-        { label: 'GPT OSS 20B', value: 'gpt-oss-20b' },
-        { label: 'Llama 3.1 8B', value: 'llama-3.1-8b-instant' },
-        { label: 'Mixtral 8x7B', value: 'mixtral-8x7b-32768' },
-        { label: 'Qwen 3.6 27B', value: 'qwen-3.6-27b' }
+        { label: 'GPT OSS 120B', value: 'openai/gpt-oss-120b' },
+        { label: 'GPT OSS 20B', value: 'openai/gpt-oss-20b' },
+        { label: 'Llama 3.3 70B', value: 'llama-3.3-70b-versatile' }
     ],
     openai: [
         { label: 'GPT-4o Mini', value: 'gpt-4o-mini' },
         { label: 'GPT-4o', value: 'gpt-4o' }
+    ],
+    cerebras: [
+        { label: 'Llama 3.3 70B', value: 'llama-3.3-70b' }
     ]
 };
 
@@ -1206,7 +1208,7 @@ function populateModels() {
 }
 
 function updateStatusPill() {
-    const providerName = providerSelect.value === 'groq' ? 'Groq' : providerSelect.value === 'openai' ? 'OpenAI' : 'Gemini';
+    const providerName = providerSelect.value === 'groq' ? 'Groq' : providerSelect.value === 'openai' ? 'OpenAI' : providerSelect.value === 'cerebras' ? 'Cerebras' : 'Gemini';
     const modelName = modelSelect.options[modelSelect.selectedIndex]?.textContent || modelSelect.value;
     const connectionLabel = socketReady ? ' · Live' : ' · Offline';
     statusPill.textContent = `● ${providerName} · ${modelName}${connectionLabel}`;
